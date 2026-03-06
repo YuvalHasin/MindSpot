@@ -1,9 +1,7 @@
 import { motion } from "framer-motion";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const navLinks = [
@@ -15,12 +13,6 @@ const navLinks = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();
-
-  const handleLogin = () => {
-    navigate("/auth");
-  };
 
   return (
     <motion.nav
@@ -45,24 +37,8 @@ const Navbar = () => {
               {link.label}
             </a>
           ))}
+          <Link to="/therapist"><Button size="sm" variant="outline">For Professionals</Button></Link>
           <Link to="/triage"><Button size="sm">Get Support Now</Button></Link>
-          
-          {/* Auth Toggle */}
-          {isLoggedIn ? (
-            <Badge className="bg-[var(--sage)] text-white flex items-center gap-2 px-3 py-2">
-              <User size={16} />
-              Logged In
-            </Badge>
-          ) : (
-            <Button 
-              variant="outline" 
-              onClick={handleLogin}
-              size="sm"
-              className="border-[var(--sage)] text-[var(--sage)] hover:bg-[var(--sage)] hover:text-white"
-            >
-              Login
-            </Button>
-          )}
         </div>
 
         {/* Mobile toggle */}
@@ -92,29 +68,16 @@ const Navbar = () => {
               {link.label}
             </a>
           ))}
+          <Link to="/therapist">
+            <Button className="mt-2 w-full" size="sm" variant="outline">
+              For Professionals
+            </Button>
+          </Link>
           <Link to="/triage">
             <Button className="mt-2 w-full" size="sm">
               Get Support Now
             </Button>
           </Link>
-          
-          {/* Mobile Auth Toggle */}
-          <div className="mt-4">
-            {isLoggedIn ? (
-              <Badge className="bg-[var(--sage)] text-white flex items-center gap-2 px-3 py-2 w-full justify-center">
-                <User size={16} />
-                Logged In
-              </Badge>
-            ) : (
-              <Button 
-                variant="outline" 
-                onClick={handleLogin}
-                className="w-full border-[var(--sage)] text-[var(--sage)] hover:bg-[var(--sage)] hover:text-white"
-              >
-                Login
-              </Button>
-            )}
-          </div>
         </motion.div>
       )}
     </motion.nav>

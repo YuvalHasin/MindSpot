@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
 import TriagePage from "./pages/TriagePage";
 import DashboardPage from "./pages/DashboardPage";
+import TherapistPage from "./pages/TherapistPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/triage" element={<TriagePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/therapist" element={<TherapistPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
