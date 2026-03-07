@@ -1,30 +1,35 @@
 using Raven.Client.Documents;
+using MindSpot-server.Services; 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- δερτϊ δηιαεψ μ-RavenDB ---
-// δβγψϊ δ-Document Store - δΰεαιιχθ δξψλζι ωξπδμ ΰϊ δϊχωεψϊ ξεμ αριρ δπϊεπιν
+// --- Χ”Χ’Χ“Χ¨Χª Χ—Χ™Χ‘Χ•Χ¨ Χ-RavenDB ---
+[cite_start]// Χ”-DocumentStore ΧΧ Χ”Χ ΧΧª Χ”ΧªΧ§Χ©Χ•Χ¨Χª ΧΧ•Χ Χ‘Χ΅Χ™Χ΅ Χ”Χ ΧªΧ•Χ Χ™Χ [cite: 129]
 var documentStore = new DocumentStore
 {
-    // δλϊεαϊ ωμ δωψϊ δξχεξι λτι ωδβγψϊ αδϊχπδ
+    [cite_start]// Χ”Χ›ΧªΧ•Χ‘Χª Χ”ΧΧ§Χ•ΧΧ™Χª Χ©Χ Χ”Χ©Χ¨Χª Χ›Χ¤Χ™ Χ©Χ”Χ’Χ“Χ¨Χª Χ‘Χ”ΧªΧ§Χ Χ” [cite: 50]
     Urls = new[] { "http://localhost:8080" },
 
-    // ων δγΰθΰαιιρ δξγειχ ωιφψϊ αρθεγιε
+    // Χ©Χ Χ”Χ“ΧΧΧΧ‘Χ™Χ™Χ΅ Χ©Χ™Χ¦Χ¨Χª Χ‘Χ΅ΧΧ•Χ“Χ™Χ•
     Database = "MindSpotDB"
 }.Initialize();
 
-// δζψχϊ δ-DocumentStore λ-Singleton λγι ωιδιδ πβιω μλμ ημχι δξςψλϊ
+[cite_start]// Χ”Χ–Χ¨Χ§Χª Χ”-DocumentStore Χ›-Singleton ΧΧ©Χ™ΧΧ•Χ© Χ‘Χ›Χ Χ”-Controllers [cite: 129]
 builder.Services.AddSingleton<IDocumentStore>(documentStore);
+
+// --- Χ”Χ•Χ΅Χ¤Χª Χ©Χ™Χ¨Χ•Χª Χ”-AI ---
+[cite_start]// Χ¨Χ™Χ©Χ•Χ Χ”Χ©Χ™Χ¨Χ•Χª Χ©Χ™Χ‘Χ¦ΧΆ ΧΧª Χ”Χ΅Χ™Χ›Χ•Χ Χ•Χ”Χ•Χ•Χ§ΧΧ•Χ¨Χ™Χ–Χ¦Χ™Χ” ΧΧ•Χ OpenAI 
+builder.Services.AddSingleton<OpenAiService>();
 // ------------------------------
 
 // Presentation Layer
-builder.Services.AddControllers(); // ϊξιλδ α-ASP.NET Core Web API
+builder.Services.AddControllers(); // ΧªΧΧ™Χ›Χ” Χ‘-ASP.NET Core Web API [cite: 111, 112]
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // Swagger μπιδεμ εαγιχϊ αχωεϊ HTTP
+builder.Services.AddSwaggerGen(); // Swagger ΧΧ‘Χ“Χ™Χ§Χª Χ‘Χ§Χ©Χ•Χª Χ”-API [cite: 112]
 
 var app = builder.Build();
 
-// δβγψϊ Swagger μραιαϊ δτιϊεη
+// Χ”Χ’Χ“Χ¨Χª Swagger ΧΧ΅Χ‘Χ™Χ‘Χª Χ”Χ¤Χ™ΧªΧ•Χ—
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -33,7 +38,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Authentication ε-Authorization
+[cite_start]// Authentication Χ•-Authorization [cite: 114, 115]
 app.UseAuthentication();
 app.UseAuthorization();
 
