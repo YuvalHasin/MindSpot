@@ -1,0 +1,14 @@
+# Python secrets
+.env
+__pycache__/
+*.py[cod]
+
+# .NET secrets
+appsettings.json
+appsettings.Development.json
+bin/
+obj/
+
+# Node/React
+node_modules/
+.env.local

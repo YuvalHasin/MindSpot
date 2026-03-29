@@ -1,0 +1,50 @@
+import { TooltipProvider } from "./components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import ChatPage from "./pages/ChatPage";
+import TriagePage from "./pages/TriagePage";
+import TherapistPage from "./pages/TherapistPage";
+import PatientAuthPage from "./pages/PatientAuthPage";
+import TherapistAuthPage from "./pages/TherapistAuthPage";
+import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminSideBar from "./components/admin/AdminSideBar";
+import AdminOverview from "./pages/admin/AdminOverview";
+import TherapistManagment from "./pages/admin/TherapistManagement";
+import AdminSettings from "./pages/admin/AdminSettings";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Index />} />
+          <Route path="/patient-auth" element={<PatientAuthPage />} />
+          <Route path="/therapist-auth" element={<TherapistAuthPage />} /> 
+          <Route path="/triage" element={<TriagePage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/therapist-dashboard" element={<TherapistPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+
+          {/* Admin Routes with Layout */}
+          <Route path="/admin" element={<AdminLayout />} >
+            <Route index element={<AdminOverview />} />
+            <Route path="therapists" element={<TherapistManagment />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="sidebar" element={<AdminSideBar />} />
+          </Route>
+
+          {/* 404 Route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;

@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-sage: hsl(var(--sage));
+  --color-sage-light: hsl(var(--sage-light));
+  --color-sand: hsl(var(--sand));
+  --color-ocean: hsl(var(--ocean));
+  --color-border: hsl(var(--border));
+  
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    --background: 48 60% 97%;
+    --foreground: 30 15% 18%;
+
+    --card: 48 50% 94%;
+    --card-foreground: 30 15% 18%;
+
+    --popover: 48 60% 97%;
+    --popover-foreground: 30 15% 18%;
+
+    --primary: 48 85% 52%;
+    --primary-foreground: 30 20% 15%;
+
+    --secondary: 38 50% 88%;
+    --secondary-foreground: 30 15% 18%;
+
+    --muted: 45 30% 91%;
+    --muted-foreground: 30 10% 45%;
+
+    --accent: 48 55% 88%;
+    --accent-foreground: 35 30% 25%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 48 60% 97%;
+
+    --border: 40 30% 85%;
+    --input: 40 30% 85%;
+    --ring: 48 85% 52%;
+
+    --radius: 0.75rem;
+
+    --sage: 48 85% 52%;
+    --sage-light: 48 55% 88%;
+    --sage-muted: 42 40% 70%;
+    --sand: 38 50% 88%;
+    --sand-warm: 35 55% 78%;
+    --cream: 48 60% 97%;
+    --ocean: 38 45% 55%;
+    --ocean-light: 42 40% 85%;
+
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+
+    --shadow-soft: 0 4px 20px -4px hsl(40 30% 50% / 0.12);
+    --shadow-card: 0 8px 32px -8px hsl(40 30% 50% / 0.15);
+    --shadow-elevated: 0 16px 48px -12px hsl(40 30% 50% / 0.2);
+
+    --sidebar-background: 48 40% 96%;
+    --sidebar-foreground: 30 15% 20%;
+    --sidebar-primary: 30 15% 12%;
+    --sidebar-primary-foreground: 48 60% 97%;
+    --sidebar-accent: 48 35% 93%;
+    --sidebar-accent-foreground: 30 15% 12%;
+    --sidebar-border: 40 25% 88%;
+    --sidebar-ring: 48 85% 52%;
+  }
+}
+
+@layer base {
+  * {
+    /* בגרסה 4, אם border-border עושה בעיה, נסי להחליף את זה ב-border-solid */
+    border-color: hsl(var(--border)); 
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .text-gradient-sage {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--sage)), hsl(var(--sand-warm)));
+  }
+}
