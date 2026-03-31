@@ -21,7 +21,7 @@ const Navbar = () => {
     setOpen(false); // סגירת תפריט מובייל אם הוא פתוח
 
     if (userToken) {
-      navigate("/triage");
+      navigate("/patient-dashboard");
     } else {
       navigate("/patient-auth");
     }
@@ -66,7 +66,7 @@ const Navbar = () => {
           </Button>
           
           <Button size="sm" onClick={handleSupportClick}>
-            Get Support Now
+            Personal Area
           </Button>
         </div>
 

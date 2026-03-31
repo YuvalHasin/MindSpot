@@ -1,33 +1,42 @@
 import { motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { ShieldCheck, Brain, Heart, Users, MessageCircle, Sparkles } from "lucide-react";
 
-const therapists = [
+const specializations = [
   {
-    name: "Dr. Sarah Chen",
-    specialty: "Anxiety & Crisis Support",
-    experience: "12 years",
-    initials: "SC",
-    rating: 4.9,
+    title: "Clinical Psychology",
+    description: "Evidence-based therapy for depression, anxiety, and complex emotional challenges.",
+    icon: Brain,
   },
   {
-    name: "Dr. Marcus Rivera",
-    specialty: "Depression & Grief",
-    experience: "8 years",
-    initials: "MR",
-    rating: 4.8,
+    title: "CBT & DBT",
+    description: "Structured techniques to transform thought patterns and manage intense emotions.",
+    icon: ShieldCheck,
   },
   {
-    name: "Dr. Amara Osei",
-    specialty: "Relationships & Stress",
-    experience: "15 years",
-    initials: "AO",
-    rating: 4.9,
+    title: "Relationship Counseling",
+    description: "Specialized support for couples and family dynamics to build healthier connections.",
+    icon: Users,
+  },
+  {
+    title: "Trauma & PTSD",
+    description: "Compassionate care and specialized protocols for healing from past experiences.",
+    icon: Heart,
+  },
+  {
+    title: "Adolescent Support",
+    description: "Tailored approaches for teenagers navigating modern social and academic stress.",
+    icon: MessageCircle,
+  },
+  {
+    title: "Personal Growth",
+    description: "Executive coaching and mindfulness strategies for self-actualization.",
+    icon: Sparkles,
   },
 ];
 
 const Therapists = () => {
   return (
-    <section id="therapists" className="py-24 bg-card">
+    <section id="specializations" className="py-24 bg-card">
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,44 +46,46 @@ const Therapists = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-4">
-            Certified Professionals
+            Licensed Professional Care
           </h2>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Licensed, vetted, and ready to support you in the moment.
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Every therapist on our platform is a <strong>licensed clinical professional</strong> who has undergone a rigorous vetting process. We match you with specialists based on your unique needs.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          {therapists.map((therapist, i) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {specializations.map((spec, i) => (
             <motion.div
-              key={therapist.name}
+              key={spec.title}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="text-center p-8 rounded-2xl bg-background border border-border/60 shadow-soft hover:shadow-card transition-all duration-300 group"
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="p-8 rounded-2xl bg-background border border-border/60 shadow-soft hover:border-primary/30 transition-all duration-300 group"
             >
-              <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center mx-auto mb-5 group-hover:scale-105 transition-transform duration-300">
-                <span className="text-xl font-display font-bold text-primary">
-                  {therapist.initials}
-                </span>
+              <div className="w-12 h-12 rounded-lg bg-accent/50 flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
+                <spec.icon className="text-primary" size={24} />
               </div>
-              <h3 className="text-lg font-display font-semibold text-foreground mb-1">
-                {therapist.name}
+              <h3 className="text-xl font-display font-bold text-foreground mb-3">
+                {spec.title}
               </h3>
-              <p className="text-primary text-sm font-medium mb-1">
-                {therapist.specialty}
-              </p>
-              <div className="flex items-center justify-center gap-1 mb-2">
-                <Star size={14} className="fill-primary text-primary" />
-                <span className="text-sm font-medium text-foreground">{therapist.rating}</span>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {therapist.experience} experience
+              <p className="text-muted-foreground leading-relaxed">
+                {spec.description}
               </p>
             </motion.div>
           ))}
         </div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          className="mt-16 p-6 rounded-xl bg-primary/5 border border-primary/10 text-center max-w-3xl mx-auto"
+        >
+          <p className="text-sm font-medium text-primary uppercase tracking-wider mb-2">Verification Standard</p>
+          <p className="text-foreground italic">
+            "All practitioners hold a minimum of a Master's degree in their respective fields and maintain active state/national licensure with at least 2,000 hours of clinical experience."
+          </p>
+        </motion.div>
       </div>
     </section>
   );

@@ -14,6 +14,11 @@ import TherapistManagement from "./pages/admin/TherapistManagement";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 import PatientManagement from "./pages/admin/PatientManagement";
+import PatientDashboardLayout from "./pages/patient/PatientDashboardLayout";
+import PatientOverview from "./pages/patient/PatientOverview";
+import SessionHistory from "./pages/patient/SessionHistory";
+import ProfileSettings from "./pages/patient/ProfileSettings";
+import SecuritySettings from "./pages/patient/SecuritySettings";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +35,14 @@ const App = () => (
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/therapist-dashboard" element={<TherapistPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/sessions" element={<SessionHistory />} />
+          <Route path="/profile" element={<ProfileSettings />} />
+          <Route path="security" element={<SecuritySettings />} />
+
+          <Route path="/patient-dashboard" element={<PatientDashboardLayout />}>
+            <Route index element={<PatientOverview />} />
+          </Route>
 
           {/* Admin Routes with Layout */}
           <Route path="/admin" element={<AdminLayout />}>
