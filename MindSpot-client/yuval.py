@@ -5,7 +5,7 @@ from openai import OpenAI
 
 # 1. הגדרת לקוח OpenAI
 # ניתן להגדיר את המפתח כאן ישירות או כמשתנה סביבה
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="")
 
 def generate_therapist_embeddings(input_csv, output_json):
     # 2. טעינת הנתונים מה-CSV
