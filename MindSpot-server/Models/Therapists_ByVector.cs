@@ -1,5 +1,6 @@
-﻿using Raven.Client.Documents.Indexes;
-using MindSpot_server.Models;
+﻿using MindSpot_server.Models;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector; 
 
 public class Therapists_ByVector : AbstractIndexCreationTask<Therapist>
 {
@@ -8,14 +9,13 @@ public class Therapists_ByVector : AbstractIndexCreationTask<Therapist>
         Map = therapists => from therapist in therapists
                             select new
                             {
-                                // אנחנו מאנדקסים את הווקטור ואת ההתמחויות
-                                therapist.EmbeddingVector,
-                                therapist.Bio,
-                                therapist.Specialties,
-                                therapist.FullName
+                                // שימוש בפונקציה CreateVector כדי להכריח את רייבן לזהות את המערך
+                                EmbeddingVector = CreateVector(therapist.EmbeddingVector)
                             };
 
-        // הגדרת השדה כווקטור לחיפוש
-        Index(x => x.EmbeddingVector, FieldIndexing.Search);
+        Configuration.Add("Indexing.Static.SearchEngineType", "Corax");
+
+        // הגדרת האופציות לווקטור
+        Vector(x => x.EmbeddingVector, options => options.Dimensions(1536));
     }
 }

@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
+  UserCheck,
+  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -10,9 +12,11 @@ import {
   LogOut,
 } from "lucide-react";
 
+// רשימת הניווט המעודכנת הכוללת את Patients ו-Analytics
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
   { label: "Therapists", icon: Users, path: "/admin/therapists" },
+  { label: "Patients", icon: UserCheck, path: "/admin/patients" },
   { label: "Settings", icon: Settings, path: "/admin/settings" },
 ];
 
@@ -21,17 +25,20 @@ const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // הסרנו את הגדרת הטיפוס path: string
+  // בדיקה אם הנתיב הנוכחי פעיל (בלי הגדרת טיפוסים)
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
+    // ניקוי ה-Token מה-LocalStorage
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("token");
+    // חזרה לדף הלוגין
     navigate("/admin-login");
   };
 
   return (
     <>
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav - מופיע רק במסכים קטנים */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-background/95 backdrop-blur-md py-2 md:hidden">
         {navItems.map((item) => {
           const active = isActive(item.path);
@@ -50,13 +57,13 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar - מופיע במסכים בינוניים ומעלה */}
       <aside
         className={`hidden md:flex flex-col border-r border-border bg-card/60 backdrop-blur-sm transition-all duration-300 shrink-0 ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        {/* Logo */}
+        {/* Logo Section */}
         <div className="flex items-center gap-2 px-4 py-5 border-b border-border/50">
           {!collapsed && (
             <span className="font-display text-lg font-semibold text-foreground">
@@ -77,7 +84,7 @@ const AdminSidebar = () => {
           </button>
         </div>
 
-        {/* Nav */}
+        {/* Navigation Items */}
         <nav className="flex-1 py-4 space-y-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -98,7 +105,7 @@ const AdminSidebar = () => {
           })}
         </nav>
 
-        {/* Logout */}
+        {/* Logout Button */}
         <div className="border-t border-border/50 p-3">
           <button
             onClick={handleLogout}

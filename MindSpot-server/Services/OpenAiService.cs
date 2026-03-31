@@ -4,6 +4,7 @@ using OpenAI.Embeddings;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DotNetEnv;
 
 namespace MindSpot_server.Services
 {
@@ -14,9 +15,18 @@ namespace MindSpot_server.Services
 
         public OpenAiService(IConfiguration configuration)
         {
-            var apiKey = configuration["OpenAI:ApiKey"];
+            // טעינת ה-env
+            DotNetEnv.Env.Load();
 
-            // אתחול המודלים - גירסה 4o-mini מעולה לצ'אט מהיר וזול
+            // שליפה ישירה מהסביבה
+            string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+
+            // אם לא מצא ב-env, נסה למשוך מה-Configuration (למקרה ששמת שם)
+            if (string.IsNullOrEmpty(apiKey) || apiKey.Contains("YOUR_KEY"))
+            {
+                apiKey = configuration["OpenAI:ApiKey"];
+            }
+
             _embeddingClient = new EmbeddingClient("text-embedding-3-small", apiKey);
             _chatClient = new ChatClient("gpt-4o-mini", apiKey);
         }

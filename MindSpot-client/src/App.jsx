@@ -9,11 +9,11 @@ import PatientAuthPage from "./pages/PatientAuthPage";
 import TherapistAuthPage from "./pages/TherapistAuthPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminLayout from "./components/admin/AdminLayout";
-import AdminSideBar from "./components/admin/AdminSideBar";
 import AdminOverview from "./pages/admin/AdminOverview";
-import TherapistManagment from "./pages/admin/TherapistManagement";
+import TherapistManagement from "./pages/admin/TherapistManagement";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
+import PatientManagement from "./pages/admin/PatientManagement";
 
 const queryClient = new QueryClient();
 
@@ -32,11 +32,11 @@ const App = () => (
           <Route path="/admin-login" element={<AdminLoginPage />} />
 
           {/* Admin Routes with Layout */}
-          <Route path="/admin" element={<AdminLayout />} >
+          <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOverview />} />
-            <Route path="therapists" element={<TherapistManagment />} />
+            <Route path="therapists" element={<TherapistManagement />} />
+            <Route path="patients" element={<PatientManagement />} />
             <Route path="settings" element={<AdminSettings />} />
-            <Route path="sidebar" element={<AdminSideBar />} />
           </Route>
 
           {/* 404 Route */}

@@ -3,6 +3,9 @@ using MindSpot_server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using DotNetEnv;
+
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +17,8 @@ var documentStore = new DocumentStore
     Urls = ravenSettings.GetSection("Urls").Get<string[]>(),
     Database = ravenSettings["Database"]
 }.Initialize();
+
+new Therapists_ByVector().Execute(documentStore);
 
 // הזרקת ה-DocumentStore כ-Singleton לשימוש בכל ה-Controllers 
 builder.Services.AddSingleton<IDocumentStore>(documentStore);

@@ -34,6 +34,16 @@ namespace server.Controllers
             return Ok(therapists);
         }
 
+
+        // 2. קבלת כל המטופלים לטבלת הניהול
+        [HttpGet("patients")]
+        public async Task<IActionResult> GetAllPatients()
+        {
+            using var session = _store.OpenAsyncSession();
+            var patients = await session.Query<Patient>().ToListAsync();
+            return Ok(patients);
+        }
+
         // 2. קבלת סטטיסטיקות כלליות ל-Dashboard (Overview)
         [HttpGet("summary")]
         public async Task<IActionResult> GetPlatformSummary()

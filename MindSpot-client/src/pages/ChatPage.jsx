@@ -1,28 +1,30 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ArrowLeft, Loader2, User, Star, Quote } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Send, ArrowLeft, Loader2, User, Star, Quote, Check, Phone, Mail, X } from "lucide-react";
+import { Button } from "../components/ui/button"; 
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../hooks/use-toast";
 
-const CHAT_URL = "https://localhost:7160/api/chat/send"; 
+const CHAT_URL = "https://localhost:7160/api/chat/send";
 
 const ChatPage = () => {
   const location = useLocation();
-  // חילוץ הנתונים - ודואים שימוש בנתונים מה-Triage
   const { matches, summary } = location.state || { matches: [], summary: "" };
 
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: summary 
-        ? `Hello, I'm Serenity. 💚 I've carefully reviewed your assessment, and I want you to know that I'm here with you.\n\nIt sounds like you're going through a challenging time, but you've taken a brave first step today. Based on what you shared, I've matched you with specialists who are experts in supporting people through exactly these types of feelings.\n\nHow are you holding up at this moment?`
-        : "Hello, I'm Serenity. 💚 I'm here to listen and support you on your wellness journey. How are you feeling today?",
+      content: summary
+        ? `Hello, I'm Serenity. 💚 Based on our assessment, I've found the best matches for you. Feel free to reach out to them directly or continue talking with me.`
+        : "Hello, I'm Serenity. 💚 How can I support you today?",
     },
   ]);
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTherapist, setSelectedTherapist] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const bottomRef = useRef(null);
   const { toast } = useToast();
 
@@ -47,7 +49,7 @@ const ChatPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: allMessages }),
       });
@@ -55,52 +57,13 @@ const ChatPage = () => {
       if (resp.ok) {
         const aiResponseText = await resp.text();
         setMessages((prev) => [...prev, { role: "assistant", content: aiResponseText }]);
-      } else {
-        throw new Error("Failed to get response");
       }
     } catch (e) {
-      console.error(e);
-      toast({
-        title: "Connection issue",
-        description: "Serenity is momentarily unreachable. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Connection issue", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleBookSession = async (therapist) => {
-  // 1. קודם כל, נשלח הודעה בצ'אט כדי שהמשתמש יראה שזה קרה
-  const bookingText = `I would like to book a session with ${therapist.fullName}, please.`;
-  send(bookingText);
-
-  try {
-    const token = localStorage.getItem("token");
-    const patientName = "Patient"; // כאן כדאי לשלוף את השם האמיתי מה-localStorage אם שמרת אותו
-
-    const response = await fetch("https://localhost:7160/api/triage/book-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        therapistId: therapist.id, // חשוב להעביר את ה-ID של המטפל
-        patientName: patientName
-      }),
-    });
-
-    if (response.ok) {
-      toast({
-        title: "Request Sent!",
-        description: `A notification was sent to ${therapist.fullName}. They will contact you soon.`,
-      });
-    }
-  } catch (error) {
-    console.error("Booking error:", error);
-  }
-};
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -109,71 +72,54 @@ const ChatPage = () => {
     }
   };
 
+  // לחיצה פותחת ישר את המודל עם הפרטים
+  const handleConnectClick = (therapist) => {
+    setSelectedTherapist(therapist);
+    setIsModalOpen(true);
+    
+    // אופציונלי: שליחת הודעה לצ'אט כדי לתעד את הבחירה
+    setMessages(prev => [...prev, { 
+      role: "assistant", 
+      content: `Excellent choice. I've opened the contact details for ${therapist.fullName}.` 
+    }]);
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative">
       {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 z-10">
+      <header className="border-b bg-background/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 z-20 shadow-sm">
         <Link to="/">
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ArrowLeft size={20} />
-          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full"><ArrowLeft size={20} /></Button>
         </Link>
         <div>
-          <h1 className="font-display text-lg font-semibold">Serenity</h1>
-          <p className="text-xs text-muted-foreground italic">Your AI Companion</p>
+          <h1 className="font-bold text-lg leading-none">Serenity</h1>
+          <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">AI Assistant</p>
         </div>
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-primary font-medium">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          Online
-        </span>
       </header>
 
-      {/* Recommended Therapists Section */}
-      {matches && matches.length > 0 && (
-        <div className="bg-muted/20 border-b border-border p-4 overflow-x-auto no-scrollbar shadow-inner">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Star size={14} className="text-amber-500 fill-amber-500" />
-            <h2 className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Top Matches For You</h2>
-          </div>
-          <div className="flex gap-4 pb-2">
+      {/* Recommended Area */}
+      {matches?.length > 0 && (
+        <div className="bg-muted/10 border-b p-4 overflow-x-auto no-scrollbar shadow-inner">
+          <div className="flex gap-4">
             {matches.map((therapist, idx) => (
-              <motion.div 
-                key={therapist.id || idx}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.1 }}
-                className="min-w-[280px] max-w-[300px] bg-card border border-border rounded-2xl p-4 shadow-sm flex flex-col justify-between"
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="min-w-[260px] bg-card border rounded-[2rem] p-5 shadow-sm flex flex-col justify-between border-primary/10"
               >
                 <div>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="bg-primary/10 p-2.5 rounded-full">
-                      <User size={20} className="text-primary" />
-                    </div>
+                    <div className="bg-primary/10 p-2 rounded-full"><User size={18} className="text-primary" /></div>
                     <div>
-                      <h3 className="font-bold text-sm leading-tight">{therapist.fullName}</h3>
-                      <p className="text-[11px] font-medium text-primary uppercase tracking-tighter">
-                        {therapist.specialties || "Mental Health Specialist"}
-                      </p>
+                      <h3 className="font-bold text-sm">{therapist.fullName}</h3>
+                      <p className="text-[10px] text-primary/70 font-bold uppercase">{therapist.specialties || "Specialist"}</p>
                     </div>
                   </div>
-                  
-                  {therapist.bio && (
-                    <div className="relative mb-3 bg-muted/30 p-2 rounded-lg italic text-[11px] text-muted-foreground leading-relaxed">
-                      <Quote size={10} className="absolute -top-1 -left-1 text-primary/40" />
-                      <p className="line-clamp-3 pl-2">
-                        {therapist.bio}
-                      </p>6
-                    </div>
-                  )}
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 italic mb-4">"{therapist.bio}"</p>
                 </div>
-
-                <Button 
-                  onClick={() => handleBookSession(therapist)}
-                  variant="default" 
-                  className="w-full h-9 text-xs rounded-xl shadow-sm hover:shadow-md transition-all font-semibold"
-                  disabled={isLoading}
-                >
-                  Book Session
+                <Button onClick={() => handleConnectClick(therapist)} className="w-full rounded-xl h-10 text-xs font-bold shadow-sm">
+                  Connect Now
                 </Button>
               </motion.div>
             ))}
@@ -181,52 +127,97 @@ const ChatPage = () => {
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent">
-        <AnimatePresence initial={false}>
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-none"
-                    : "bg-card text-card-foreground border border-border rounded-tl-none"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent to-primary/5">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[80%] p-4 rounded-[1.5rem] text-sm shadow-sm ${
+              msg.role === "user" ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/20" : "bg-card border rounded-tl-none"
+            }`}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
-      {/* Chat Input */}
-      <div className="border-t border-border bg-background p-4">
-        <div className="max-w-3xl mx-auto flex items-end gap-2 bg-muted/30 rounded-2xl p-2 border border-border focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+      {/* Input Field */}
+      <div className="p-4 bg-background border-t">
+        <div className="max-w-3xl mx-auto flex items-end gap-2 bg-muted/50 rounded-3xl p-2 border border-border focus-within:ring-2 ring-primary/20 transition-all">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message to Serenity..."
+            placeholder="Talk to Serenity..."
+            className="flex-1 bg-transparent border-none px-4 py-3 text-sm focus:outline-none resize-none min-h-[44px]"
             rows={1}
-            className="flex-1 resize-none bg-transparent border-none px-3 py-2 text-sm focus:outline-none min-h-[44px] max-h-[150px]"
           />
-          <Button
-            onClick={() => send()}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            className="rounded-xl h-11 w-11 shrink-0 shadow-lg"
-          >
+          <Button onClick={() => send()} disabled={!input.trim() || isLoading} size="icon" className="rounded-2xl h-11 w-11 shrink-0">
             {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </Button>
         </div>
       </div>
+
+      {/* --- DIRECT CONTACT MODAL --- */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white border-none w-full max-w-md rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative"
+            >
+              {/* כפתור סגירה בולט */}
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"
+              >
+                <X size={24}/>
+              </button>
+
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <Star className="text-primary fill-primary" size={36} />
+                </div>
+                
+                <div>
+                  {/* כותרת בשחור בולט */}
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                    Contact {selectedTherapist?.fullName}
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-2 px-4 font-medium">
+                    You can reach out directly via phone to schedule your first session.
+                  </p>
+                </div>
+                
+                <div className="space-y-3 pt-2">
+                  {/* כרטיס טלפון - צבעים בולטים */}
+                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 hover:border-primary/50 transition-all group">
+                    <div className="bg-primary/20 p-2.5 rounded-xl group-hover:bg-primary/30 transition-colors">
+                      <Phone size={22} className="text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] text-primary font-black uppercase tracking-widest">Direct Phone</p>
+                      <span className="font-bold text-md text-slate-900">
+                        {selectedTherapist?.phone || "050-888-7766"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="w-full rounded-2xl h-14 text-base font-black shadow-xl shadow-primary/30 hover:scale-[1.02] transition-transform" 
+                  variant="default"
+                >
+                  Got it, thanks!
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
