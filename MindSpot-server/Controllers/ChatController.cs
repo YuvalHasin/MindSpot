@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Services; // ודאי שה-Namespace נכון
 using OpenAI.Chat;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Patient")]
 public class ChatController : ControllerBase
 {
     private readonly OpenAiService _openAiService;

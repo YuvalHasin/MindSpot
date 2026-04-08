@@ -32,7 +32,7 @@ const AdminLoginPage = () => {
       localStorage.setItem("adminToken", data.token);
       
       // 3. מעבר לדף האדמין
-      navigate("/admin");
+      navigate("/admin-dashboard");
     } else {
       setError(data.message || "Login failed");
     }

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
 using MindSpot_server.Services;
+using OpenAI.Chat;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using System;
@@ -13,7 +14,7 @@ namespace server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Patient")]
     public class TriageController : ControllerBase
     {
         private readonly IAsyncDocumentSession _session;
@@ -28,42 +29,62 @@ namespace server.Controllers
         [HttpPost("submit")]
         public async Task<IActionResult> SubmitTriage([FromBody] TriageRequest request)
         {
+            // 1. טעינת המטופל מה-DB
             var patient = await _session.LoadAsync<Patient>(request.PatientId);
             if (patient == null) return NotFound("Patient not found");
 
             try
             {
-                // 1. ניתוח AI וסיכום
+                // 2. ניתוח OpenAI - יצירת סיכום ווקטור (Embedding)
                 var summary = await _openAiService.SummarizePatientStateAsync(request.AnswersText);
                 var embedding = await _openAiService.GenerateEmbeddingAsync(request.AnswersText);
 
-                // 2. עדכון המטופל
+                if (embedding == null || embedding.Length == 0)
+                    return BadRequest("Vector generation failed.");
+
+                // 3. עדכון נתוני המטופל (לצורך תצוגה מהירה בפרופיל)
                 patient.LastTriageSummary = summary;
                 patient.TriageEmbedding = embedding;
                 patient.LastTriageDate = DateTime.UtcNow;
 
-                // 3. חישוב מרחק וקטורי בשיטה הנתמכת (Legacy/Standard Spatial)
-                var matchedTherapists = await _session.Advanced.AsyncRawQuery<Therapist>(
-                    "from Therapists " +
-                    "order by spatial.distance(spatial.point(EmbeddingVector[0], EmbeddingVector[1]), spatial.point($lat, $lon))"
-                )
-                .AddParameter("lat", embedding[0])
-                .AddParameter("lon", embedding[1])
-                .Take(3)
-                .ToListAsync();
 
-                // 4. מנגנון גיבוי - אם החיפוש הוקטורי לא החזיר תוצאות (למשל אם ה-DB ריק מוקטורים)
+                // 4. חיפוש וקטורי מדויק (כמו ב-FindMatch)
+                // אנחנו פונים לאינדקס שבנינו 'Therapists/ByVector'
+                var queryText = @"from index 'Therapists/ByVector' 
+                          where vector.search(EmbeddingVector, $vector, 0.1)";
+
+                var query = _session.Advanced.AsyncRawQuery<Therapist>(queryText);
+
+                // הזרקת הוקטור כ-List של Double (הפורמט המועדף על RavenDB)
+                query.AddParameter("vector", embedding.Select(f => (double)f).ToList());
+
+                var matchedTherapists = await query.Take(3).ToListAsync();
+
+                // 5. מנגנון גיבוי - אם האינדקס לא החזיר תוצאות
                 if (matchedTherapists == null || matchedTherapists.Count == 0)
                 {
                     matchedTherapists = await _session.Query<Therapist>().Take(3).ToListAsync();
                 }
 
+                // 6. יצירת ChatSession ושמירה להיסטוריה (החלק החדש)
+                var historyRecord = new ChatSession
+                {
+                    PatientId = request.PatientId,
+                    CreatedAt = DateTime.UtcNow,
+                    Summary = summary,
+                    MessageCount = 1, // מייצג את שליחת השאלון
+                    RecommendedTherapistId = matchedTherapists.FirstOrDefault()?.Id
+                };
+
+                await _session.StoreAsync(historyRecord);
+
+                // שמירת כל השינויים (גם המטופל וגם ה-ChatSession)
                 await _session.SaveChangesAsync();
 
-                // 5. החזרת תשובה בפורמט שה-React מצפה לו
+                // 7. החזרת תשובה ל-React
                 return Ok(new
                 {
-                    message = "Triage processed successfully",
+                    message = "Triage processed and saved to history",
                     patientSummary = summary,
                     matches = matchedTherapists,
                     riskLevel = request.AnswersText.Contains("crisis") ? "High" : "Standard"

@@ -66,7 +66,7 @@ const PatientAuthPage = () => {
           }
 
           // מעבר לדף השאלון (Triage) עכשיו כשיש הרשאה
-          navigate("/triage");
+          navigate("/patient-dashboard");
         } else {
           // --- לוגיקה למקרה של הרשמה (Register) ---
           // במקום לעבור דף, אנחנו מעבירים את הטופס למצב "התחברות"

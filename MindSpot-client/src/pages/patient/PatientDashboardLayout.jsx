@@ -1,5 +1,5 @@
 import { Outlet, Navigate } from "react-router-dom";
-import PatientSidebar from "../../components/patient/PatientSidebar";
+import PatientSidebar from "@/components/PatientSidebar";
 
 const PatientDashboardLayout = () => {
   const token = localStorage.getItem("token");

@@ -10,7 +10,7 @@ namespace server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // הגנה ברמת הקונטרולר - רק אדמין נכנס
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IDocumentStore _store;
@@ -61,8 +61,6 @@ namespace server.Controllers
             {
                 totalTherapists = totalTherapists,
                 activePatients = totalPatients,
-                pendingApplications = 5, // דוגמה לערך סטטי או שאילתה נוספת
-                totalRevenue = "₪24,650"
             });
         }
 
@@ -100,28 +98,42 @@ namespace server.Controllers
             return Ok(new { message = "Therapist deleted successfully" });
         }
 
-        // 5. שינוי סיסמת אדמין (הגדרות)
-        [HttpPost("change-password")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        // עדכון שם ומייל
+        [HttpPut("update-profile")]
+        public async Task<IActionResult> UpdateAdminProfile([FromBody] Admin updatedData)
         {
             using var session = _store.OpenAsyncSession();
+            var admin = await session.LoadAsync<Admin>("admins/1"); // או המזהה האמיתי
 
-            // שליפת האדמין (נניח שיש רק אחד עם ה-ID הזה)
+            if (admin == null) return NotFound();
+
+            admin.FullName = updatedData.FullName;
+            admin.Email = updatedData.Email;
+
+            await session.SaveChangesAsync();
+            return Ok(new { message = "Profile updated successfully" });
+        }
+
+        // עדכון סיסמה בלבד
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest request)
+        {
+            using var session = _store.OpenAsyncSession();
             var admin = await session.LoadAsync<Admin>("admins/1");
 
             if (admin == null) return NotFound();
 
-            // הצפנת הסיסמה החדשה
+            // בדיקת סיסמה ישנה
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, admin.PasswordHash))
+            {
+                return BadRequest(new { message = "Current password is incorrect" });
+            }
+
+            // הצפנת סיסמה חדשה
             admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
             await session.SaveChangesAsync();
-            return Ok(new { message = "Password updated successfully" });
+            return Ok(new { message = "Password changed successfully" });
         }
-    }
-
-    // DTO פשוט לשינוי סיסמה
-    public class ChangePasswordRequest
-    {
-        public string NewPassword { get; set; }
     }
 }

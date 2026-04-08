@@ -104,7 +104,7 @@ const Navbar = () => {
           </Link>
           
           <Button className="mt-2 w-full" size="sm" onClick={handleSupportClick}>
-            Get Support Now
+              Personal Area
           </Button>
 
         </motion.div>

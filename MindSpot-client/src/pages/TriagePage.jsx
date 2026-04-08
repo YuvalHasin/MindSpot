@@ -160,15 +160,6 @@ const TriagePage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border bg-background/80 backdrop-blur-md px-4 py-3 flex items-center gap-3">
-        <Link to="/">
-          <Button variant="ghost" size="icon" className="rounded-full"><ArrowLeft size={20} /></Button>
-        </Link>
-        <div>
-          <h1 className="font-display text-lg font-semibold text-foreground">MindSpot Assessment</h1>
-          <p className="text-xs text-muted-foreground italic">Your privacy is our priority</p>
-        </div>
-      </header>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         {result ? (

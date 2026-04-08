@@ -16,7 +16,7 @@
 
         // השדות שחסרים לך בשגיאות:
         public string? LastTriageSummary { get; set; }   // סיכום ה-AI
-        public float[] TriageEmbedding { get; set; } // הוקטור לשידוך
+        public float[]? TriageEmbedding { get; set; } // הוקטור לשידוך
         public DateTime? LastTriageDate { get; set; }    // תאריך האבחון
 
         public Patient() { }

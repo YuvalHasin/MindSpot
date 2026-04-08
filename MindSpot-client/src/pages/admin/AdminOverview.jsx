@@ -49,9 +49,7 @@ const AdminOverview = () => {
   // הגדרת הכרטיסיות העליונות
   const stats = [
     { label: "Total Therapists", value: data.totalTherapists || 0, icon: Users, trend: "+4" },
-    { label: "Pending Applications", value: data.pendingApplications || 0, icon: Clock },
     { label: "Active Patients", value: data.activePatients || 0, icon: UserCheck, trend: "+12" },
-    { label: "Total Revenue", value: data.totalRevenue || "₪0", icon: DollarSign, trend: "+8%" },
   ];
 
   return (
