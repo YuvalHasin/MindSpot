@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, ArrowLeft, Loader2, User, Star, Quote, Check, Phone, Mail, X } from "lucide-react";
-import { Button } from "../components/ui/button"; 
+import { Button } from "../../components/ui/button"; 
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "../hooks/use-toast";
+import { useToast } from "../../hooks/use-toast";
 
 const CHAT_URL = "https://localhost:7160/api/chat/send";
 
@@ -15,7 +15,7 @@ const ChatPage = () => {
     {
       role: "assistant",
       content: summary
-        ? `Hello, I'm Serenity. 💚 Based on our assessment, I've found the best matches for you. Feel free to reach out to them directly or continue talking with me.`
+        ? `Hello, I'm Serenity. 💚 Based on our assessment: "${summary}", I've found the best matches for you. Feel free to reach out to them directly or continue talking with me.`
         : "Hello, I'm Serenity. 💚 How can I support you today?",
     },
   ]);
@@ -42,7 +42,7 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 
       const resp = await fetch(CHAT_URL, {
@@ -55,9 +55,14 @@ const ChatPage = () => {
       });
 
       if (resp.ok) {
-        const aiResponseText = await resp.text();
-        setMessages((prev) => [...prev, { role: "assistant", content: aiResponseText }]);
-      }
+  // 1. נסה לקרוא את זה כ-JSON
+  const data = await resp.json();
+  
+  // 2. בדוק אם התשובה היא אובייקט עם שדה content או מחרוזת פשוטה
+  const aiMessage = typeof data === 'object' ? data.content : data;
+
+  setMessages((prev) => [...prev, { role: "assistant", content: aiMessage }]);
+}
     } catch (e) {
       toast({ title: "Connection issue", variant: "destructive" });
     } finally {
@@ -200,7 +205,7 @@ const ChatPage = () => {
                     <div className="text-left">
                       <p className="text-[10px] text-primary font-black uppercase tracking-widest">Direct Phone</p>
                       <span className="font-bold text-md text-slate-900">
-                        {selectedTherapist?.phone || "050-888-7766"}
+                        {selectedTherapist?.phoneNumber || "No phone provided"}
                       </span>
                     </div>
                   </div>

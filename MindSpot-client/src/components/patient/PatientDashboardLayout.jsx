@@ -1,8 +1,8 @@
 import { Outlet, Navigate } from "react-router-dom";
-import PatientSidebar from "@/components/PatientSidebar";
+import PatientSidebar from "@/components/patient/PatientSidebar";
 
 const PatientDashboardLayout = () => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   if (!token) return <Navigate to="/auth" replace />;
 
   return (

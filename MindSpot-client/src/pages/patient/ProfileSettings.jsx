@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, User, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // ודאי שהאימפורט קיים בראש הקובץ
+import { Link } from "react-router-dom"; 
 import { ArrowLeft } from "lucide-react";
 
 const ProfileSettings = () => {
@@ -15,12 +15,12 @@ const ProfileSettings = () => {
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
-        const patientId = localStorage.getItem("patientId");
-        if (!patientId) return;
+        const userId = sessionStorage.getItem("userId");
+        if (!userId) return;
 
-        const response = await fetch(`https://localhost:7160/api/patients/details?id=${encodeURIComponent(patientId)}`, {
+        const response = await fetch(`https://localhost:7160/api/patients/details?id=${encodeURIComponent(userId)}`, {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
+            "Authorization": `Bearer ${sessionStorage.getItem("token")}`
           }
         });
 
@@ -61,10 +61,10 @@ const ProfileSettings = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+          "Authorization": `Bearer ${sessionStorage.getItem("token")}`
         },
         body: JSON.stringify({
-          Id: localStorage.getItem("patientId"),
+          Id: Number(sessionStorage.getItem("userId")),
           FullName: form.fullName,
           Email: form.email
         }),

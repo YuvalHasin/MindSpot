@@ -1,5 +1,5 @@
 import { LayoutDashboard, History, UserCog, ShieldCheck, LogOut, ArrowLeft, MessageSquare } from "lucide-react";
-import { NavLink } from "./patient/NavLink";
+import { NavLink } from "./NavLink";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 

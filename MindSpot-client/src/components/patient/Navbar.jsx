@@ -62,7 +62,7 @@ const Navbar = () => {
             </a>
           ))}
           <Button size="sm" variant="outline" onClick={handleTherapistClick}>
-            For Professionals
+            Join as Therapist
           </Button>
           
           <Button size="sm" onClick={handleSupportClick}>

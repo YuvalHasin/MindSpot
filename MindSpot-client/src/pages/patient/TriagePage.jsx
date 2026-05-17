@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "../components/ui/button.jsx";
+import { Button } from "../../components/ui/button.jsx";
 import { ArrowLeft, ArrowRight, Brain, AlertTriangle, Shield, Loader2, CheckCircle2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const emotionalCategories = [
   { id: "anxiety", label: "Anxiety & Worry", icon: "😰" },
@@ -36,8 +36,8 @@ const TriagePage = () => {
   setError("");
 
   try {
-    const token = localStorage.getItem("token");
-    const patientId = localStorage.getItem("patientId");
+    const token = sessionStorage.getItem("token");
+    const userId = sessionStorage.getItem("userId");
 
     const response = await fetch("https://localhost:7160/api/Triage/submit", {
       method: "POST",
@@ -46,16 +46,13 @@ const TriagePage = () => {
         "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
-        PatientId: patientId,
+        PatientId: Number(userId),
         AnswersText: `Category: ${category}. Urgency: ${urgency}. User context: ${context}`
       }),
     });
 
     if (response.ok) {
       const data = await response.json();
-      
-      // הדפס לקונסול כדי לראות בדיוק מה חזר מהשרת
-      console.log("Server Response:", data);
 
       // חילוץ בטוח - בודק גם אות גדולה וגם קטנה
       const finalMatches = data.matches || data.Matches || [];
@@ -190,7 +187,7 @@ const TriagePage = () => {
             </div>
 
             <Button 
-                onClick={() => navigate("/chat", { 
+                onClick={() => navigate("/patient-dashboard/chat", { 
                   state: { 
                     matches: matches, 
                     summary: result?.summary 

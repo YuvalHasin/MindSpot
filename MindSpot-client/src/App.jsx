@@ -1,24 +1,53 @@
+import React from "react";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+
+// --- קומפוננטת הגנה על נתיבים ---
+const ProtectedRoute = ({ children, redirectTo, roleRequired }) => {
+  const location = useLocation();
+  const token = sessionStorage.getItem("token"); // וודא שזה המפתח שבו אתה שומר את הטוקן
+  const userRole = sessionStorage.getItem("role"); // וודא שזה המפתח שבו אתה שומר את התפקיד (admin/patient)
+
+  // 1. אם אין טוקן בכלל - שלח ללוגין הרלוונטי
+  if (!token) {
+    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+  }
+
+  // 2. אם יש טוקן אבל התפקיד לא מתאים (למשל מטופל שמנסה להיכנס לאדמין)
+  if (roleRequired && userRole !== roleRequired) {
+    return <Navigate to="/" replace />; 
+  }
+
+  // 3. הכל תקין - הצג את הדף
+  return children;
+};
+
+// --- ייבוא דפים (Pages) ---
 import Index from "./pages/Index";
-import ChatPage from "./pages/ChatPage";
-import TriagePage from "./pages/TriagePage";
-import TherapistPage from "./pages/TherapistPage";
-import PatientAuthPage from "./pages/PatientAuthPage";
-import TherapistAuthPage from "./pages/TherapistAuthPage";
+import PatientAuthPage from "./pages/patient/PatientAuthPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import NotFound from "./pages/NotFound";
+
+// Admin Pages & Layout
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import TherapistManagement from "./pages/admin/TherapistManagement";
-import AdminSettings from "./pages/admin/AdminSettings";
-import NotFound from "./pages/NotFound";
 import PatientManagement from "./pages/admin/PatientManagement";
-import PatientDashboardLayout from "./pages/patient/PatientDashboardLayout";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminRequests from "./pages/admin/AdminRequests";
+
+// Patient Pages & Layout
+import PatientDashboardLayout from "./components/patient/PatientDashboardLayout";
 import PatientOverview from "./pages/patient/PatientOverview";
 import SessionHistory from "./pages/patient/SessionHistory";
 import ProfileSettings from "./pages/patient/ProfileSettings";
 import SecuritySettings from "./pages/patient/SecuritySettings";
+import TriagePage from "./pages/patient/TriagePage";
+import ChatPage from "./pages/patient/ChatPage";
+
+// Therapist Pages & Layout
+import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
 
 const queryClient = new QueryClient();
 
@@ -27,32 +56,47 @@ const App = () => (
     <TooltipProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes */}
+          {/* --- נתיבים ציבוריים (פתוחים לכולם) --- */}
           <Route path="/" element={<Index />} />
           <Route path="/patient-auth" element={<PatientAuthPage />} />
-          <Route path="/therapist-auth" element={<TherapistAuthPage />} /> 
-          <Route path="/triage" element={<TriagePage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/therapist-dashboard" element={<TherapistPage />} />
+          <Route path="/therapist-auth" element={<TherapistAuthPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
-          <Route path="/admin-login" element={<AdminLoginPage />} />
-          <Route path="/sessions" element={<SessionHistory />} />
-          <Route path="/profile" element={<ProfileSettings />} />
-          <Route path="security" element={<SecuritySettings />} />
 
-          <Route path="/patient-dashboard" element={<PatientDashboardLayout />}>
+          {/* --- נתיבי מטופל (מוגנים) --- */}
+          <Route 
+            path="/patient-dashboard" 
+            element={
+              <ProtectedRoute redirectTo="/patient-auth" roleRequired="patient">
+                <PatientDashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<PatientOverview />} />
+            <Route path="sessions" element={<SessionHistory />} />
+            <Route path="settings" element={<ProfileSettings />} />
+            <Route path="security" element={<SecuritySettings />} />
+            <Route path="triage" element={<TriagePage />} />
+            <Route path="chat/:sessionId?" element={<ChatPage />} />
           </Route>
 
-          {/* Admin Routes with Layout */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverview />} />
+          {/* --- נתיבי אדמין (מוגנים) --- */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute redirectTo="/admin-login" roleRequired="admin">
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverview />} /> 
+            <Route path="admin-dashboard" element={<AdminOverview />} />
             <Route path="therapists" element={<TherapistManagement />} />
             <Route path="patients" element={<PatientManagement />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="requests" element={<AdminRequests />} />
           </Route>
 
-          {/* 404 Route */}
+          {/* --- דף 404 --- */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

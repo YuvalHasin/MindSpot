@@ -14,18 +14,28 @@ const PatientOverview = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const userId = localStorage.getItem("patientId");
-        const token = localStorage.getItem("token");
-        if (!userId) return;
+        const userId = sessionStorage.getItem("userId");
+        const token = sessionStorage.getItem("token");
+        
+        if (!userId) {
+          console.error("No user ID found in session");
+          return;
+        }
 
         const url = `https://localhost:7160/api/patients/details?id=${encodeURIComponent(userId)}`;
         const response = await fetch(url, {
-          headers: { "Authorization": `Bearer ${token}` }
+          headers: { 
+            "Authorization": `Bearer ${token}`, 
+            "Content-Type": "application/json"
+          }
         });
 
         if (response.ok) {
           const data = await response.json();
           setPatientData(data);
+        } else if (response.status === 401) {
+          // אם הטוקן לא תקף או פג תוקף
+          console.error("Unauthorized access");
         }
       } catch (error) {
         console.error("Error:", error);
