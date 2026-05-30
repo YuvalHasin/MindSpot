@@ -46,7 +46,7 @@ const TriagePage = () => {
         "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
-        PatientId: Number(userId),
+        PatientId: userId,
         AnswersText: `Category: ${category}. Urgency: ${urgency}. User context: ${context}`
       }),
     });

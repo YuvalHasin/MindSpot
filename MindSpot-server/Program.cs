@@ -34,6 +34,10 @@ builder.Services.AddSingleton<IDocumentStore>(documentStore);
 
 // --- הוספת שירות ה-AI ---
 // רישום השירות שיבצע את הסיכום והווקטוריזציה מול OpenAI
+var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+// תיקון קריטי: הזרקת המפתח מתוך ה-env ישירות לקונפיגורציה של השרת
+builder.Configuration["OpenAI:ApiKey"] = openAiKey;
+
 builder.Services.AddSingleton<OpenAiService>();
 
 // --- Module 1: Therapist Verification Services ---

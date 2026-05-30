@@ -61,7 +61,7 @@ const PatientAuthPage = () => {
               sessionStorage.setItem("token", data.token);
           }
           if (data.userId) {
-              sessionStorage.setItem("patientId", data.userId);
+              sessionStorage.setItem("userId", data.userId);
           }
           // ProtectedRoute מצפה ל-"patient" (אותיות קטנות)
           sessionStorage.setItem("role", "patient");
