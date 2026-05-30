@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
+using MindSpot_server.Models.Verification;
 using MindSpot_server.Services;
+using MindSpot_server.Services.Verification;
+using MindSpot_server.Services.Search;
 using Raven.Client.Documents;
 using System.Threading;
 
@@ -12,12 +15,20 @@ using System.Threading;
 public class TherapistsController : ControllerBase
 {
     private readonly IDocumentStore _store;
-    private readonly OpenAiService _openAiService; // הזרקת השירות החדש
+    private readonly OpenAiService _openAiService;
+    private readonly ITherapistVerificationManager _verificationManager;
+    private readonly ITherapistSearchService _searchService;
 
-    public TherapistsController(IDocumentStore store, OpenAiService openAiService)
+    public TherapistsController(
+        IDocumentStore store,
+        OpenAiService openAiService,
+        ITherapistVerificationManager verificationManager,
+        ITherapistSearchService searchService)
     {
         _store = store;
         _openAiService = openAiService;
+        _verificationManager = verificationManager;
+        _searchService = searchService;
     }
 
     [AllowAnonymous]
@@ -152,6 +163,126 @@ public class TherapistsController : ControllerBase
         int count = await session.Query<Notification>()
             .CountAsync(x => x.TherapistId == fullId && !x.IsRead);
         return Ok(new { count });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Module 4: Fuzzy full-text search (Lucene)
+    // GET /api/therapists/search?query=חרדה+ערב&language=עברית&fuzzyDistance=1
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [AllowAnonymous]
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string query,
+        [FromQuery] string? language    = null,
+        [FromQuery] string? city        = null,
+        [FromQuery] int take            = 10,
+        [FromQuery] int skip            = 0,
+        [FromQuery] int fuzzyDistance   = 1,
+        CancellationToken ct            = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return BadRequest(new { error = "query parameter is required." });
+
+        var request = new TherapistSearchRequest
+        {
+            Query         = query,
+            Language      = language,
+            City          = city,
+            Take          = take,
+            Skip          = skip,
+            FuzzyDistance = fuzzyDistance
+        };
+
+        var response = await _searchService.SearchAsync(request, ct);
+        return Ok(response);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Module 1: Two-step therapist license verification
+    // POST /api/therapists/verify
+    // Accepts a multipart form with: therapistId, claimedLicenseNumber,
+    // selfieImage (file), licenseImage (file)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HttpPost("verify")]
+    [RequestSizeLimit(20 * 1024 * 1024)] // 20 MB max for two images
+    public async Task<IActionResult> VerifyTherapist(
+        [FromForm] string therapistId,
+        [FromForm] string claimedLicenseNumber,
+        IFormFile selfieImage,
+        IFormFile licenseImage,
+        CancellationToken cancellationToken)
+    {
+        // ── Input validation ──────────────────────────────────────────────────
+        if (string.IsNullOrWhiteSpace(therapistId))
+            return BadRequest(new { error = "therapistId is required." });
+
+        if (string.IsNullOrWhiteSpace(claimedLicenseNumber))
+            return BadRequest(new { error = "claimedLicenseNumber is required." });
+
+        if (selfieImage is null || selfieImage.Length == 0)
+            return BadRequest(new { error = "selfieImage is required." });
+
+        if (licenseImage is null || licenseImage.Length == 0)
+            return BadRequest(new { error = "licenseImage is required." });
+
+        // Restrict to image content types
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(selfieImage.ContentType, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "selfieImage must be a JPEG, PNG, or WebP image." });
+
+        if (!allowedTypes.Contains(licenseImage.ContentType, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "licenseImage must be a JPEG, PNG, or WebP image." });
+
+        // ── Read image bytes ──────────────────────────────────────────────────
+        byte[] selfieBytes;
+        byte[] licenseBytes;
+
+        using (var ms = new MemoryStream())
+        {
+            await selfieImage.CopyToAsync(ms, cancellationToken);
+            selfieBytes = ms.ToArray();
+        }
+
+        using (var ms = new MemoryStream())
+        {
+            await licenseImage.CopyToAsync(ms, cancellationToken);
+            licenseBytes = ms.ToArray();
+        }
+
+        // ── Run verification pipeline ─────────────────────────────────────────
+        var request = new TherapistVerificationRequest
+        {
+            TherapistId           = therapistId,
+            ClaimedLicenseNumber  = claimedLicenseNumber,
+            SelfieImageBytes      = selfieBytes,
+            LicenseImageBytes     = licenseBytes,
+            SelfieContentType     = selfieImage.ContentType,
+            LicenseContentType    = licenseImage.ContentType
+        };
+
+        var result = await _verificationManager.VerifyAndUpdateTherapistAsync(request, cancellationToken);
+
+        // ── Return appropriate HTTP status ────────────────────────────────────
+        if (result.IsVerified)
+        {
+            return Ok(new
+            {
+                status        = result.Status.ToString(),
+                isVerified    = true,
+                extractedName = result.AiResult.ExtractedFullName,
+                licenseNumber = result.AiResult.ExtractedLicenseNumber,
+                registeredName = result.LicenseResult.RegisteredName
+            });
+        }
+
+        return UnprocessableEntity(new
+        {
+            status        = result.Status.ToString(),
+            isVerified    = false,
+            failureReason = result.FailureReason
+        });
     }
 
 }

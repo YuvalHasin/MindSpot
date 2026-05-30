@@ -1,5 +1,12 @@
 using Raven.Client.Documents;
-using MindSpot_server.Services; 
+using MindSpot_server.Filters;
+using MindSpot_server.Indexes;
+using MindSpot_server.Services;
+using MindSpot_server.Services.Audit;
+using MindSpot_server.Services.Billing;
+using MindSpot_server.Services.Privacy;
+using MindSpot_server.Services.Search;
+using MindSpot_server.Services.Verification;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -18,18 +25,54 @@ var documentStore = new DocumentStore
     Database = ravenSettings["Database"]
 }.Initialize();
 
+// רישום אינדקסים ב-RavenDB — מבוצע פעם אחת בהפעלה
 new Therapists_ByVector().Execute(documentStore);
+new Therapists_BySearch().Execute(documentStore);   // Module 4: Lucene full-text index
 
 // הזרקת ה-DocumentStore כ-Singleton לשימוש בכל ה-Controllers 
 builder.Services.AddSingleton<IDocumentStore>(documentStore);
 
 // --- הוספת שירות ה-AI ---
-// רישום השירות שיבצע את הסיכום והווקטוריזציה מול OpenAI 
+// רישום השירות שיבצע את הסיכום והווקטוריזציה מול OpenAI
 builder.Services.AddSingleton<OpenAiService>();
-// ------------------------------
+
+// --- Module 1: Therapist Verification Services ---
+// HttpClient מוגדר עם timeout ארוך יחסית לקריאות AI
+builder.Services.AddHttpClient("ClaudeApi", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+
+builder.Services.AddScoped<ITherapistAiVerificationService, TherapistAiVerificationService>();
+builder.Services.AddScoped<ILicenseVerificationService, LicenseVerificationService>();
+builder.Services.AddScoped<ITherapistVerificationManager, TherapistVerificationManager>();
+// -------------------------------------------------
+
+// --- Module 2: Patient Privacy & Application-Layer Encryption ---
+// Singleton: EncryptionService טוען את המפתח פעם אחת בלבד
+// Scoped:    PatientPrivacyService  — חי לאורך בקשת HTTP אחת
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<IPatientPrivacyService, PatientPrivacyService>();
+// ---------------------------------------------------------------
+
+// --- Module 3: Billing, Stripe & Cancellation Policy ---
+builder.Services.AddSingleton<IStripeService, StripeService>();
+builder.Services.AddHostedService<AppointmentCancellationJob>();
+// -------------------------------------------------------
+
+// --- Module 4: Lucene Search + Audit Log ---
+builder.Services.AddScoped<ITherapistSearchService, TherapistSearchService>();
+builder.Services.AddSingleton<IAuditService, AuditService>();
+
+// AuditActionFilter: רישום גלובלי כ-ServiceFilter (עם DI)
+// פועל אוטומטית על כל action עם [Audit] attribute
+builder.Services.AddScoped<AuditActionFilter>();
+// -------------------------------------------
 
 // Presentation Layer
-builder.Services.AddControllers(); // תמיכה ב-ASP.NET Core Web API 
+// AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
+builder.Services.AddControllers(opts =>
+    opts.Filters.Add<AuditActionFilter>()); // Module 4: global audit filter 
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
