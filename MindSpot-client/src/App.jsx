@@ -48,6 +48,10 @@ import ChatPage from "./pages/patient/ChatPage";
 
 // Therapist Pages & Layout
 import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
+import TherapistPage from "./pages/therapist/TherapistPage";
+
+// Patient extra pages
+import BookSessionPage from "./pages/patient/BookSessionPage";
 
 const queryClient = new QueryClient();
 
@@ -77,7 +81,18 @@ const App = () => (
             <Route path="security" element={<SecuritySettings />} />
             <Route path="triage" element={<TriagePage />} />
             <Route path="chat/:sessionId?" element={<ChatPage />} />
+            <Route path="book-session" element={<BookSessionPage />} />
           </Route>
+
+          {/* --- נתיבי מטפל (מוגנים) --- */}
+          <Route
+            path="/therapist-dashboard"
+            element={
+              <ProtectedRoute redirectTo="/therapist-auth" roleRequired="therapist">
+                <TherapistPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* --- נתיבי אדמין (מוגנים) --- */}
           <Route 

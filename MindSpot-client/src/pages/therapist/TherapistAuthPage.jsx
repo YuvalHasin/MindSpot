@@ -84,7 +84,7 @@ const TherapistAuthPage = () => {
           sessionStorage.setItem("role", "therapist");
           if (data.userId) sessionStorage.setItem("therapistId", data.userId);
         }
-        setTimeout(() => { navigate("/"); }, 2000);
+        setTimeout(() => { navigate("/therapist-dashboard"); }, 2000);
       } else {
         if (data.errors) {
           const serverErrors = {};

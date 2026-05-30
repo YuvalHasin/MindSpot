@@ -20,6 +20,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { PaymentForm } from "../../components/patient/PaymentForm";
@@ -37,17 +38,23 @@ const STEP = { SELECT: "select", PAYMENT: "payment", SUCCESS: "success" };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getAuthHeader() {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ── Main page component ───────────────────────────────────────────────────────
 export default function BookSessionPage() {
+  const location = useLocation();
+  const navigate  = useNavigate();
+
+  // therapist מגיע מ-ChatPage דרך navigation state
+  const therapist = location.state?.therapist ?? null;
+
   // Step state
   const [step, setStep] = useState(STEP.SELECT);
 
-  // Form state
-  const [therapistId,  setTherapistId]  = useState("");
+  // Form state — therapistId מולא אוטומטית מהמטפל שנבחר
+  const [therapistId,  setTherapistId]  = useState(therapist?.id ?? "");
   const [appointmentAt, setAppointmentAt] = useState("");
   const [notes,        setNotes]        = useState("");
 
@@ -68,7 +75,7 @@ export default function BookSessionPage() {
     setIsLoading(true);
 
     try {
-      const patientId = localStorage.getItem("patientId");
+      const patientId = sessionStorage.getItem("patientId");
 
       // 1a. Create the Appointment document in RavenDB
       const bookRes = await fetch(`${API_URL}/api/billing/book`, {
@@ -168,21 +175,31 @@ export default function BookSessionPage() {
             )}
 
             <form onSubmit={handleBooking} className="space-y-4">
-              {/* Therapist */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Therapist ID
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Therapists/1-A"
-                  value={therapistId}
-                  onChange={(e) => setTherapistId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              {/* Therapist — כרטיס אם הגיע מה-state, שדה טקסט fallback */}
+              {therapist ? (
+                <div className="flex items-center gap-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-200 text-blue-700 font-bold text-sm">
+                    {therapist.fullName?.[0] ?? "T"}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{therapist.fullName}</p>
+                    <p className="text-xs text-gray-500">{therapist.specialties || "Therapist"}</p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Therapist ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Therapists/1-A"
+                    value={therapistId}
+                    onChange={(e) => setTherapistId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
 
               {/* Date & time */}
               <div>
@@ -282,13 +299,13 @@ export default function BookSessionPage() {
             <p className="mt-3 text-xs text-gray-400">
               Appointment ID: <code className="font-mono">{appointmentId}</code>
             </p>
-            <a
-              href="/patient/dashboard"
+            <button
+              onClick={() => navigate("/patient-dashboard")}
               className="mt-6 inline-block rounded-xl bg-blue-600 px-6 py-2.5
                          text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
             >
               Go to Dashboard
-            </a>
+            </button>
           </div>
         )}
 

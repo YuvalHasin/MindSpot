@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ArrowLeft, Loader2, User, Star, Quote, Check, Phone, Mail, X } from "lucide-react";
-import { Button } from "../../components/ui/button"; 
-import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { Send, ArrowLeft, Loader2, User, Star, Calendar } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useToast } from "../../hooks/use-toast";
 
 const CHAT_URL = "https://localhost:7160/api/chat/send";
 
 const ChatPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { matches, summary } = location.state || { matches: [], summary: "" };
 
   const [messages, setMessages] = useState([
@@ -22,8 +23,6 @@ const ChatPage = () => {
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTherapist, setSelectedTherapist] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const bottomRef = useRef(null);
   const { toast } = useToast();
@@ -77,16 +76,11 @@ const ChatPage = () => {
     }
   };
 
-  // לחיצה פותחת ישר את המודל עם הפרטים
+  // לחיצה מנווטת לדף קביעת תור עם פרטי המטפל
   const handleConnectClick = (therapist) => {
-    setSelectedTherapist(therapist);
-    setIsModalOpen(true);
-    
-    // אופציונלי: שליחת הודעה לצ'אט כדי לתעד את הבחירה
-    setMessages(prev => [...prev, { 
-      role: "assistant", 
-      content: `Excellent choice. I've opened the contact details for ${therapist.fullName}.` 
-    }]);
+    navigate("/patient-dashboard/book-session", {
+      state: { therapist }
+    });
   };
 
   return (
@@ -163,66 +157,6 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* --- DIRECT CONTACT MODAL --- */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white border-none w-full max-w-md rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative"
-            >
-              {/* כפתור סגירה בולט */}
-              <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"
-              >
-                <X size={24}/>
-              </button>
-
-              <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Star className="text-primary fill-primary" size={36} />
-                </div>
-                
-                <div>
-                  {/* כותרת בשחור בולט */}
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                    Contact {selectedTherapist?.fullName}
-                  </h2>
-                  <p className="text-sm text-slate-600 mt-2 px-4 font-medium">
-                    You can reach out directly via phone to schedule your first session.
-                  </p>
-                </div>
-                
-                <div className="space-y-3 pt-2">
-                  {/* כרטיס טלפון - צבעים בולטים */}
-                  <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 hover:border-primary/50 transition-all group">
-                    <div className="bg-primary/20 p-2.5 rounded-xl group-hover:bg-primary/30 transition-colors">
-                      <Phone size={22} className="text-primary" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] text-primary font-black uppercase tracking-widest">Direct Phone</p>
-                      <span className="font-bold text-md text-slate-900">
-                        {selectedTherapist?.phoneNumber || "No phone provided"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <Button 
-                  onClick={() => setIsModalOpen(false)} 
-                  className="w-full rounded-2xl h-14 text-base font-black shadow-xl shadow-primary/30 hover:scale-[1.02] transition-transform" 
-                  variant="default"
-                >
-                  Got it, thanks!
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

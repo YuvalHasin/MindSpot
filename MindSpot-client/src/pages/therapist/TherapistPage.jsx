@@ -13,11 +13,11 @@ const TherapistPage = () => {
 
   useEffect(() => {
     const fetchTherapistProfileAndNotifications = async () => {
-      const id = localStorage.getItem("therapistId"); // "Therapists/000..."
-      const token = localStorage.getItem("therapistToken");
+      const id    = sessionStorage.getItem("therapistId");
+      const token = sessionStorage.getItem("token");
 
       if (!id || !token) {
-        window.location.href = "/login";
+        window.location.href = "/therapist-auth";
         return;
       }
       try {
