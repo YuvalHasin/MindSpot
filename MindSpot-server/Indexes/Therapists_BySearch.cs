@@ -1,5 +1,8 @@
 using MindSpot_server.Models;
 using Raven.Client.Documents.Indexes;
+using Raven.Client;
+using System.Linq;
+using Raven.Client.Documents.Linq;
 
 namespace MindSpot_server.Indexes
 {

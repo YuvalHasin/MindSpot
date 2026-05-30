@@ -241,5 +241,10 @@ namespace MindSpot_server.Services.Privacy
                 .Select(m => (m.Role, _enc.Decrypt(m.Content), m.Timestamp))
                 .ToList();
         }
+
+        Task<List<EncryptedChatMessage>> IPatientPrivacyService.GetDecryptedMessagesAsync(string sessionId, CancellationToken ct)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

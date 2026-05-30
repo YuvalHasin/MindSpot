@@ -93,35 +93,36 @@ namespace MindSpot_server.Services.Verification
         // -----------------------------------------------------------------------
 
         private static object BuildClaudeRequest(
-            byte[] selfieBytes, byte[] licenseBytes,
-            string selfieContentType, string licenseContentType,
-            string claimedLicenseNumber)
+      byte[] selfieBytes, byte[] licenseBytes,
+      string selfieContentType, string licenseContentType,
+      string claimedLicenseNumber)
         {
-            // The prompt instructs Claude to return a rigid JSON object — no prose.
-            string prompt = $"""
-                You are an identity verification system for a licensed healthcare platform.
-                You will receive TWO images:
-                  • Image 1 – a live selfie taken by the person at registration time.
-                  • Image 2 – a scan of their official therapist / psychologist license issued by the Ministry of Health.
+            // השימוש ב-$$""" מחייב סוגריים כפולים עבור אינטרפולציה של קוד,
+            // ומשאיר סוגריים בודדים כטקסט רגיל עבור ה-JSON Schema.
+            string prompt = $$"""
+        You are an identity verification system for a licensed healthcare platform.
+        You will receive TWO images:
+          • Image 1 – a live selfie taken by the person at registration time.
+          • Image 2 – a scan of their official therapist / psychologist license issued by the Ministry of Health.
 
-                Claimed license number: {claimedLicenseNumber}
+        Claimed license number: {{claimedLicenseNumber}}
 
-                Perform the following checks and respond ONLY with a single JSON object — no markdown, no explanation:
+        Perform the following checks and respond ONLY with a single JSON object — no markdown, no explanation:
 
-                1. FACE COMPARISON – do the faces in both images belong to the same individual?
-                2. OCR – extract the full name and license number printed on the official document.
-                3. LICENSE NUMBER MATCH – does the extracted license number match the claimed value?
+        1. FACE COMPARISON – do the faces in both images belong to the same individual?
+        2. OCR – extract the full name and license number printed on the official document.
+        3. LICENSE NUMBER MATCH – does the extracted license number match the claimed value?
 
-                Required JSON schema (strictly):
-                {{
-                  "facesMatch": <boolean>,
-                  "confidenceScore": <float 0.0-1.0>,
-                  "extractedFullName": "<string>",
-                  "extractedLicenseNumber": "<string>",
-                  "licenseNumberMatches": <boolean>,
-                  "failureReason": "<empty string on success, explanation on failure>"
-                }}
-                """;
+        Required JSON schema (strictly):
+        {
+          "facesMatch": <boolean>,
+          "confidenceScore": <float 0.0-1.0>,
+          "extractedFullName": "<string>",
+          "extractedLicenseNumber": "<string>",
+          "licenseNumberMatches": <boolean>,
+          "failureReason": "<empty string on success, explanation on failure>"
+        }
+        """;
 
             return new
             {
@@ -129,45 +130,44 @@ namespace MindSpot_server.Services.Verification
                 max_tokens = 512,
                 messages = new[]
                 {
+            new
+            {
+                role = "user",
+                content = new object[]
+                {
+                    // Image 1: selfie
                     new
                     {
-                        role = "user",
-                        content = new object[]
+                        type = "image",
+                        source = new
                         {
-                            // Image 1: selfie
-                            new
-                            {
-                                type = "image",
-                                source = new
-                                {
-                                    type = "base64",
-                                    media_type = selfieContentType,
-                                    data = Convert.ToBase64String(selfieBytes)
-                                }
-                            },
-                            // Image 2: license document
-                            new
-                            {
-                                type = "image",
-                                source = new
-                                {
-                                    type = "base64",
-                                    media_type = licenseContentType,
-                                    data = Convert.ToBase64String(licenseBytes)
-                                }
-                            },
-                            // Instruction text
-                            new
-                            {
-                                type = "text",
-                                text = prompt
-                            }
+                            type = "base64",
+                            media_type = selfieContentType,
+                            data = Convert.ToBase64String(selfieBytes)
                         }
+                    },
+                    // Image 2: license document
+                    new
+                    {
+                        type = "image",
+                        source = new
+                        {
+                            type = "base64",
+                            media_type = licenseContentType,
+                            data = Convert.ToBase64String(licenseBytes)
+                        }
+                    },
+                    // Instruction text
+                    new
+                    {
+                        type = "text",
+                        text = prompt
                     }
                 }
+            }
+        }
             };
         }
-
         private AiVerificationResult ParseClaudeResponse(string responseBody)
         {
             try
