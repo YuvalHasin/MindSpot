@@ -92,5 +92,11 @@ namespace MindSpot_server.Services.Privacy
         /// Returns null when not found.
         /// </summary>
         Task<UserIdentity?> FindByEmailAsync(string email, CancellationToken ct = default);
+
+        /// <summary>
+        /// Returns all decrypted chat messages for a given session document ID.
+        /// </summary>
+        Task<List<MindSpot_server.Models.Privacy.EncryptedChatMessage>> GetDecryptedMessagesAsync(
+            string sessionId, CancellationToken ct = default);
     }
 }

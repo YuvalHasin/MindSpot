@@ -1,5 +1,6 @@
 using MindSpot_server.Models.Audit;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 
 namespace MindSpot_server.Services.Audit

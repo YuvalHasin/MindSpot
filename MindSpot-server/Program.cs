@@ -72,7 +72,7 @@ builder.Services.AddScoped<AuditActionFilter>();
 // Presentation Layer
 // AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
 builder.Services.AddControllers(opts =>
-    opts.Filters.Add<AuditActionFilter>()); // Module 4: global audit filter 
+    opts.Filters.AddService<AuditActionFilter>()); // Module 4: global audit filter (DI-aware)
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>

@@ -57,39 +57,18 @@ namespace MindSpot_server.Services.Search
 
             using var session = _store.OpenAsyncSession();
 
-            // ── Base query against the full-text index ────────────────────────
-            var query = session
-                .Advanced
-                .AsyncDocumentQuery<Therapist, Therapists_BySearch>()
-                .WhereLucene("SearchField", luceneQuery);
+            // ── Execute count + paged results ─────────────────────────────────
+            // IAsyncDocumentQuery is mutable: calling CountLazilyAsync() then
+            // chaining OrderByScore on the same object corrupts internal state.
+            // Fix: build two independent queries via BuildFilteredQuery().
+            var totalCount = await BuildFilteredQuery(session, luceneQuery, request)
+                .CountAsync(ct);
 
-            // ── Structured filters (do NOT apply fuzzy here — exact match) ────
-
-            if (!string.IsNullOrWhiteSpace(request.Language))
-            {
-                // Match the language exactly inside the Languages field
-                query = query.AndAlso()
-                             .Search("Languages", request.Language);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.City))
-            {
-                query = query.AndAlso()
-                             .Search("City", request.City);
-            }
-
-            // ── Execute with total count ──────────────────────────────────────
-            var lazyCount   = query.CountLazilyAsync();
-            var lazyResults = query
+            var therapists = await BuildFilteredQuery(session, luceneQuery, request)
                 .OrderByScore()
                 .Skip(skip)
                 .Take(take)
-                .LazilyAsync();
-
-            await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync(ct);
-
-            var totalCount = await lazyCount.Value;
-            var therapists = await lazyResults.Value;
+                .ToListAsync(ct);
 
             sw.Stop();
 
@@ -120,6 +99,31 @@ namespace MindSpot_server.Services.Search
                 TookMs       = (int)sw.ElapsedMilliseconds,
                 ParsedQuery  = luceneQuery
             };
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Query factory — builds a fresh IAsyncDocumentQuery each time so that
+        // count and results calls do not share mutable state.
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static Raven.Client.Documents.Session.IAsyncDocumentQuery<Therapist>
+            BuildFilteredQuery(
+                Raven.Client.Documents.Session.IAsyncDocumentSession session,
+                string luceneQuery,
+                TherapistSearchRequest request)
+        {
+            var q = session
+                .Advanced
+                .AsyncDocumentQuery<Therapist, Therapists_BySearch>()
+                .WhereLucene("SearchField", luceneQuery);
+
+            if (!string.IsNullOrWhiteSpace(request.Language))
+                q = q.AndAlso().Search("Languages", request.Language);
+
+            if (!string.IsNullOrWhiteSpace(request.City))
+                q = q.AndAlso().Search("City", request.City);
+
+            return q;
         }
 
         // ─────────────────────────────────────────────────────────────────────

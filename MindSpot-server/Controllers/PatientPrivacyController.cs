@@ -183,19 +183,13 @@ namespace MindSpot_server.Controllers
             if (string.IsNullOrWhiteSpace(sessionId))
                 return BadRequest(new { error = "sessionId is required." });
 
-            // PatientPrivacyService exposes a helper for this
-            if (_privacyService is PatientPrivacyService concrete)
+            var messages = await _privacyService.GetDecryptedMessagesAsync(sessionId, ct);
+            return Ok(messages.Select(m => new
             {
-                var messages = await concrete.GetDecryptedMessagesAsync(sessionId, ct);
-                return Ok(messages.Select(m => new
-                {
-                    role      = m.Role,
-                    content   = m.Content,    // plaintext — decrypted
-                    timestamp = m.Timestamp
-                }));
-            }
-
-            return StatusCode(501, new { error = "Method not available on this service implementation." });
+                role      = m.Role,
+                content   = m.Content,    // plaintext — decrypted
+                timestamp = m.Timestamp
+            }));
         }
 
         // ─────────────────────────────────────────────────────────────────────
