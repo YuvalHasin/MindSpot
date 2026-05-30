@@ -79,7 +79,11 @@ const TherapistAuthPage = () => {
       if (response.ok) {
         setIsSuccess(true);
         // שמירת ה-Token אם זה לוגין
-        if (data.token) localStorage.setItem("token", data.token); 
+        if (data.token) {
+          sessionStorage.setItem("token", data.token);
+          sessionStorage.setItem("role", "therapist");
+          if (data.userId) sessionStorage.setItem("therapistId", data.userId);
+        }
         setTimeout(() => { navigate("/"); }, 2000);
       } else {
         if (data.errors) {

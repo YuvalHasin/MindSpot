@@ -56,16 +56,16 @@ const PatientAuthPage = () => {
         
         if (isLogin) {
           // --- לוגיקה למקרה של התחברות (Login) ---
-          // שומרים את הטוקן וה-ID כדי למנוע שגיאות 401 בהמשך
+          // ProtectedRoute קורא מ-sessionStorage — חייב להיות עקבי
           if (data.token) {
-              localStorage.setItem("token", data.token);
+              sessionStorage.setItem("token", data.token);
           }
-          
           if (data.userId) {
-              localStorage.setItem("patientId", data.userId);
+              sessionStorage.setItem("patientId", data.userId);
           }
+          // ProtectedRoute מצפה ל-"patient" (אותיות קטנות)
+          sessionStorage.setItem("role", "patient");
 
-          // מעבר לדף השאלון (Triage) עכשיו כשיש הרשאה
           navigate("/patient-dashboard");
         } else {
           // --- לוגיקה למקרה של הרשמה (Register) ---
