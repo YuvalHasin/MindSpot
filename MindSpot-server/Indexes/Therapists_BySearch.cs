@@ -81,20 +81,17 @@ namespace MindSpot_server.Indexes
             Index(x => x.SearchField,  FieldIndexing.Search);
             Analyze(x => x.SearchField, "StandardAnalyzer");
 
-            // FullName: search-enabled with highest boost
+            // FullName: search-enabled — boost applied at query time (^5 in query string)
             Index(x => x.FullName,     FieldIndexing.Search);
             Analyze(x => x.FullName,   "StandardAnalyzer");
-            Boost(x => x.FullName,     5);
 
-            // Specialties: search-enabled with medium-high boost
+            // Specialties: search-enabled — boost applied at query time (^3 in query string)
             Index(x => x.Specialties,  FieldIndexing.Search);
             Analyze(x => x.Specialties, "StandardAnalyzer");
-            Boost(x => x.Specialties,  3);
 
-            // Languages: search-enabled with medium boost
+            // Languages: search-enabled — boost applied at query time (^2 in query string)
             Index(x => x.Languages,    FieldIndexing.Search);
             Analyze(x => x.Languages,  "StandardAnalyzer");
-            Boost(x => x.Languages,    2);
 
             // Availability and City: basic search, no extra boost
             Index(x => x.Availability, FieldIndexing.Search);
