@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import TherapistSidebar from "../components/therapist/TherapistSidebar";
-import StatsOverview from "../components/therapist/StatsOverview";
-import ConsultationQueue from "../components/therapist/ConsultationQueue";
-import ActiveSession from "../components/therapist/ActiveSession";
-import RecentSessions from "../components/therapist/RecentSessions";
+import TherapistSidebar from "../../components/therapist/TherapistSidebar";
+import StatsOverview from "./StatsOverview";
+import ConsultationQueue from "./ConsultationQueue";
+import ActiveSession from "./ActiveSession";
+import RecentSessions from "./RecentSessions";
 import { Bell, Calendar, User, Clock } from "lucide-react";
 
 const TherapistPage = () => {

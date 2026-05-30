@@ -29,7 +29,6 @@ import { PaymentForm } from "../../components/patient/PaymentForm";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const API_URL         = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 const SESSION_PRICE   = 350;    // ILS — in production, load from therapist profile
 const SESSION_CURRENCY = "ils";
 
@@ -75,10 +74,10 @@ export default function BookSessionPage() {
     setIsLoading(true);
 
     try {
-      const patientId = sessionStorage.getItem("patientId");
+      const patientId = sessionStorage.getItem("userId");
 
       // 1a. Create the Appointment document in RavenDB
-      const bookRes = await fetch(`${API_URL}/api/billing/book`, {
+      const bookRes = await fetch(`https://localhost:7160/api/billing/book`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
         body: JSON.stringify({
@@ -99,7 +98,7 @@ export default function BookSessionPage() {
       const { appointmentId: newApptId } = await bookRes.json();
 
       // 1b. Request a Stripe PaymentIntent → get clientSecret
-      const intentRes = await fetch(`${API_URL}/api/billing/payment-intent`, {
+      const intentRes = await fetch(`https://localhost:7160/api/billing/payment-intent`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
         body: JSON.stringify({ appointmentId: newApptId }),
