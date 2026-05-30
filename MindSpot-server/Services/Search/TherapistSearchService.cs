@@ -112,10 +112,13 @@ namespace MindSpot_server.Services.Search
                 string luceneQuery,
                 TherapistSearchRequest request)
         {
+            // The luceneQuery already contains explicit field names (FullName:..., Specialties:..., etc.)
+            // so we pass it to the special "@all_fields" field which lets Lucene parse the
+            // field prefixes inside the query string itself.
             var q = session
                 .Advanced
                 .AsyncDocumentQuery<Therapist, Therapists_BySearch>()
-                .WhereLucene("SearchField", luceneQuery);
+                .WhereLucene("@all_fields", luceneQuery);
 
             if (!string.IsNullOrWhiteSpace(request.Language))
                 q = q.AndAlso().Search("Languages", request.Language);
@@ -131,12 +134,25 @@ namespace MindSpot_server.Services.Search
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Converts a free-text input into a Lucene query string with per-token fuzzy matching.
+        /// Converts a free-text input into a multi-field Lucene query string that
+        /// actually activates the boost weights defined in the index.
         ///
-        /// Input:  "חרדה ערב"           Output: "חרדה~1 OR ערב~1"
-        /// Input:  "CBT english"        Output: "CBT OR english~1"  (short token = exact)
-        /// Input:  "anxeity therapist"  Output: "anxeity~1 OR therapist~1"
-        ///         (Lucene fuzzy corrects "anxeity" → "anxiety" at distance 1)
+        /// Each token is searched across four fields with different boost factors (^N),
+        /// mirroring the Boost() calls in Therapists_BySearch:
+        ///   FullName    ^5  — exact name match ranks highest
+        ///   Specialties ^3  — specialty match is very relevant
+        ///   Languages   ^2  — language preference
+        ///   SearchField ^1  — bio / availability catch-all
+        ///
+        /// Example output for query "חרדה ערב" with fuzzyDistance=1:
+        ///   (FullName:חרדה~1)^5 OR (Specialties:חרדה~1)^3 OR (Languages:חרדה~1)^2 OR SearchField:חרדה~1
+        ///   OR
+        ///   (FullName:ערב~1)^5 OR (Specialties:ערב~1)^3 OR (Languages:ערב~1)^2 OR SearchField:ערב~1
+        ///
+        /// Why this matters:
+        ///   WhereLucene("SearchField", query) searched only SearchField — the boost
+        ///   fields were indexed but never queried, so Boost() had zero effect.
+        ///   This query targets all four fields so Lucene can apply their weights.
         /// </summary>
         private static string BuildLuceneQuery(string rawQuery, int fuzzyDistance)
         {
@@ -153,18 +169,22 @@ namespace MindSpot_server.Services.Search
             if (!tokens.Any())
                 return "*:*";
 
+            // (field:token~N)^boost — parentheses required when combining field+fuzzy+boost
             var sb = new StringBuilder();
             for (int i = 0; i < tokens.Count; i++)
             {
                 if (i > 0) sb.Append(" OR ");
 
                 var token = EscapeLuceneSpecialChars(tokens[i]);
+                var fuzzy = (fuzzyDistance > 0 && token.Length >= MinLengthForFuzzy)
+                    ? $"~{fuzzyDistance}"
+                    : string.Empty;
 
-                // Apply fuzzy only for tokens long enough and when distance > 0
-                if (fuzzyDistance > 0 && token.Length >= MinLengthForFuzzy)
-                    sb.Append($"{token}~{fuzzyDistance}");
-                else
-                    sb.Append(token);
+                // One token → four field clauses, each with its boost weight
+                sb.Append($"(FullName:{token}{fuzzy})^5");
+                sb.Append($" OR (Specialties:{token}{fuzzy})^3");
+                sb.Append($" OR (Languages:{token}{fuzzy})^2");
+                sb.Append($" OR SearchField:{token}{fuzzy}");
             }
 
             return sb.ToString();
