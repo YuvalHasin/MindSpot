@@ -9,9 +9,6 @@
  *  3. Raw card numbers are sent DIRECTLY to Stripe's servers — never to ours.
  *  4. We only receive a PaymentIntent ID (opaque token) once payment succeeds.
  *
- * Required packages (install once):
- *   npm install @stripe/stripe-js @stripe/react-stripe-js
- *
  * Props:
  *   clientSecret   {string}   — from POST /api/billing/payment-intent
  *   appointmentId  {string}   — RavenDB appointment ID
@@ -27,9 +24,10 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // ── Currency formatter ────────────────────────────────────────────────────────
-
 const CURRENCY_SYMBOLS = { ils: "₪", usd: "$", eur: "€" };
 
 function formatAmount(amount, currency) {
@@ -38,31 +36,27 @@ function formatAmount(amount, currency) {
 }
 
 // ── Inner form (must be used inside <Elements> provider) ─────────────────────
-
 export function PaymentForm({ clientSecret, appointmentId, amount, currency, onSuccess, onError }) {
   const stripe   = useStripe();
   const elements = useElements();
 
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [isProcessing,   setIsProcessing]   = useState(false);
+  const [statusMessage,  setStatusMessage]  = useState("");
+  const [isSuccess,      setIsSuccess]      = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements) return;   // Stripe.js not yet loaded
+    if (!stripe || !elements) return;
 
     setIsProcessing(true);
     setStatusMessage("");
 
-    // confirmPayment sends the tokenised card data directly to Stripe.
-    // Our server never sees a raw card number.
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // Redirect URL for 3D Secure / bank-redirect flows
         return_url: `${window.location.origin}/payment-complete?appointmentId=${appointmentId}`,
       },
-      // Don't redirect if the payment can be confirmed without a redirect
       redirect: "if_required",
     });
 
@@ -76,6 +70,7 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
 
     if (paymentIntent?.status === "succeeded") {
       setStatusMessage("Payment successful! Booking confirmed.");
+      setIsSuccess(true);
       onSuccess?.({ paymentIntentId: paymentIntent.id });
     } else {
       setStatusMessage(`Payment status: ${paymentIntent?.status}`);
@@ -85,9 +80,10 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Stripe-hosted card input — PCI compliant, card data never reaches our server */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-5">
+
+      {/* Stripe-hosted card input */}
+      <div className="rounded-xl border border-border bg-background p-4">
         <PaymentElement
           options={{
             layout: "tabs",
@@ -99,8 +95,10 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
       {/* Status message */}
       {statusMessage && (
         <p
-          className={`text-sm text-center font-medium ${
-            statusMessage.includes("successful") ? "text-green-600" : "text-red-500"
+          className={`text-sm text-center font-medium rounded-xl px-4 py-2.5 ${
+            isSuccess
+              ? "bg-green-50 border border-green-100 text-green-700"
+              : "bg-red-50 border border-red-100 text-red-600"
           }`}
         >
           {statusMessage}
@@ -108,38 +106,33 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
       )}
 
       {/* Charge summary */}
-      <div className="flex items-center justify-between rounded-lg bg-blue-50 px-4 py-3 text-sm">
-        <span className="text-gray-600">Session fee</span>
-        <span className="font-semibold text-gray-900">{formatAmount(amount, currency)}</span>
+      <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-sm">
+        <span className="text-muted-foreground">Session fee</span>
+        <span className="font-bold text-foreground">{formatAmount(amount, currency)}</span>
       </div>
 
       {/* Submit button */}
-      <button
+      <Button
         type="submit"
         disabled={!stripe || isProcessing}
-        className={`w-full rounded-xl py-3 text-base font-semibold text-white transition-all
-          ${isProcessing || !stripe
-            ? "cursor-not-allowed bg-gray-400"
-            : "bg-blue-600 hover:bg-blue-700 active:scale-[0.98]"
-          }`}
+        className="w-full rounded-xl py-6 h-auto text-base font-semibold shadow-sm shadow-primary/20 transition-transform hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
-        {isProcessing
-          ? "Processing…"
-          : `Pay ${formatAmount(amount, currency)}`}
-      </button>
+        {isProcessing ? "Processing…" : `Pay ${formatAmount(amount, currency)}`}
+      </Button>
 
       {/* Trust badge */}
-      <p className="text-center text-xs text-gray-400">
-        🔒 Payments are secured by{" "}
+      <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+        <Lock size={11} />
+        Secured by{" "}
         <a
           href="https://stripe.com"
           target="_blank"
           rel="noreferrer"
-          className="underline"
+          className="underline hover:text-foreground transition-colors"
         >
           Stripe
         </a>
-        . Your card details are never stored on our servers.
+        — your card details never reach our servers.
       </p>
     </form>
   );

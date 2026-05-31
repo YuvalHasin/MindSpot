@@ -14,7 +14,7 @@ const PatientOverview = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const userId = sessionStorage.getItem("userId");
+        const userId = sessionStorage.getItem("patientId");
         const token = sessionStorage.getItem("token");
         
         if (!userId) {
