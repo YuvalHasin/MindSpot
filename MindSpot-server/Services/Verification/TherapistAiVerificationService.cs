@@ -34,10 +34,16 @@ namespace MindSpot_server.Services.Verification
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            _apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
-                      ?? configuration["Anthropic:ApiKey"]
-                      ?? throw new InvalidOperationException(
-                          "Anthropic API key is not configured. Set the ANTHROPIC_API_KEY environment variable.");
+            // שליפה בטוחה מה-env או מהקונפיגורציה
+            _apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY") ?? configuration["Anthropic:ApiKey"];
+
+            // במקום לזרוק Exception שיפיל את כל השרת ברקע, נרשום אזהרה בלוג.
+            // השרת יעלה חלק, ונוכל לעבוד על המודולים של Stripe וסלניום באין מפריע.
+            if (string.IsNullOrWhiteSpace(_apiKey))
+            {
+                _logger.LogWarning("Anthropic API key is not configured. " +
+                                   "TherapistAiVerificationService will fail if invoked.");
+            }
         }
 
         public async Task<AiVerificationResult> VerifyTherapistImagesAsync(
