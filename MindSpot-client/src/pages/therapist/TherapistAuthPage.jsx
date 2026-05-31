@@ -106,7 +106,7 @@ const TherapistAuthPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName, phoneNumber, licenseNumber, password,
-          specialties: [], bio: "", role: "Therapist",
+          specialties: "", bio: "", role: "Therapist",
         }),
       });
       const data = await res.json();
