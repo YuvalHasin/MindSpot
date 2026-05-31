@@ -1,15 +1,54 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { FileText, User } from "lucide-react";
+import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
-const completedSessions = [
-  { id: 1, client: "Anonymous #7743", topic: "Work Burnout", date: "Today, 10:30 AM", duration: "22 min", aiSummary: true },
-  { id: 2, client: "Anonymous #5512", topic: "Social Anxiety", date: "Today, 9:15 AM", duration: "18 min", aiSummary: true },
-  { id: 3, client: "Anonymous #2290", topic: "Grief & Loss", date: "Yesterday", duration: "30 min", aiSummary: true },
-  { id: 4, client: "Anonymous #8891", topic: "Self-esteem", date: "Yesterday", duration: "15 min", aiSummary: false },
-];
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const today    = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  if (d.toDateString() === today.toDateString())    return `Today, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+  if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+  return d.toLocaleDateString("en-IL", { day: "numeric", month: "short" }) + `, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function StatusDot({ status }) {
+  if (status === "Confirmed") return <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600"><CheckCircle2 size={11} /> Confirmed</span>;
+  if (status === "Pending")   return <span className="flex items-center gap-1 text-[10px] font-semibold text-yellow-600"><AlertCircle size={11} /> Pending</span>;
+  if (status === "Completed") return <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-600"><CheckCircle2 size={11} /> Completed</span>;
+  return <span className="text-[10px] text-muted-foreground">{status}</span>;
+}
 
 const RecentSessions = () => {
+  const [sessions, setSessions] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showAll,  setShowAll]  = useState(false);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const therapistId = sessionStorage.getItem("therapistId");
+        const token       = sessionStorage.getItem("token");
+        if (!therapistId || !token) { setLoading(false); return; }
+
+        const cleanId = therapistId.includes("/") ? therapistId.split("/")[1] : therapistId;
+        const res = await fetch(
+          `https://localhost:7160/api/billing/appointments/therapist?therapistId=${cleanId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) setSessions(await res.json());
+      } catch (err) {
+        console.error("Failed to load sessions", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSessions();
+  }, []);
+
+  const displayed = showAll ? sessions : sessions.slice(0, 5);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -18,37 +57,61 @@ const RecentSessions = () => {
       className="rounded-2xl border border-border bg-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-semibold text-foreground">Recent Sessions</h3>
-        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-          View All
-        </Button>
-      </div>
-
-      <div className="space-y-3">
-        {completedSessions.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors"
+        <h3 className="font-display font-semibold text-foreground">Upcoming &amp; Recent</h3>
+        {sessions.length > 5 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground"
+            onClick={() => setShowAll(v => !v)}
           >
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
-              <User size={14} className="text-primary" />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{s.client}</p>
-              <p className="text-xs text-muted-foreground">
-                {s.topic} · {s.date} · {s.duration}
-              </p>
-            </div>
-
-            {s.aiSummary && (
-              <Button variant="ghost" size="sm" className="rounded-lg gap-1 text-xs shrink-0">
-                <FileText size={12} /> AI Notes
-              </Button>
-            )}
-          </div>
-        ))}
+            {showAll ? "Show Less" : "View All"}
+          </Button>
+        )}
       </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 size={22} className="animate-spin text-primary" />
+        </div>
+      ) : sessions.length === 0 ? (
+        <div className="text-center py-8 text-sm text-muted-foreground">
+          No appointments yet.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {displayed.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors"
+            >
+              {/* Date badge */}
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
+                <span className="text-[13px] font-bold text-primary leading-none">
+                  {new Date(s.appointmentAt).getDate()}
+                </span>
+                <span className="text-[8px] font-semibold text-primary/70 uppercase">
+                  {new Date(s.appointmentAt).toLocaleString("en", { month: "short" })}
+                </span>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    Patient · {s.durationMinutes} min
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  <Clock size={10} />
+                  <span>{formatDate(s.appointmentAt)}</span>
+                </div>
+              </div>
+
+              <StatusDot status={s.status} />
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -1,109 +1,164 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, ArrowLeft, Loader2, Award, Briefcase } from "lucide-react";
+import {
+  Lock, User, ArrowLeft, Loader2, Award, Briefcase,
+  Phone, Upload, CheckCircle2, Clock, ChevronRight,
+} from "lucide-react";
+
+// ── Registration steps ────────────────────────────────────────────────────────
+const STEP = { DETAILS: 1, PROFESSIONAL: 2, PENDING: 3 };
 
 const TherapistAuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [bio, setBio] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [specialties, setSpecialties] = useState(""); // שינוי למחרוזת לצורך ה-Input
-  const [phoneNumber, setPhoneNumber] = useState(""); // חסר היה!
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [errors, setErrors] = useState({}); // חסר היה!
-  const [isSuccess, setIsSuccess] = useState(false); // חסר היה!
+  const [regStep, setRegStep] = useState(STEP.DETAILS);
   const navigate = useNavigate();
 
-  const validate = () => {
-    const newErrors = {};
-    
-    if (!isLogin) { // ולידציות רק להרשמה
-      if (!fullName.trim()) newErrors.fullName = "Full name is required."; 
-      if (!bio.trim()) newErrors.bio = "Bio is required."; 
-      if (!specialties.trim()) newErrors.specialties = "Specialties are required."; 
-      
-      if (!phoneNumber.trim()) {
-        newErrors.phoneNumber = "Phone number is required.";
-      } else if (!/^\d{3}-?\d{7}$/.test(phoneNumber.replace(/\s/g, ""))) {
-        newErrors.phoneNumber = "Please enter a valid phone number.";
-      }
-    }
+  // Login fields
+  const [loginLicense,  setLoginLicense]  = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
+  // Step 1 fields
+  const [fullName,      setFullName]      = useState("");
+  const [phoneNumber,   setPhoneNumber]   = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [password,      setPassword]      = useState("");
+
+  // Step 2 fields
+  const [specialties, setSpecialties] = useState("");
+  const [bio,         setBio]         = useState("");
+  const [selfieFile,  setSelfieFile]  = useState(null);
+  const [licenseFile, setLicenseFile] = useState(null);
+  const selfieRef  = useRef();
+  const licenseRef = useRef();
+
+  // Shared UI state
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+  const [errors,  setErrors]  = useState({});
+  const [registeredId, setRegisteredId] = useState(null);
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  const validateStep1 = () => {
+    const e = {};
+    if (!fullName.trim()) e.fullName = "Full name is required.";
+    if (!phoneNumber.trim()) {
+      e.phoneNumber = "Phone number is required.";
+    } else if (!/^\d{3}-?\d{7}$/.test(phoneNumber.replace(/\s/g, ""))) {
+      e.phoneNumber = "Enter a valid Israeli phone number.";
+    }
     if (!licenseNumber.trim()) {
-      newErrors.licenseNumber = "License number is required.";
+      e.licenseNumber = "License number is required.";
     } else if (!/^27-\d{4,6}$/.test(licenseNumber)) {
-      newErrors.licenseNumber = "Invalid format. Must be 27- followed by 4 or 6 digits.";
+      e.licenseNumber = "Format: 27-XXXXX";
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!password.trim()) e.password = "Password is required.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const validateStep2 = () => {
+    const e = {};
+    if (!specialties.trim()) e.specialties = "Specialties are required.";
+    if (!bio.trim())         e.bio         = "Bio is required.";
+    if (!selfieFile)         e.selfie      = "Please upload a selfie photo.";
+    if (!licenseFile)        e.license     = "Please upload your license document.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setErrors({});
-    
-    if (!validate()) return;
     setLoading(true);
-
-    const endpoint = isLogin 
-      ? "https://localhost:7160/api/Auth/login" 
-      : "https://localhost:7160/api/Therapists/register";
-
-    const payload = isLogin 
-      ? { licenseNumber, password, role: "Therapist" } 
-      : { 
-          fullName, 
-          specialties: specialties.split(',').map(s => s.trim()), // הפיכה למערך עבור השרת
-          bio,  
-          licenseNumber, 
-          phoneNumber,
-          password,
-          role: "Therapist" 
-        };
-
     try {
-      const response = await fetch(endpoint, {
+      const res  = await fetch("https://localhost:7160/api/Auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ licenseNumber: loginLicense, password: loginPassword, role: "Therapist" }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsSuccess(true);
-        // שמירת ה-Token אם זה לוגין
-        if (data.token) {
-          sessionStorage.setItem("token", data.token);
-          sessionStorage.setItem("role", "therapist");
-          if (data.userId) sessionStorage.setItem("therapistId", data.userId);
-        }
-        setTimeout(() => { navigate("/therapist-dashboard"); }, 2000);
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem("token",       data.token);
+        sessionStorage.setItem("role",        "therapist");
+        sessionStorage.setItem("therapistId", data.userId);
+        setTimeout(() => navigate("/therapist-dashboard"), 800);
       } else {
-        if (data.errors) {
-          const serverErrors = {};
-          if (data.errors.LicenseNumber) serverErrors.licenseNumber = data.errors.LicenseNumber[0];
-          if (data.errors.PhoneNumber) serverErrors.phoneNumber = data.errors.PhoneNumber[0];
-          setErrors(serverErrors);
-        } else {
-          setError(data.message || "Action failed");
-        }
+        setError(data.message || "Login failed.");
       }
-    } catch (err) {
-      setError("Server connection failed");
+    } catch {
+      setError("Server connection failed.");
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClass =
-    "w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors";
+  const handleStep1Submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!validateStep1()) return;
+    setLoading(true);
+    try {
+      const res  = await fetch("https://localhost:7160/api/Therapists/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName, phoneNumber, licenseNumber, password,
+          specialties: [], bio: "", role: "Therapist",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRegisteredId(data.id);
+        setRegStep(STEP.PROFESSIONAL);
+      } else {
+        if (data.errors) {
+          const se = {};
+          if (data.errors.LicenseNumber) se.licenseNumber = data.errors.LicenseNumber[0];
+          if (data.errors.PhoneNumber)   se.phoneNumber   = data.errors.PhoneNumber[0];
+          setErrors(se);
+        } else {
+          setError(data.message || "Registration failed.");
+        }
+      }
+    } catch {
+      setError("Server connection failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStep2Submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!validateStep2()) return;
+    setLoading(true);
+    try {
+      const form = new FormData();
+      form.append("therapistId",          registeredId);
+      form.append("claimedLicenseNumber", licenseNumber);
+      form.append("selfieImage",          selfieFile);
+      form.append("licenseImage",         licenseFile);
+
+      // Fire-and-forget — verification runs async, UI moves on immediately
+      fetch("https://localhost:7160/api/Therapists/verify", { method: "POST", body: form })
+        .catch(() => {});
+
+      setRegStep(STEP.PENDING);
+    } catch {
+      setError("Upload failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Shared input class ────────────────────────────────────────────────────
+  const ic = (hasError) =>
+    `w-full pl-10 pr-4 py-3 rounded-xl border bg-background text-foreground text-sm
+     placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors
+     ${hasError ? "border-destructive" : "border-border"}`;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
@@ -117,204 +172,291 @@ const TherapistAuthPage = () => {
           to="/"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors text-sm"
         >
-          <ArrowLeft size={16} />
-          Back to home
+          <ArrowLeft size={16} /> Back to home
         </Link>
 
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-card">
-          <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+
+          {/* Brand */}
+          <div className="flex justify-center mb-2">
             <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center">
               <Briefcase size={16} className="text-primary" />
             </div>
           </div>
-          
           <div className="text-center mb-6">
             <h1 className="font-display text-2xl font-semibold text-foreground">
               Mind<span className="text-primary">Spot</span>{" "}
-              <span className="text-sm font-body font-medium text-muted-foreground tracking-wide uppercase">Pro</span>
+              <span className="text-sm font-normal text-muted-foreground tracking-wide uppercase">Pro</span>
             </h1>
-            <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
-              Join our network of certified professionals
-            </p>
+            <p className="text-muted-foreground text-sm mt-1">Join our network of certified professionals</p>
           </div>
 
-          {/* טאבים למעבר בין התחברות להרשמה */}
+          {/* Tabs */}
           <div className="flex bg-muted rounded-xl p-1 mb-6">
-            {["Therapist Login", "Apply to Join"].map((label, i) => {
-              const active = i === 0 ? isLogin : !isLogin;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => { 
-                    setIsLogin(i === 0); 
-                    setError(""); 
-                    setErrors({}); 
-                  }}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                    active
-                      ? "bg-card text-foreground shadow-soft"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+            {["Therapist Login", "Apply to Join"].map((label, i) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => { setIsLogin(i === 0); setError(""); setErrors({}); setRegStep(STEP.DETAILS); }}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  (i === 0 ? isLogin : !isLogin)
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <AnimatePresence mode="wait">
-              {!isLogin && (
-                <motion.div
-                  key="register-fields"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden space-y-4"
-                >
-                  {/* שם מלא */}
-                  <div className="space-y-1">
-                    <div className="relative">
-                      <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        type="text"
-                        placeholder="Full name"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className={`${inputClass} ${errors.fullName ? "border-destructive" : ""}`}
-                      />
-                    </div>
-                    {errors.fullName && <p className="text-xs text-destructive ml-1">{errors.fullName}</p>}
-                  </div>
+          <AnimatePresence mode="wait">
 
-                  {/* טלפון - נוסף כאן */}
-                  <div className="space-y-1">
-                    <div className="relative">
-                      <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        type="text"
-                        placeholder="Phone Number (e.g., 0501234567)"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        className={`${inputClass} ${errors.phoneNumber ? "border-destructive" : ""}`}
-                      />
-                    </div>
-                    {errors.phoneNumber && <p className="text-xs text-destructive ml-1">{errors.phoneNumber}</p>}
-                  </div>
+            {/* LOGIN */}
+            {isLogin && (
+              <motion.form
+                key="login"
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
+                onSubmit={handleLogin}
+                className="space-y-4"
+              >
+                <FieldRow icon={Award} placeholder="License number (27-XXXXX)" value={loginLicense}  onChange={setLoginLicense}  ic={ic} />
+                <FieldRow icon={Lock}  placeholder="Password"                  value={loginPassword} onChange={setLoginPassword} ic={ic} type="password" />
+                {error && <ErrBox msg={error} />}
+                <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign In"}
+                </Button>
+              </motion.form>
+            )}
 
-                  {/* התמחויות */}
+            {/* STEP 1 */}
+            {!isLogin && regStep === STEP.DETAILS && (
+              <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepBar current={1} total={2} />
+                <p className="text-sm font-semibold text-foreground mb-4">Step 1 — Personal Details</p>
+                <form onSubmit={handleStep1Submit} className="space-y-3">
+                  <FieldRow icon={User}  placeholder="Full name"                   value={fullName}      onChange={setFullName}      ic={ic} err={errors.fullName} />
+                  <FieldRow icon={Phone} placeholder="Phone (e.g. 050-1234567)"    value={phoneNumber}   onChange={setPhoneNumber}   ic={ic} err={errors.phoneNumber} />
+                  <FieldRow icon={Award} placeholder="License number (27-XXXXX)"   value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
+                  <FieldRow icon={Lock}  placeholder="Password"                    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
+                  {error && <ErrBox msg={error} />}
+                  <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
+                    {loading
+                      ? <Loader2 size={18} className="animate-spin" />
+                      : <span className="flex items-center gap-2">Continue <ChevronRight size={16} /></span>
+                    }
+                  </Button>
+                </form>
+              </motion.div>
+            )}
+
+            {/* STEP 2 */}
+            {!isLogin && regStep === STEP.PROFESSIONAL && (
+              <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepBar current={2} total={2} />
+                <p className="text-sm font-semibold text-foreground mb-4">Step 2 — Professional Profile</p>
+                <form onSubmit={handleStep2Submit} className="space-y-4">
+
+                  {/* Specialties */}
                   <div className="space-y-1">
                     <div className="relative">
-                      <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         type="text"
                         placeholder="Specialties (comma separated)"
                         value={specialties}
                         onChange={(e) => setSpecialties(e.target.value)}
-                        className={`${inputClass} ${errors.specialties ? "border-destructive" : ""}`}
+                        className={ic(!!errors.specialties)}
                       />
                     </div>
                     {errors.specialties && <p className="text-xs text-destructive ml-1">{errors.specialties}</p>}
                   </div>
 
-                  {/* ביוגרפיה */}
+                  {/* Bio */}
                   <div className="space-y-1">
                     <div className="relative">
-                      <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <User size={15} className="absolute left-3 top-3.5 text-muted-foreground" />
                       <textarea
-                        placeholder="Bio"
+                        rows={3}
+                        placeholder="Short professional bio…"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
-                        /* הוספתי h-12 כדי להשוות לשאר התיבות, ו-resize-none כדי למנוע שינוי גודל */
-                        className={`${inputClass} h-12 py-3 resize-none overflow-hidden ${
-                          errors.bio ? "border-destructive" : ""
-                        }`}
+                        className={`${ic(!!errors.bio)} resize-none pt-3`}
                       />
                     </div>
                     {errors.bio && <p className="text-xs text-destructive ml-1">{errors.bio}</p>}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
-            {/* מספר רישיון - תמיד מופיע */}
-            <div className="space-y-1">
-              <div className="relative">
-                <Award size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Professional license number (27-XXXXX)"
-                  value={licenseNumber}
-                  onChange={(e) => setLicenseNumber(e.target.value)}
-                  className={`${inputClass} ${errors.licenseNumber ? "border-destructive" : ""}`}
-                />
-              </div>
-              {errors.licenseNumber && <p className="text-xs text-destructive ml-1">{errors.licenseNumber}</p>}
-            </div>
+                  {/* Photo uploads */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Verification Photos</p>
 
-            {/* סיסמה - תמיד מופיע */}
-            <div className="space-y-1">
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputClass}
-                  required
-                />
-              </div>
-            </div>
+                    <FilePicker
+                      label="Upload a selfie photo"
+                      file={selfieFile}
+                      onFile={setSelfieFile}
+                      inputRef={selfieRef}
+                      err={errors.selfie}
+                    />
+                    <FilePicker
+                      label="Upload license / ID document"
+                      file={licenseFile}
+                      onFile={setLicenseFile}
+                      inputRef={licenseRef}
+                      err={errors.license}
+                    />
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Used for identity verification only — never shown publicly.
+                    </p>
+                  </div>
 
-            {/* שגיאה כללית מהשרת */}
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-lg"
+                  {error && <ErrBox msg={error} />}
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button" variant="outline" className="rounded-xl h-12 px-5"
+                      onClick={() => { setRegStep(STEP.DETAILS); setErrors({}); setError(""); }}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" className="flex-1 rounded-xl h-12 text-base font-medium" disabled={loading}>
+                      {loading ? <Loader2 size={18} className="animate-spin" /> : "Submit Application"}
+                    </Button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+
+            {/* STEP 3: Pending */}
+            {!isLogin && regStep === STEP.PENDING && (
+              <motion.div
+                key="s3"
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-2"
+              >
+                <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock size={30} className="text-primary animate-pulse" />
+                </div>
+                <h2 className="font-display text-xl font-bold text-foreground">Application Submitted!</h2>
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-xs mx-auto">
+                  We're running automated verification of your license and identity. This usually takes a few minutes.
+                </p>
+
+                <div className="mt-5 space-y-2 text-left">
+                  {[
+                    { label: "Personal details",    done: true  },
+                    { label: "Professional profile", done: true  },
+                    { label: "License verification", done: false },
+                    { label: "Admin approval",       done: false },
+                  ].map(({ label, done }) => (
+                    <div key={label} className="flex items-center gap-3 rounded-xl bg-muted/40 px-4 py-2.5 text-sm">
+                      {done
+                        ? <CheckCircle2 size={15} className="text-green-600 shrink-0" />
+                        : <Clock size={15} className="text-muted-foreground shrink-0 animate-pulse" />
+                      }
+                      <span className={done ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-muted-foreground mt-4">
+                  You'll be notified once your account is approved.
+                </p>
+
+                <Button
+                  variant="outline" className="mt-5 rounded-xl"
+                  onClick={() => { setIsLogin(true); setRegStep(STEP.DETAILS); setError(""); setErrors({}); }}
                 >
-                  {error}
-                </motion.div>
-              )}
-              {isSuccess && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="bg-green-500/10 border border-green-500/20 text-green-600 text-sm p-3 rounded-lg"
-                >
-                  {isLogin ? "Login successful! Redirecting..." : "Application submitted successfully!"}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  Back to Login
+                </Button>
+              </motion.div>
+            )}
 
-            <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
-              {loading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : isLogin ? (
-                "Sign In"
-              ) : (
-                "Submit Application"
-              )}
-            </Button>
-          </form>
+          </AnimatePresence>
 
-          <div className="mt-6 space-y-2 text-center text-sm">
-            <Link
-              to="/auth"
-              className="block text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Not a therapist? Back to patient portal →
-            </Link>
-          </div>
+          {isLogin && (
+            <div className="mt-5 text-center text-sm">
+              <Link to="/patient-auth" className="text-muted-foreground hover:text-foreground transition-colors">
+                Not a therapist? Patient portal →
+              </Link>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
   );
 };
+
+// ── Micro-components ──────────────────────────────────────────────────────────
+function FieldRow({ icon: Icon, placeholder, value, onChange, ic, type = "text", err }) {
+  return (
+    <div className="space-y-1">
+      <div className="relative">
+        <Icon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={ic(!!err)}
+        />
+      </div>
+      {err && <p className="text-xs text-destructive ml-1">{err}</p>}
+    </div>
+  );
+}
+
+function ErrBox({ msg }) {
+  return (
+    <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-xl">
+      {msg}
+    </div>
+  );
+}
+
+function StepBar({ current, total }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+            i + 1 <= current ? "bg-primary" : "bg-border"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FilePicker({ label, file, onFile, inputRef, err }) {
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => onFile(e.target.files[0] ?? null)}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-colors text-sm
+          ${err
+            ? "border-destructive/50 bg-red-50"
+            : file
+              ? "border-green-400/60 bg-green-50"
+              : "border-border hover:border-primary/50 hover:bg-primary/5 bg-background"
+          }`}
+      >
+        {file
+          ? <><CheckCircle2 size={15} className="text-green-600 shrink-0" /><span className="text-foreground truncate">{file.name}</span></>
+          : <><Upload size={15} className="text-muted-foreground shrink-0" /><span className="text-muted-foreground">{label}</span></>
+        }
+      </button>
+      {err && <p className="text-xs text-destructive mt-1 ml-1">{err}</p>}
+    </div>
+  );
+}
 
 export default TherapistAuthPage;

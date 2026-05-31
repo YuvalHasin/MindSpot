@@ -213,6 +213,95 @@ namespace MindSpot_server.Controllers
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // GET /api/billing/appointments/patient?patientId=UserIdentities/1-A
+        // Returns all appointments for a patient, with therapist name joined.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Authorize]
+        [HttpGet("appointments/patient")]
+        public async Task<IActionResult> GetPatientAppointments(
+            [FromQuery] string patientId,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(patientId))
+                return BadRequest(new { error = "patientId is required." });
+
+            using var session = _store.OpenAsyncSession();
+
+            var appointments = await session.Query<Appointment>()
+                .Where(a => a.PatientId == patientId)
+                .OrderByDescending(a => a.AppointmentAt)
+                .Take(50)
+                .ToListAsync(ct);
+
+            // Load therapist names in one batch
+            var therapistIds = appointments.Select(a => a.TherapistId).Distinct().ToList();
+            var therapists   = await session.LoadAsync<MindSpot_server.Models.Therapist>(therapistIds, ct);
+
+            var result = appointments.Select(a =>
+            {
+                therapists.TryGetValue(a.TherapistId, out var therapist);
+                return new
+                {
+                    id              = a.Id,
+                    therapistId     = a.TherapistId,
+                    therapistName   = therapist?.FullName ?? "Unknown Therapist",
+                    appointmentAt   = a.AppointmentAt,
+                    durationMinutes = a.DurationMinutes,
+                    status          = a.Status.ToString(),
+                    amount          = a.Amount,
+                    currency        = a.Currency,
+                    paymentStatus   = a.Payment.Status.ToString(),
+                    notes           = a.Notes,
+                    cancelledAt     = a.CancelledAt
+                };
+            });
+
+            return Ok(result);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GET /api/billing/appointments/therapist?therapistId=Therapists/1-A
+        // Returns all appointments for a therapist, with patient name joined.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Authorize]
+        [HttpGet("appointments/therapist")]
+        public async Task<IActionResult> GetTherapistAppointments(
+            [FromQuery] string therapistId,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(therapistId))
+                return BadRequest(new { error = "therapistId is required." });
+
+            string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
+
+            using var session = _store.OpenAsyncSession();
+
+            var appointments = await session.Query<Appointment>()
+                .Where(a => a.TherapistId == fullId)
+                .OrderByDescending(a => a.AppointmentAt)
+                .Take(50)
+                .ToListAsync(ct);
+
+            var result = appointments.Select(a => new
+            {
+                id              = a.Id,
+                patientId       = a.PatientId,
+                appointmentAt   = a.AppointmentAt,
+                durationMinutes = a.DurationMinutes,
+                status          = a.Status.ToString(),
+                amount          = a.Amount,
+                currency        = a.Currency,
+                paymentStatus   = a.Payment.Status.ToString(),
+                notes           = a.Notes,
+                cancelledAt     = a.CancelledAt
+            });
+
+            return Ok(result);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // GET /api/billing/appointment?appointmentId=Appointments/1-A
         // ─────────────────────────────────────────────────────────────────────
 
