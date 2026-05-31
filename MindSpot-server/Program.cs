@@ -27,9 +27,9 @@ var documentStore = new DocumentStore
 
 // רישום אינדקסים ב-RavenDB — מבוצע פעם אחת בהפעלה
 new Therapists_ByVector().Execute(documentStore);
-new Therapists_BySearch().Execute(documentStore);   // Module 4: Lucene full-text index
+new Therapists_BySearch().Execute(documentStore);   // Module 4: Lucene full-text index
 
-// הזרקת ה-DocumentStore כ-Singleton לשימוש בכל ה-Controllers 
+// הזרקת ה-DocumentStore כ-Singleton לשימוש בכל ה-Controllers 
 builder.Services.AddSingleton<IDocumentStore>(documentStore);
 
 // --- הוספת שירות ה-AI ---
@@ -54,7 +54,7 @@ builder.Services.AddScoped<ITherapistVerificationManager, TherapistVerificationM
 
 // --- Module 2: Patient Privacy & Application-Layer Encryption ---
 // Singleton: EncryptionService טוען את המפתח פעם אחת בלבד
-// Scoped:    PatientPrivacyService  — חי לאורך בקשת HTTP אחת
+// Scoped:    PatientPrivacyService  — חי לאורך בקשת HTTP אחת
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<IPatientPrivacyService, PatientPrivacyService>();
 // ---------------------------------------------------------------
@@ -76,7 +76,7 @@ builder.Services.AddScoped<AuditActionFilter>();
 // Presentation Layer
 // AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
 builder.Services.AddControllers(opts =>
-    opts.Filters.AddService<AuditActionFilter>()); // Module 4: global audit filter (DI-aware)
+  opts.Filters.AddService<AuditActionFilter>()); // Module 4: global audit filter (DI-aware)
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -91,19 +91,19 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Enter 'Bearer' [space] and then your valid token."
     });
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+  {
     {
+      new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+      {
+        Reference = new Microsoft.OpenApi.Models.OpenApiReference
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
+          Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+          Id = "Bearer"
         }
-    });
+      },
+      new string[] {}
+    }
+  });
 });
 
 // --- הגדרת אימות JWT ---
@@ -133,11 +133,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        // הוספתי את שני הפורטים הנפוצים כדי שלא תתקעי אם React יחליט להחליף
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        // הוספתי את שני הפורטים הנפוצים כדי שלא תתקעי אם React יחליט להחליף
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+       .AllowAnyMethod()
+       .AllowAnyHeader()
+       .AllowCredentials();
     });
 });
 
@@ -160,4 +160,3 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
-

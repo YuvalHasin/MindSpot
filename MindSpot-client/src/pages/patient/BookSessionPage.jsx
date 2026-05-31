@@ -74,7 +74,7 @@ export default function BookSessionPage() {
     setIsLoading(true);
 
     try {
-      const patientId = sessionStorage.getItem("patientId");
+      const patientId = sessionStorage.getItem("userId");
 
       // 1a. Create the Appointment document in RavenDB
       const bookRes = await fetch(`https://localhost:7160/api/billing/book`, {
