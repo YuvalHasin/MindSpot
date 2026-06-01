@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MindSpot_server.Models;
 using MindSpot_server.Models.Billing;
+using MindSpot_server.Services;
 using MindSpot_server.Services.Billing;
 using Raven.Client.Documents;
 using Stripe;
@@ -23,17 +25,20 @@ namespace MindSpot_server.Controllers
     {
         private readonly IDocumentStore _store;
         private readonly IStripeService _stripeService;
+        private readonly IEmailService _emailService;
         private readonly ILogger<BillingController> _logger;
         private readonly string _webhookSecret;
 
         public BillingController(
             IDocumentStore store,
             IStripeService stripeService,
+            IEmailService emailService,
             IConfiguration configuration,
             ILogger<BillingController> logger)
         {
             _store         = store;
             _stripeService = stripeService;
+            _emailService  = emailService;
             _logger        = logger;
             _webhookSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET")
                              ?? configuration["Stripe:WebhookSecret"]
@@ -360,6 +365,27 @@ namespace MindSpot_server.Controllers
 
             _logger.LogInformation(
                 "Payment succeeded for appointment {AppointmentId}", appointment.Id);
+
+            // Send booking confirmation email to the patient
+            try
+            {
+                var patient   = await session.LoadAsync<Patient>(appointment.PatientId);
+                var therapist = await session.LoadAsync<Therapist>(appointment.TherapistId);
+                if (patient?.Email is not null)
+                {
+                    await _emailService.SendBookingConfirmationAsync(
+                        patient.Email,
+                        patient.FullName ?? patient.Email,
+                        therapist?.FullName ?? "your therapist",
+                        appointment.AppointmentAt);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to send booking confirmation email for appointment {AppointmentId}",
+                    appointment.Id);
+            }
         }
 
         private async Task HandlePaymentFailedAsync(Stripe.Event e)

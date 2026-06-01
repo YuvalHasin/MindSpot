@@ -1,0 +1,9 @@
+{
+  "nav": { "home": "דף הבית", "about": "אודות", "contact": "צור קשר", "login": "כניסה" },
+  "chat": { "placeholder": "דבר עם סרנה...", "send": "שלח", "assistant_title": "סרנה", "subtitle": "עוזרת AI" },
+  "booking": { "title": "קביעת פגישה", "connect": "קבע עכשיו", "view_profile": "פרופיל מלא", "no_slots": "המטפל טרם הגדיר זמינות. אנא צור קשר ישירות.", "select_slot": "בחר מועד", "prev_week": "שבוע קודם", "next_week": "שבוע הבא" },
+  "session": { "booked": "פגישות שנקבעו", "ai": "שיחות AI", "cancel": "ביטול", "rate": "דירוג", "no_appointments": "אין פגישות עדיין." },
+  "profile": { "bio": "אודות", "specialties": "התמחויות", "rating": "דירוג", "reviews": "ביקורות", "verified": "מאומת" },
+  "auth": { "login": "כניסה", "register": "הרשמה", "email": "אימייל", "password": "סיסמה", "name": "שם מלא" },
+  "common": { "loading": "טוען...", "error": "משהו השתבש.", "back": "חזרה", "save": "שמור", "cancel": "ביטול" }
+}

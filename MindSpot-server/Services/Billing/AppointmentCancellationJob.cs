@@ -1,5 +1,5 @@
-using MindSpot_server.Models.Billing;
 using MindSpot_server.Models;
+using MindSpot_server.Models.Billing;
 using Raven.Client.Documents;
 
 namespace MindSpot_server.Services.Billing
@@ -38,6 +38,7 @@ namespace MindSpot_server.Services.Billing
             _logger       = logger;
         }
 
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("AppointmentCancellationJob started. Polling every {Interval}.", PollingInterval);
@@ -75,6 +76,7 @@ namespace MindSpot_server.Services.Billing
             await using var scope = _scopeFactory.CreateAsyncScope();
             var store        = scope.ServiceProvider.GetRequiredService<IDocumentStore>();
             var stripeService = scope.ServiceProvider.GetRequiredService<IStripeService>();
+            var emailService  = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
             using var session = store.OpenAsyncSession();
 
@@ -99,7 +101,7 @@ namespace MindSpot_server.Services.Billing
             {
                 try
                 {
-                    await ProcessSingleRefundAsync(appointment, stripeService, session, ct);
+                    await ProcessSingleRefundAsync(appointment, stripeService, emailService, session, ct);
                 }
                 catch (Exception ex)
                 {
@@ -116,6 +118,7 @@ namespace MindSpot_server.Services.Billing
         private async Task ProcessSingleRefundAsync(
             Appointment appointment,
             IStripeService stripeService,
+            IEmailService emailService,
             Raven.Client.Documents.Session.IAsyncDocumentSession session,
             CancellationToken ct)
         {
@@ -191,6 +194,24 @@ namespace MindSpot_server.Services.Billing
                     "Late cancellation for appointment {Id}: " +
                     "no patient refund. Fee ₪{Fee} transferred (TransferId={TransferId})",
                     appointment.Id, feeForTherapist, transferId ?? "N/A");
+
+                // Send late-cancellation confirmation email to the patient
+                try
+                {
+                    var patient = await session.LoadAsync<Patient>(appointment.PatientId, ct);
+                    if (patient?.Email is not null)
+                    {
+                        await emailService.SendCancellationConfirmationAsync(
+                            patient.Email,
+                            patient.FullName ?? patient.Email,
+                            isRefundable: false);
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    _logger.LogError(emailEx,
+                        "Failed to send cancellation email for appointment {Id}.", appointment.Id);
+                }
             }
         }
     }

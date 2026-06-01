@@ -6,6 +6,7 @@ using MindSpot_server.Models.Verification;
 using MindSpot_server.Services;
 using MindSpot_server.Services.Verification;
 using MindSpot_server.Services.Search;
+using MindSpot_server.Models.Billing;
 using Raven.Client.Documents;
 using System.Threading;
 
@@ -282,6 +283,183 @@ public class TherapistsController : ControllerBase
             status        = result.Status.ToString(),
             isVerified    = false,
             failureReason = result.FailureReason
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Availability: PUT /api/Therapists/availability
+    // Upsert the weekly schedule for a therapist.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Authorize]
+    [HttpPut("availability")]
+    public async Task<IActionResult> UpsertAvailability([FromBody] UpsertAvailabilityRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TherapistId))
+            return BadRequest(new { error = "therapistId is required." });
+
+        string fullId = request.TherapistId.Contains("/")
+            ? request.TherapistId
+            : $"Therapists/{request.TherapistId}";
+
+        using var session = _store.OpenAsyncSession();
+
+        // Try to find existing availability document for this therapist
+        var existing = await session.Query<TherapistAvailability>()
+            .Where(a => a.TherapistId == fullId)
+            .FirstOrDefaultAsync();
+
+        if (existing == null)
+        {
+            var avail = new TherapistAvailability
+            {
+                Id                     = "TherapistAvailability/",
+                TherapistId            = fullId,
+                WeeklySlots            = request.WeeklySlots,
+                SessionDurationMinutes = request.SessionDurationMinutes,
+                BreakBetweenMinutes    = request.BreakBetweenMinutes,
+                UpdatedAt              = DateTime.UtcNow
+            };
+            await session.StoreAsync(avail);
+        }
+        else
+        {
+            existing.WeeklySlots            = request.WeeklySlots;
+            existing.SessionDurationMinutes = request.SessionDurationMinutes;
+            existing.BreakBetweenMinutes    = request.BreakBetweenMinutes;
+            existing.UpdatedAt              = DateTime.UtcNow;
+        }
+
+        await session.SaveChangesAsync();
+        return Ok(new { message = "Availability updated." });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Availability: GET /api/Therapists/availability?therapistId=...&weekStart=YYYY-MM-DD
+    // Returns all available time slots for the 7-day window starting weekStart,
+    // with booked slots marked as unavailable.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [AllowAnonymous]
+    [HttpGet("availability")]
+    public async Task<IActionResult> GetAvailability(
+        [FromQuery] string therapistId,
+        [FromQuery] string weekStart)
+    {
+        if (string.IsNullOrWhiteSpace(therapistId))
+            return BadRequest(new { error = "therapistId is required." });
+
+        if (!DateTime.TryParse(weekStart, out DateTime weekStartDate))
+            return BadRequest(new { error = "weekStart must be a valid date (YYYY-MM-DD)." });
+
+        weekStartDate = weekStartDate.Date; // strip time
+
+        string fullId = therapistId.Contains("/")
+            ? therapistId
+            : $"Therapists/{therapistId}";
+
+        using var session = _store.OpenAsyncSession();
+
+        // Load availability settings
+        var avail = await session.Query<TherapistAvailability>()
+            .Where(a => a.TherapistId == fullId)
+            .FirstOrDefaultAsync();
+
+        if (avail == null)
+            return Ok(new { slots = Array.Empty<object>() });
+
+        int slotIncrement = avail.SessionDurationMinutes + avail.BreakBetweenMinutes;
+
+        // Load all appointments for the therapist in the 7-day window
+        DateTime weekEnd = weekStartDate.AddDays(7);
+        var bookedAppointments = await session.Query<Appointment>()
+            .Where(a =>
+                a.TherapistId == fullId &&
+                a.AppointmentAt >= weekStartDate &&
+                a.AppointmentAt < weekEnd &&
+                a.Status != AppointmentStatus.CancelledByPatient &&
+                a.Status != AppointmentStatus.CancelledByTherapist)
+            .ToListAsync();
+
+        // Build a HashSet of booked start times for O(1) lookup
+        var bookedTimes = new HashSet<DateTime>(bookedAppointments.Select(a => a.AppointmentAt));
+
+        var slots = new List<object>();
+
+        for (int dayOffset = 0; dayOffset < 7; dayOffset++)
+        {
+            DateTime day = weekStartDate.AddDays(dayOffset);
+            int dayOfWeek = (int)day.DayOfWeek; // 0=Sunday … 6=Saturday
+
+            var matchingSlots = avail.WeeklySlots.Where(s => s.DayOfWeek == dayOfWeek);
+
+            foreach (var slot in matchingSlots)
+            {
+                // Parse HH:mm start/end times
+                if (!TimeSpan.TryParse(slot.StartTime, out TimeSpan startTs)) continue;
+                if (!TimeSpan.TryParse(slot.EndTime,   out TimeSpan endTs))   continue;
+
+                DateTime current = day + startTs;
+                DateTime end     = day + endTs;
+
+                // Generate slots within the window
+                while (current.AddMinutes(avail.SessionDurationMinutes) <= end)
+                {
+                    bool isAvailable = !bookedTimes.Contains(current);
+                    slots.Add(new
+                    {
+                        dateTime  = current.ToString("o"), // ISO 8601
+                        available = isAvailable
+                    });
+                    current = current.AddMinutes(slotIncrement);
+                }
+            }
+        }
+
+        // Sort chronologically
+        var sorted = slots
+            .OrderBy(s => ((dynamic)s).dateTime)
+            .ToList();
+
+        return Ok(new { slots = sorted });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Public profile: GET /api/Therapists/{id}/public-profile
+    // Returns aggregated public info: bio, specialties, rating stats.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [AllowAnonymous]
+    [HttpGet("{id}/public-profile")]
+    public async Task<IActionResult> GetPublicProfile(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { error = "id is required." });
+
+        string fullId = id.Contains("/") ? id : $"Therapists/{id}";
+
+        using var session = _store.OpenAsyncSession();
+
+        var therapist = await session.LoadAsync<Therapist>(fullId);
+        if (therapist == null)
+            return NotFound(new { error = "Therapist not found." });
+
+        var reviews = await session.Query<Review>()
+            .Where(r => r.TherapistId == fullId)
+            .ToListAsync();
+
+        double averageRating = reviews.Count > 0 ? reviews.Average(r => r.Rating) : 0;
+
+        return Ok(new
+        {
+            id                 = therapist.Id,
+            fullName           = therapist.FullName,
+            bio                = therapist.Bio,
+            specialties        = therapist.Specialties,
+            licenseNumber      = therapist.LicenseNumber,
+            averageRating      = Math.Round(averageRating, 2),
+            totalReviews       = reviews.Count,
+            verificationStatus = therapist.VerificationStatus.ToString()
         });
     }
 

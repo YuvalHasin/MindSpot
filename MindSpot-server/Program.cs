@@ -1,5 +1,6 @@
 using Raven.Client.Documents;
 using MindSpot_server.Filters;
+using MindSpot_server.Hubs;
 using MindSpot_server.Indexes;
 using MindSpot_server.Services;
 using MindSpot_server.Services.Audit;
@@ -64,6 +65,10 @@ builder.Services.AddSingleton<IStripeService, StripeService>();
 builder.Services.AddHostedService<AppointmentCancellationJob>();
 // -------------------------------------------------------
 
+// --- Email Notifications (SendGrid) ---
+builder.Services.AddHttpClient<IEmailService, SendGridEmailService>();
+// ---------------------------------------
+
 // --- Module 4: Lucene Search + Audit Log ---
 builder.Services.AddScoped<ITherapistSearchService, TherapistSearchService>();
 builder.Services.AddSingleton<IAuditService, AuditService>();
@@ -77,6 +82,7 @@ builder.Services.AddScoped<AuditActionFilter>();
 // AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
 builder.Services.AddControllers(opts =>
   opts.Filters.AddService<AuditActionFilter>()); // Module 4: global audit filter (DI-aware)
+builder.Services.AddSignalR();                   // Real-time chat
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -159,4 +165,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");   // Real-time chat
 app.Run();

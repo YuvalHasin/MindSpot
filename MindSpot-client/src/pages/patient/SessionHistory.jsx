@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item      = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
@@ -35,6 +36,19 @@ const SessionHistory = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading,      setLoading]      = useState(true);
 
+  // Cancel dialog state
+  const [cancelTarget,  setCancelTarget]  = useState(null);   // appointment to cancel
+  const [cancelReason,  setCancelReason]  = useState("");
+  const [cancelling,    setCancelling]    = useState(false);
+  const [cancelError,   setCancelError]   = useState("");
+
+  // Rating dialog state
+  const [rateTarget,    setRateTarget]    = useState(null);   // appointment to rate
+  const [ratingValue,   setRatingValue]   = useState(0);
+  const [ratingHover,   setRatingHover]   = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingRate,setSubmittingRate]= useState(false);
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -59,6 +73,64 @@ const SessionHistory = () => {
     };
     fetchAll();
   }, []);
+
+  // ── Cancel appointment ──────────────────────────────────────────────────────
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    setCancelError("");
+    try {
+      const token = sessionStorage.getItem("token");
+      const res = await fetch("https://localhost:7160/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ appointmentId: cancelTarget.id, cancellationReason: cancelReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to cancel.");
+      // Update local state
+      setAppointments(prev =>
+        prev.map(a => a.id === cancelTarget.id ? { ...a, status: "CancelledByPatient" } : a)
+      );
+      setCancelTarget(null);
+      setCancelReason("");
+    } catch (e) {
+      setCancelError(e.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // ── Submit rating ───────────────────────────────────────────────────────────
+  const handleRateSubmit = async () => {
+    if (!rateTarget || ratingValue === 0) return;
+    setSubmittingRate(true);
+    try {
+      const token     = sessionStorage.getItem("token");
+      const patientId = sessionStorage.getItem("patientId");
+      await fetch("https://localhost:7160/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          appointmentId: rateTarget.id,
+          therapistId:   rateTarget.therapistId,
+          patientId,
+          rating:        ratingValue,
+          comment:       ratingComment,
+        }),
+      });
+      setAppointments(prev =>
+        prev.map(a => a.id === rateTarget.id ? { ...a, rated: true } : a)
+      );
+      setRateTarget(null);
+      setRatingValue(0);
+      setRatingComment("");
+    } catch (e) {
+      console.error("Rating failed", e);
+    } finally {
+      setSubmittingRate(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -235,14 +307,38 @@ const SessionHistory = () => {
                       )}
                     </div>
 
-                    {/* Payment */}
-                    <div className="shrink-0 text-[11px] font-semibold">
-                      {a.paymentStatus === "Succeeded"
-                        ? <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={13} /> Paid</span>
-                        : a.paymentStatus === "RefundPending" || a.paymentStatus === "FullyRefunded"
-                          ? <span className="flex items-center gap-1 text-orange-500"><AlertCircle size={13} /> Refund</span>
-                          : <span className="flex items-center gap-1 text-muted-foreground"><XCircle size={13} /> {a.paymentStatus}</span>
-                      }
+                    {/* Actions */}
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      {/* Payment status */}
+                      <span className="text-[11px] font-semibold">
+                        {a.paymentStatus === "Succeeded"
+                          ? <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={13} /> Paid</span>
+                          : a.paymentStatus === "RefundPending" || a.paymentStatus === "FullyRefunded"
+                            ? <span className="flex items-center gap-1 text-orange-500"><AlertCircle size={13} /> Refund</span>
+                            : <span className="flex items-center gap-1 text-muted-foreground"><XCircle size={13} /> {a.paymentStatus}</span>
+                        }
+                      </span>
+
+                      {/* Rate button — only for Completed + not yet rated */}
+                      {a.status === "Completed" && !a.rated && (
+                        <button
+                          onClick={() => setRateTarget(a)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          <Star size={12} /> Rate session
+                        </button>
+                      )}
+
+                      {/* Cancel button — only for Pending/Confirmed in the future */}
+                      {(a.status === "Pending" || a.status === "Confirmed") &&
+                        new Date(a.appointmentAt) > new Date() && (
+                        <button
+                          onClick={() => { setCancelTarget(a); setCancelError(""); }}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:underline"
+                        >
+                          <Trash2 size={12} /> Cancel
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -251,6 +347,112 @@ const SessionHistory = () => {
           </motion.div>
         )}
 
+      </AnimatePresence>
+
+      {/* ── Cancel dialog ── */}
+      <AnimatePresence>
+        {cancelTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={(e) => e.target === e.currentTarget && setCancelTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <h3 className="font-display text-lg font-bold text-foreground mb-1">Cancel Appointment</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {new Date(cancelTarget.appointmentAt) - new Date() > 24 * 60 * 60 * 1000
+                  ? "You'll receive a full refund since you're cancelling more than 24 hours in advance."
+                  : "Late cancellation — no refund will be issued per our policy."}
+              </p>
+              <textarea
+                rows={2}
+                placeholder="Reason for cancellation (optional)"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
+                           placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none mb-3"
+              />
+              {cancelError && <p className="text-xs text-red-500 mb-2">{cancelError}</p>}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCancelTarget(null)}>
+                  Keep
+                </Button>
+                <Button
+                  className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+                  disabled={cancelling}
+                  onClick={handleCancel}
+                >
+                  {cancelling ? <Loader2 size={16} className="animate-spin" /> : "Cancel Appointment"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Rate session dialog ── */}
+      <AnimatePresence>
+        {rateTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={(e) => e.target === e.currentTarget && setRateTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <h3 className="font-display text-lg font-bold text-foreground mb-1">Rate Your Session</h3>
+              <p className="text-sm text-muted-foreground mb-4">with {rateTarget.therapistName}</p>
+
+              {/* Stars */}
+              <div className="flex justify-center gap-2 mb-4">
+                {[1,2,3,4,5].map(n => (
+                  <button
+                    key={n}
+                    onMouseEnter={() => setRatingHover(n)}
+                    onMouseLeave={() => setRatingHover(0)}
+                    onClick={() => setRatingValue(n)}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star
+                      size={28}
+                      className={`transition-colors ${
+                        n <= (ratingHover || ratingValue)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-border"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={2}
+                placeholder="Tell us about your experience (optional)"
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
+                           placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none mb-3"
+              />
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setRateTarget(null)}>
+                  Skip
+                </Button>
+                <Button
+                  className="flex-1 rounded-xl"
+                  disabled={ratingValue === 0 || submittingRate}
+                  onClick={handleRateSubmit}
+                >
+                  {submittingRate ? <Loader2 size={16} className="animate-spin" /> : "Submit Rating"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

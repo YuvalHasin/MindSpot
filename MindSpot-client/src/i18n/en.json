@@ -1,0 +1,9 @@
+{
+  "nav": { "home": "Home", "about": "About", "contact": "Contact", "login": "Sign In" },
+  "chat": { "placeholder": "Talk to Serenity...", "send": "Send", "assistant_title": "Serenity", "subtitle": "AI Assistant" },
+  "booking": { "title": "Book a Session", "connect": "Connect Now", "view_profile": "View Profile", "no_slots": "No availability set. Please contact the therapist directly.", "select_slot": "Select a time slot", "prev_week": "Previous week", "next_week": "Next week" },
+  "session": { "booked": "Booked Appointments", "ai": "AI Sessions", "cancel": "Cancel", "rate": "Rate Session", "no_appointments": "No appointments yet." },
+  "profile": { "bio": "About", "specialties": "Specialties", "rating": "Rating", "reviews": "Reviews", "verified": "Verified" },
+  "auth": { "login": "Sign In", "register": "Register", "email": "Email", "password": "Password", "name": "Full Name" },
+  "common": { "loading": "Loading...", "error": "Something went wrong.", "back": "Back", "save": "Save", "cancel": "Cancel" }
+}

@@ -12,12 +12,12 @@
  *  6. Stripe calls our webhook → appointment status → Confirmed.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { motion } from "framer-motion";
-import { CalendarDays, User, FileText, CheckCircle2, Lock } from "lucide-react";
+import { CalendarDays, User, FileText, CheckCircle2, Lock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PaymentForm } from "../../components/patient/PaymentForm";
 
@@ -37,8 +37,171 @@ function getAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/** Return the Monday of the week containing `date` as a YYYY-MM-DD string. */
+function getMondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun … 6=Sat
+  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Format a YYYY-MM-DD string as "Mon DD/MM" */
+function formatDateHeader(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${days[d.getDay()]} ${dd}/${mm}`;
+}
+
+/** Format an ISO datetime string as "HH:MM" in UTC */
+function formatTime(isoStr) {
+  const d = new Date(isoStr);
+  return d.toISOString().slice(11, 16);
+}
+
 // ── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } };
+
+// ── SlotPicker sub-component ──────────────────────────────────────────────────
+function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
+  const [weekStart, setWeekStart]   = useState(() => getMondayOf(new Date()));
+  const [slots,     setSlots]       = useState([]);
+  const [loading,   setLoading]     = useState(false);
+  const [fetchError, setFetchError] = useState("");
+
+  useEffect(() => {
+    if (!therapistId) return;
+    setLoading(true);
+    setFetchError("");
+    setSlots([]);
+    fetch(
+      `https://localhost:7160/api/Therapists/availability?therapistId=${encodeURIComponent(therapistId)}&weekStart=${weekStart}`
+    )
+      .then((r) => {
+        if (!r.ok) throw new Error("Could not load availability.");
+        return r.json();
+      })
+      .then((data) => setSlots(data.slots ?? []))
+      .catch((err) => setFetchError(err.message))
+      .finally(() => setLoading(false));
+  }, [therapistId, weekStart]);
+
+  function shiftWeek(delta) {
+    const d = new Date(weekStart + "T00:00:00");
+    d.setDate(d.getDate() + delta * 7);
+    setWeekStart(d.toISOString().slice(0, 10));
+    onSelectSlot(null); // clear selection on week change
+  }
+
+  // Group slots by date
+  const byDate = {};
+  for (const slot of slots) {
+    const date = slot.dateTime.slice(0, 10);
+    if (!byDate[date]) byDate[date] = [];
+    byDate[date].push(slot);
+  }
+  const dates = Object.keys(byDate).sort();
+
+  // Display the week range label
+  const weekEndDate = new Date(weekStart + "T00:00:00");
+  weekEndDate.setDate(weekEndDate.getDate() + 6);
+  const weekLabel = `${weekStart.slice(8, 10)}/${weekStart.slice(5, 7)} – ${String(weekEndDate.getDate()).padStart(2, "0")}/${String(weekEndDate.getMonth() + 1).padStart(2, "0")}`;
+
+  return (
+    <div>
+      {/* Label */}
+      <label className="block text-sm font-medium text-foreground mb-2">
+        <span className="flex items-center gap-1.5">
+          <CalendarDays size={13} className="text-primary" /> Pick a time slot
+        </span>
+      </label>
+
+      {/* Week navigation */}
+      <div className="flex items-center justify-between mb-3 rounded-xl border border-border/60 bg-card px-3 py-2">
+        <button
+          type="button"
+          onClick={() => shiftWeek(-1)}
+          className="p-1 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+          aria-label="Previous week"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="text-sm font-medium text-foreground font-display">{weekLabel}</span>
+        <button
+          type="button"
+          onClick={() => shiftWeek(1)}
+          className="p-1 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+          aria-label="Next week"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Content area */}
+      {loading && (
+        <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
+          <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+          Loading availability…
+        </div>
+      )}
+
+      {!loading && fetchError && (
+        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+          {fetchError}
+        </div>
+      )}
+
+      {!loading && !fetchError && slots.length === 0 && (
+        <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-5 text-sm text-muted-foreground text-center">
+          This therapist hasn&apos;t set their availability yet. Please contact them directly.
+        </div>
+      )}
+
+      {!loading && !fetchError && dates.length > 0 && (
+        <div className="overflow-x-auto pb-1">
+          <div className="flex gap-3 min-w-max">
+            {dates.map((date) => (
+              <div key={date} className="flex flex-col gap-2 min-w-[80px]">
+                {/* Date header */}
+                <div className="text-center text-xs font-semibold text-muted-foreground font-display pb-1 border-b border-border/40">
+                  {formatDateHeader(date)}
+                </div>
+                {/* Time chips */}
+                {byDate[date].map((slot) => {
+                  const isSelected  = selectedSlot === slot.dateTime;
+                  const isAvailable = slot.available;
+                  return (
+                    <button
+                      key={slot.dateTime}
+                      type="button"
+                      disabled={!isAvailable}
+                      onClick={() => isAvailable && onSelectSlot(slot.dateTime)}
+                      className={[
+                        "rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : isAvailable
+                          ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 cursor-pointer"
+                          : "bg-muted/40 text-muted-foreground border-border/40 line-through cursor-not-allowed",
+                      ].join(" ")}
+                    >
+                      {formatTime(slot.dateTime)}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Main page component ───────────────────────────────────────────────────────
 export default function BookSessionPage() {
@@ -50,7 +213,7 @@ export default function BookSessionPage() {
   const [step, setStep] = useState(STEP.SELECT);
 
   const [therapistId,    setTherapistId]    = useState(therapist?.id ?? "");
-  const [appointmentAt,  setAppointmentAt]  = useState("");
+  const [selectedSlot,   setSelectedSlot]   = useState(null);
   const [notes,          setNotes]          = useState("");
 
   const [appointmentId,  setAppointmentId]  = useState(null);
@@ -64,6 +227,10 @@ export default function BookSessionPage() {
   // ── Step 1: Create appointment + get clientSecret ──────────────────────────
   const handleBooking = useCallback(async (e) => {
     e.preventDefault();
+    if (!selectedSlot) {
+      setError("Please select a time slot.");
+      return;
+    }
     setError("");
     setIsLoading(true);
 
@@ -76,7 +243,7 @@ export default function BookSessionPage() {
         body: JSON.stringify({
           patientId,
           therapistId,
-          appointmentAt: new Date(appointmentAt).toISOString(),
+          appointmentAt: selectedSlot,
           durationMinutes: 50,
           amount:   SESSION_PRICE,
           currency: SESSION_CURRENCY,
@@ -112,7 +279,7 @@ export default function BookSessionPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [therapistId, appointmentAt, notes]);
+  }, [therapistId, selectedSlot, notes]);
 
   // ── Step 2 → 3: Payment confirmed ──────────────────────────────────────────
   const handlePaymentSuccess = useCallback(({ paymentIntentId }) => {
@@ -220,23 +387,19 @@ export default function BookSessionPage() {
                 </div>
               )}
 
-              {/* Date & time */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <CalendarDays size={13} className="text-primary" /> Date &amp; Time
-                  </span>
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  min={new Date().toISOString().slice(0, 16)}
-                  value={appointmentAt}
-                  onChange={(e) => setAppointmentAt(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
-                             focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition"
-                />
-              </div>
+              {/* Slot picker */}
+              <SlotPicker
+                therapistId={therapistId}
+                selectedSlot={selectedSlot}
+                onSelectSlot={setSelectedSlot}
+              />
+
+              {/* Selected slot summary */}
+              {selectedSlot && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-primary font-medium">
+                  Selected: {new Date(selectedSlot).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                </div>
+              )}
 
               {/* Notes */}
               <div>
@@ -264,7 +427,7 @@ export default function BookSessionPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !selectedSlot}
                 className="w-full rounded-xl py-6 h-auto text-base font-semibold shadow-sm shadow-primary/20 transition-transform hover:scale-[1.01] active:scale-[0.98]"
               >
                 {isLoading ? "Preparing payment…" : "Continue to Payment →"}
@@ -322,36 +485,22 @@ export default function BookSessionPage() {
             animate="show"
             className="bg-card border border-border/60 rounded-2xl p-8 shadow-sm text-center"
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="text-green-600" size={32} />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="font-display text-2xl font-bold text-foreground">Session Booked!</h2>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              Your appointment has been confirmed. You'll receive a reminder 24 hours before the session.
-            </p>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Appointment ID: <code className="font-mono text-foreground">{appointmentId}</code>
+            <h2 className="font-display text-xl font-bold text-foreground mb-2">
+              Session Booked!
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Your payment was successful. You&apos;ll receive a confirmation shortly.
             </p>
             <Button
-              onClick={() => navigate("/patient-dashboard")}
-              className="mt-6 rounded-xl px-8 py-5 h-auto font-semibold shadow-sm shadow-primary/20 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => navigate("/patient/dashboard")}
+              className="rounded-xl px-6 py-2.5 font-semibold"
             >
               Go to Dashboard
             </Button>
           </motion.div>
-        )}
-
-        {/* Cancellation policy */}
-        {step !== STEP.SUCCESS && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-5 text-center text-xs text-muted-foreground"
-          >
-            Cancellation policy: full refund if cancelled &gt;24 h before the session.
-            Late cancellations are non-refundable.
-          </motion.p>
         )}
 
       </div>
@@ -359,41 +508,39 @@ export default function BookSessionPage() {
   );
 }
 
-// ── Step indicator component ──────────────────────────────────────────────────
+// ── Step indicator ─────────────────────────────────────────────────────────────
 function StepIndicator({ current }) {
   const steps = [
-    { id: STEP.SELECT,  label: "Details" },
-    { id: STEP.PAYMENT, label: "Payment" },
-    { id: STEP.SUCCESS, label: "Confirmed" },
+    { key: STEP.SELECT,  label: "Details",  icon: CalendarDays },
+    { key: STEP.PAYMENT, label: "Payment",  icon: Lock         },
+    { key: STEP.SUCCESS, label: "Confirmed", icon: CheckCircle2 },
   ];
-  const currentIdx = steps.findIndex((s) => s.id === current);
+
+  const idx = steps.findIndex((s) => s.key === current);
 
   return (
-    <div className="mb-7 flex items-center justify-center gap-0">
-      {steps.map((s, i) => (
-        <div key={s.id} className="flex items-center">
-          <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors
-              ${i <= currentIdx
-                ? "bg-primary text-white"
-                : "bg-muted text-muted-foreground"}`}
-          >
-            {i < currentIdx ? "✓" : i + 1}
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {steps.map((s, i) => {
+        const Icon = s.icon;
+        const done    = i < idx;
+        const active  = i === idx;
+        return (
+          <div key={s.key} className="flex items-center gap-2">
+            <div className={[
+              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+              active ? "bg-primary text-primary-foreground" :
+              done   ? "bg-primary/20 text-primary" :
+                       "bg-muted text-muted-foreground",
+            ].join(" ")}>
+              <Icon size={11} />
+              {s.label}
+            </div>
+            {i < steps.length - 1 && (
+              <div className={["h-px w-6 transition-colors", done ? "bg-primary/40" : "bg-border"].join(" ")} />
+            )}
           </div>
-          <span
-            className={`ml-1.5 text-xs font-medium transition-colors
-              ${i <= currentIdx ? "text-primary" : "text-muted-foreground"}`}
-          >
-            {s.label}
-          </span>
-          {i < steps.length - 1 && (
-            <div
-              className={`mx-3 h-px w-10 transition-colors
-                ${i < currentIdx ? "bg-primary/50" : "bg-border"}`}
-            />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

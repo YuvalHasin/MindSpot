@@ -45,6 +45,7 @@ import ProfileSettings from "./pages/patient/ProfileSettings";
 import SecuritySettings from "./pages/patient/SecuritySettings";
 import TriagePage from "./pages/patient/TriagePage";
 import ChatPage from "./pages/patient/ChatPage";
+import ChatRoomPage from "./pages/patient/ChatRoomPage";
 
 // Therapist Pages & Layout
 import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
@@ -52,6 +53,7 @@ import TherapistPage from "./pages/therapist/TherapistPage";
 
 // Patient extra pages
 import BookSessionPage from "./pages/patient/BookSessionPage";
+import TherapistProfilePage from "./pages/patient/TherapistProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +67,7 @@ const App = () => (
           <Route path="/patient-auth" element={<PatientAuthPage />} />
           <Route path="/therapist-auth" element={<TherapistAuthPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/therapist/:id" element={<TherapistProfilePage />} />
 
           {/* --- נתיבי מטופל (מוגנים) --- */}
           <Route 
@@ -81,6 +84,7 @@ const App = () => (
             <Route path="security" element={<SecuritySettings />} />
             <Route path="triage" element={<TriagePage />} />
             <Route path="chat/:sessionId?" element={<ChatPage />} />
+            <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
             <Route path="book-session" element={<BookSessionPage />} />
           </Route>
 
