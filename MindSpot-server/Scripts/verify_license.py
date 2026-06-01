@@ -7,7 +7,7 @@ Queries the Israeli Ministry of Health Health Professions Registry
 to verify that a given license number exists, is valid, and is active.
 
 Usage:
-    python3 verify_license.py --license <LICENSE_NUMBER> --name <FULL_NAME>
+    python verify_license.py --license <LICENSE_NUMBER> --name <FULL_NAME>
 
 Output:
     JSON to stdout — consumed by the C# LicenseVerificationService.
@@ -15,6 +15,9 @@ Output:
 Exit codes:
     0 = ran successfully (check isValid / isActive in output JSON)
     1 = script-level error (output contains failureReason)
+
+Dependencies (install once):
+    pip install selenium webdriver-manager
 """
 
 import sys
@@ -26,22 +29,30 @@ from dataclasses import dataclass, asdict
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 
-# Write logs to stderr so they don't pollute the JSON stdout output
+# webdriver-manager auto-downloads the correct ChromeDriver version
+try:
+    from webdriver_manager.chrome import ChromeDriverManager
+    USE_DRIVER_MANAGER = True
+except ImportError:
+    USE_DRIVER_MANAGER = False
+
+# Write logs to stderr so they don't pollute the JSON stdout
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-REGISTRY_URL = "https://practitioners.health.gov.il/Practitioners/Search"
-PAGE_LOAD_TIMEOUT = 25   # seconds
-ELEMENT_TIMEOUT   = 15   # seconds
-POST_CLICK_DELAY  = 2.5  # seconds to wait for AJAX results
+REGISTRY_URL      = "https://practitioners.health.gov.il/Practitioners/Search"
+PAGE_LOAD_TIMEOUT = 30
+ELEMENT_TIMEOUT   = 20
+POST_SUBMIT_WAIT  = 3.0   # seconds to wait after submitting the form
 
 # ── Data model ────────────────────────────────────────────────────────────────
 
@@ -56,8 +67,7 @@ class VerificationResult:
 
 # ── Driver factory ────────────────────────────────────────────────────────────
 
-def create_headless_driver() -> webdriver.Chrome:
-    """Return a configured, stealthy headless Chrome driver."""
+def create_driver() -> webdriver.Chrome:
     opts = Options()
     opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
@@ -65,14 +75,19 @@ def create_headless_driver() -> webdriver.Chrome:
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1920,1080")
     opts.add_argument("--lang=he-IL")
-    # Reduce automation fingerprint
     opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
     opts.add_experimental_option("useAutomationExtension", False)
 
-    driver = webdriver.Chrome(options=opts)
+    if USE_DRIVER_MANAGER:
+        logger.info("Using webdriver-manager to resolve ChromeDriver")
+        service = Service(ChromeDriverManager().install())
+        driver  = webdriver.Chrome(service=service, options=opts)
+    else:
+        logger.warning("webdriver-manager not installed — using system ChromeDriver")
+        driver = webdriver.Chrome(options=opts)
+
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
-    # Remove the "webdriver" navigator property
     driver.execute_cdp_cmd(
         "Page.addScriptToEvaluateOnNewDocument",
         {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"}
@@ -80,196 +95,195 @@ def create_headless_driver() -> webdriver.Chrome:
     return driver
 
 
-# ── Core verification logic ───────────────────────────────────────────────────
+# ── Core verification ─────────────────────────────────────────────────────────
 
 def verify_license(license_number: str, full_name: str) -> VerificationResult:
-    """
-    Navigate to the Ministry of Health registry, search for the license,
-    and return a structured result.
-
-    NOTE: The CSS selectors below target the current structure of
-    https://practitioners.health.gov.il — update them if the page changes.
-    """
     driver = None
     try:
-        driver = create_headless_driver()
-        wait = WebDriverWait(driver, ELEMENT_TIMEOUT)
+        driver = create_driver()
+        wait   = WebDriverWait(driver, ELEMENT_TIMEOUT)
 
-        logger.info("Navigating to registry: %s", REGISTRY_URL)
+        logger.info("Navigating to %s", REGISTRY_URL)
         driver.get(REGISTRY_URL)
 
         # ── 1. Enter license number ───────────────────────────────────────────
-        # Try several common selector patterns; adjust to the live page.
-        license_input_selectors = [
+        license_input = _find_first(wait, [
             "input[name='LicenseNumber']",
             "#licenseNumber",
             "input[placeholder*='רישיון']",
-            "input[placeholder*='license']",
+            "input[placeholder*='מספר']",
             "input[id*='icense']",
-        ]
-        license_input = _find_element_by_selectors(wait, license_input_selectors, "license number input")
+            "input[id*='License']",
+            "input[type='text']",   # last-resort: first text input on page
+        ], "license input")
+
+        if license_input is None:
+            # Dump page source to stderr for debugging
+            logger.error("Could not find license input. Page title: %s", driver.title)
+            logger.debug("Page source (first 2000 chars):\n%s", driver.page_source[:2000])
+            return _fail(license_number, "Could not locate the license number input field. The government site may have changed its layout.")
+
         license_input.clear()
         license_input.send_keys(license_number)
-        logger.info("Entered license number: %s", license_number)
+        logger.info("Typed license number: %s", license_number)
 
-        # ── 2. (Optional) Enter name to narrow results ────────────────────────
-        name_input_selectors = [
-            "input[name='FullName']",
-            "#fullName",
-            "input[placeholder*='שם']",
-            "input[placeholder*='name']",
-        ]
-        try:
-            name_input = _find_element_by_selectors(
-                WebDriverWait(driver, 3), name_input_selectors, "name input", raise_on_miss=False
-            )
-            if name_input:
-                name_input.clear()
-                name_input.send_keys(full_name)
-                logger.info("Entered full name: %s", full_name)
-        except Exception:
-            logger.info("Name field not found — skipping.")
+        # ── 2. Enter name if field exists ─────────────────────────────────────
+        name_input = _find_first(
+            WebDriverWait(driver, 4), [
+                "input[name='FullName']",
+                "input[name='Name']",
+                "#fullName",
+                "input[placeholder*='שם']",
+                "input[placeholder*='Name']",
+            ],
+            "name input",
+            required=False
+        )
+        if name_input:
+            name_input.clear()
+            name_input.send_keys(full_name)
+            logger.info("Typed full name: %s", full_name)
 
-        # ── 3. Submit search ──────────────────────────────────────────────────
-        submit_selectors = [
+        # ── 3. Submit ─────────────────────────────────────────────────────────
+        submit = _find_first(wait, [
             "button[type='submit']",
             "input[type='submit']",
+            "button.search-btn",
+            "button.btn-search",
             ".search-button",
             "[data-testid='search-btn']",
-        ]
-        submit_btn = _find_element_by_selectors(wait, submit_selectors, "submit button")
-        submit_btn.click()
-        logger.info("Search submitted, waiting for results...")
-        time.sleep(POST_CLICK_DELAY)
+            "button:contains('חיפוש')",
+        ], "submit button")
 
-        # ── 4. Wait for results table / list ─────────────────────────────────
-        result_selectors = [
-            ".result-row",
-            "tr.practitioner-row",
+        if submit is None:
+            logger.error("Submit button not found. Page title: %s", driver.title)
+            return _fail(license_number, "Could not locate the search submit button.")
+
+        submit.click()
+        logger.info("Submitted. Waiting %.1fs for results…", POST_SUBMIT_WAIT)
+        time.sleep(POST_SUBMIT_WAIT)
+
+        # ── 4. Look for result rows ───────────────────────────────────────────
+        row_selectors = [
+            "tr.result-row",
+            ".practitioner-row",
+            "tbody > tr",
             ".search-result-item",
-            "tbody tr",
             ".practitioner-card",
+            "li.result",
         ]
-        try:
-            result_rows = _wait_for_any_elements(wait, result_selectors)
-        except TimeoutException:
+        rows = _find_all(wait, row_selectors, timeout=ELEMENT_TIMEOUT)
+
+        if not rows:
             logger.warning("No result rows found for license %s", license_number)
+            logger.debug("Page after submit (first 3000):\n%s", driver.page_source[:3000])
             return VerificationResult(
                 isValid=False, isActive=False,
                 registeredName="", licenseNumber=license_number,
-                failureReason=f"License {license_number!r} not found in the Ministry of Health registry."
+                failureReason=f"License {license_number!r} was not found in the Ministry of Health registry."
             )
 
-        logger.info("Found %d result row(s)", len(result_rows))
+        logger.info("Found %d result row(s)", len(rows))
 
-        # ── 5. Parse each row ─────────────────────────────────────────────────
-        for row in result_rows:
-            row_text = row.text.strip()
-            if not row_text:
+        # ── 5. Parse rows ─────────────────────────────────────────────────────
+        for row in rows:
+            text = row.text.strip()
+            if not text or license_number not in text:
                 continue
 
-            # Match on the exact license number string
-            if license_number not in row_text:
-                continue
-
-            registered_name = _extract_cell(row, [
-                ".name-cell", "td:nth-child(1)", ".practitioner-name",
+            name = _cell_text(row, [
+                ".name-cell", "td:first-child", ".practitioner-name",
                 "[data-label='שם']", "[data-label='Name']",
             ])
-
-            status_text = _extract_cell(row, [
+            status_raw = _cell_text(row, [
                 ".status-cell", "td.status", ".license-status",
                 "[data-label='סטטוס']", "[data-label='Status']",
-            ]).lower()
+            ])
+            status = status_raw.lower()
+            is_active = any(kw in status for kw in ("פעיל", "active", "valid", "בתוקף"))
 
-            is_active = any(kw in status_text for kw in ("פעיל", "active", "valid", "בתוקף"))
-            failure = "" if is_active else f"License found but status is: {status_text!r}"
-
-            logger.info("Match found — name: %r, status: %r, active: %s", registered_name, status_text, is_active)
+            logger.info("Match: name=%r status=%r active=%s", name, status_raw, is_active)
             return VerificationResult(
                 isValid=True, isActive=is_active,
-                registeredName=registered_name, licenseNumber=license_number,
-                failureReason=failure
+                registeredName=name, licenseNumber=license_number,
+                failureReason="" if is_active else f"License found but status is: {status_raw!r}"
             )
 
-        # No row contained the license number
-        logger.warning("License number %s not found in any result row", license_number)
+        logger.warning("License %s not found in any row text", license_number)
         return VerificationResult(
             isValid=False, isActive=False,
             registeredName="", licenseNumber=license_number,
-            failureReason=f"License {license_number!r} was not found in the registry results."
+            failureReason=f"License {license_number!r} was not matched in the registry results."
         )
 
     except WebDriverException as exc:
         logger.error("WebDriver error: %s", exc)
-        return VerificationResult(
-            isValid=False, isActive=False,
-            registeredName="", licenseNumber=license_number,
-            failureReason=f"Browser automation error: {exc}"
-        )
+        return _fail(license_number, f"Browser automation error: {exc}")
     except Exception as exc:
-        logger.exception("Unexpected error during license verification")
-        return VerificationResult(
-            isValid=False, isActive=False,
-            registeredName="", licenseNumber=license_number,
-            failureReason=f"Unexpected error: {exc}"
-        )
+        logger.exception("Unexpected error")
+        return _fail(license_number, f"Unexpected error: {exc}")
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                pass
             logger.info("Browser closed.")
 
 
-# ── Selector helpers ──────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _find_element_by_selectors(wait: WebDriverWait, selectors: list[str],
-                                label: str, raise_on_miss: bool = True):
-    """Try each CSS selector in order; return the first element found."""
-    for selector in selectors:
+def _find_first(wait: WebDriverWait, selectors: list, label: str, required: bool = True):
+    """Return the first element matched by any selector, or None if not found."""
+    for sel in selectors:
         try:
-            return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+            return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, sel)))
         except TimeoutException:
             continue
-    if raise_on_miss:
-        raise TimeoutException(f"Could not locate element: {label!r}. Selectors tried: {selectors}")
+    if required:
+        logger.warning("Element not found: %s (tried %d selectors)", label, len(selectors))
     return None
 
 
-def _wait_for_any_elements(wait: WebDriverWait, selectors: list[str]) -> list:
+def _find_all(wait: WebDriverWait, selectors: list, timeout: int = 15) -> list:
     """Return the first non-empty list of elements matched by any selector."""
-    for selector in selectors:
+    for sel in selectors:
         try:
-            elements = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector)))
+            elements = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, sel)))
             if elements:
                 return elements
         except TimeoutException:
             continue
-    raise TimeoutException(f"No result elements found. Selectors tried: {selectors}")
+    return []
 
 
-def _extract_cell(row, selectors: list[str]) -> str:
-    """Extract text from the first matching child element; empty string if none."""
-    for selector in selectors:
+def _cell_text(row, selectors: list) -> str:
+    for sel in selectors:
         try:
-            return row.find_element(By.CSS_SELECTOR, selector).text.strip()
+            return row.find_element(By.CSS_SELECTOR, sel).text.strip()
         except NoSuchElementException:
             continue
+    # Fallback: return full row text (will be cleaned by caller)
     return ""
+
+
+def _fail(license_number: str, reason: str) -> VerificationResult:
+    return VerificationResult(
+        isValid=False, isActive=False,
+        registeredName="", licenseNumber=license_number,
+        failureReason=reason
+    )
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Verify a therapist license against the Ministry of Health registry."
-    )
-    parser.add_argument("--license", required=True, help="License number to verify")
-    parser.add_argument("--name",    required=True, help="Full name claimed by the therapist")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--license", required=True)
+    parser.add_argument("--name",    required=True)
     args = parser.parse_args()
 
     result = verify_license(args.license.strip(), args.name.strip())
-
-    # Print JSON to stdout — this is what the C# process reads
     print(json.dumps(asdict(result), ensure_ascii=False))
 
 

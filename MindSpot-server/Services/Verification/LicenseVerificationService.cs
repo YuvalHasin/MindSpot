@@ -28,11 +28,23 @@ namespace MindSpot_server.Services.Verification
         {
             _logger = logger;
 
-            _scriptPath = configuration["Verification:PythonScriptPath"]
-                          ?? Path.Combine(AppContext.BaseDirectory, "Scripts", "verify_license.py");
+            // Prefer relative path from appsettings, otherwise resolve from base dir
+            var configuredPath = configuration["Verification:PythonScriptPath"];
+            _scriptPath = string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.Combine(AppContext.BaseDirectory, "Scripts", "verify_license.py")
+                : Path.IsPathRooted(configuredPath)
+                    ? configuredPath
+                    : Path.Combine(AppContext.BaseDirectory, configuredPath);
 
-            // Allow override (e.g. "python" on Windows vs "python3" on Linux)
-            _pythonExecutable = configuration["Verification:PythonExecutable"] ?? "python3";
+            // On Windows "python" is the standard command; on Linux/macOS it's "python3"
+            var configuredExe = configuration["Verification:PythonExecutable"];
+            _pythonExecutable = string.IsNullOrWhiteSpace(configuredExe)
+                ? (OperatingSystem.IsWindows() ? "python" : "python3")
+                : configuredExe;
+
+            _logger.LogInformation(
+                "LicenseVerificationService configured: exe={Exe}, script={Script}",
+                _pythonExecutable, _scriptPath);
         }
 
         public async Task<LicenseVerificationResult> VerifyLicenseAsync(
