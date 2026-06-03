@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
-using MindSpot_server.Services; // ודאי שה-Namespace נכון
+using MindSpot_server.Services;
 using OpenAI.Chat;
 using Raven.Client.Documents;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ public class ChatController : ControllerBase
     public ChatController(OpenAiService openAiService, IDocumentStore store)
     {
         _openAiService = openAiService;
-        _store         = store;
+        _store = store;
     }
 
     [HttpPost("send")]
@@ -26,8 +26,8 @@ public class ChatController : ControllerBase
     {
         try
         {
-            // 1. הכנת רשימת ההודעות עבור OpenAI
-            var chatMessages = new List<ChatMessage>();
+            // 1. תיקון קריטי: מגדירים במפורש שהרשימה מיועדת עבור OpenAI.Chat.ChatMessage
+            var chatMessages = new List<OpenAI.Chat.ChatMessage>();
 
             // הוספת הוראת מערכת (System Prompt) כדי לקבוע את האישיות של הבוט
             chatMessages.Add(new SystemChatMessage(
@@ -46,7 +46,7 @@ public class ChatController : ControllerBase
                     chatMessages.Add(new AssistantChatMessage(msg.Content));
             }
 
-            // 2. שליחה ל-OpenAI (ללא סטרימינג כרגע, בשביל הפשטות)
+            // 2. שליחה ל-OpenAI 
             var response = await _openAiService.GetChatResponseAsync(chatMessages);
 
             // 3. החזרת התשובה בפורמט שהצ'אט ב-React יודע לקרוא
@@ -60,11 +60,9 @@ public class ChatController : ControllerBase
 
     // ─────────────────────────────────────────────────────────────────────────
     // SignalR chat history: GET /api/Chat/history?appointmentId=...
-    // Returns last 100 peer-to-peer chat messages for a given appointment,
-    // ordered oldest-first so the client can render them in sequence.
     // ─────────────────────────────────────────────────────────────────────────
 
-    [AllowAnonymous]   // auth enforced by the SignalR hub; history is read by both roles
+    [AllowAnonymous]
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory([FromQuery] string appointmentId)
     {
@@ -72,6 +70,8 @@ public class ChatController : ControllerBase
             return BadRequest(new { error = "appointmentId is required." });
 
         using var session = _store.OpenAsyncSession();
+
+        // כאן הקוד כבר היה מתוקן מצוין והשתמש בנתיב המלא של המודל המקומי
         var messages = await session.Query<MindSpot_server.Models.ChatMessage>()
             .Where(m => m.AppointmentId == appointmentId)
             .OrderBy(m => m.SentAt)
@@ -80,12 +80,12 @@ public class ChatController : ControllerBase
 
         return Ok(messages.Select(m => new
         {
-            id         = m.Id,
-            senderId   = m.SenderId,
+            id = m.Id,
+            senderId = m.SenderId,
             senderRole = m.SenderRole,
             senderName = m.SenderName,
-            content    = m.Content,
-            sentAt     = m.SentAt
+            content = m.Content,
+            sentAt = m.SentAt
         }));
     }
 }

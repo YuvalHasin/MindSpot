@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // הוספנו useNavigate
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   MessageCircle,
@@ -10,7 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  LogOut, // הוספנו את האייקון
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -25,17 +25,24 @@ const navItems = [
 const TherapistSidebar = ({ fullName }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate(); // הגדרת הניווט
+  const navigate = useNavigate();
 
-  const isActive = (path) =>
-    location.pathname === path || (path === "/therapist" && location.pathname === "/therapist");
+  // תיקון לוגיקת ה-Active: בודק התאמה מדויקת לנתיב, או אם זה דף הבית הראשי של אזור המטפל
+  const isActive = (path) => {
+    if (path === "/therapist") {
+      return location.pathname === "/therapist" || location.pathname === "/therapist/";
+    }
+    return location.pathname.startsWith(path);
+  };
 
-  // הפונקציה חייבת להיות בתוך הקומפוננטה
   const handleLogout = () => {
+    // מנקים את כל ה-Tokens כדי למנוע זליגת הרשאות
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("role");
     localStorage.removeItem("therapistToken");
     localStorage.removeItem("therapistId");
     navigate("/therapist-auth"); 
-};
+  };
 
   return (
     <>
@@ -111,7 +118,7 @@ const TherapistSidebar = ({ fullName }) => {
           {!collapsed && (
             <div className="flex items-center justify-between bg-primary/5 rounded-xl px-3 py-2 mb-2">
               <span className="text-xs font-medium text-foreground">Available</span>
-              <div className="w-8 h-4 bg-primary rounded-full relative">
+              <div className="w-8 h-4 bg-primary rounded-full relative cursor-pointer">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-primary-foreground rounded-full" />
               </div>
             </div>
