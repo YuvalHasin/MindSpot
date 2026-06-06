@@ -50,6 +50,10 @@ import ChatRoomPage from "./pages/patient/ChatRoomPage";
 // Therapist Pages & Layout
 import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
 import TherapistPage from "./pages/therapist/TherapistPage";
+import ActiveSession from "./pages/therapist/ActiveSession";
+import StatsOverview from "./pages/therapist/StatsOverview";
+import RecentSessions from "./pages/therapist/RecentSessions";
+import ConsultationQueue from "./pages/therapist/ConsultationQueue";
 
 // Patient extra pages
 import BookSessionPage from "./pages/patient/BookSessionPage";
@@ -67,7 +71,7 @@ const App = () => (
           <Route path="/patient-auth" element={<PatientAuthPage />} />
           <Route path="/therapist-auth" element={<TherapistAuthPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
-          <Route path="/therapist/:id" element={<TherapistProfilePage />} />
+          <Route path="/therapist-profile/:id" element={<TherapistProfilePage />} />
 
           {/* --- נתיבי מטופל (מוגנים) --- */}
           <Route 
@@ -88,15 +92,23 @@ const App = () => (
             <Route path="book-session" element={<BookSessionPage />} />
           </Route>
 
-          {/* --- נתיבי מטפל (מוגנים) --- */}
+         {/* --- נתיבי מטפל (מוגנים) --- */}
           <Route
-            path="/therapist-dashboard"
+            path="/therapist"
             element={
               <ProtectedRoute redirectTo="/therapist-auth" roleRequired="therapist">
-                <TherapistPage />
+                <TherapistPage /> {/* כאן נמצא ה-Sidebar וה-Layout של המטפל שכולל <Outlet /> */}
               </ProtectedRoute>
             }
-          />
+          >
+            {/* אלו הילדים שירוססו בתוך ה-Sidebar לפי מה שנבחר */}
+            <Route index element={<StatsOverview />} /> {/* או קומפוננטת ה-Overview שלך */}
+            <Route path="consultations" element={<SessionHistory />} /> {/* קומפוננטת הייעוצים של המטפל */}
+            <Route path="clients" element={<PatientManagement />} /> {/* קומפוננטת המטופלים של המטפל */}
+            <Route path="schedule" element={<ProfileSettings />} /> {/* קומפוננטת הלו"ז של המטפל */}
+            <Route path="analytics" element={<StatsOverview />} />  
+            <Route path="settings" element={<ProfileSettings />} />
+          </Route>
 
           {/* --- נתיבי אדמין (מוגנים) --- */}
           <Route 
