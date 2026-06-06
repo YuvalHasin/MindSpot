@@ -19,17 +19,48 @@ public class TherapistsController : ControllerBase
     private readonly OpenAiService _openAiService;
     private readonly ITherapistVerificationManager _verificationManager;
     private readonly ITherapistSearchService _searchService;
+    private readonly ILicenseVerificationService _licenseService;
 
     public TherapistsController(
         IDocumentStore store,
         OpenAiService openAiService,
         ITherapistVerificationManager verificationManager,
-        ITherapistSearchService searchService)
+        ITherapistSearchService searchService,
+        ILicenseVerificationService licenseService)
     {
         _store = store;
         _openAiService = openAiService;
         _verificationManager = verificationManager;
         _searchService = searchService;
+        _licenseService = licenseService;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GET /api/therapists/check-license?licenseNumber=27-XXXX&fullName=...
+    // Quick pre-registration check: validates the license against the
+    // Ministry of Health registry WITHOUT creating any account.
+    // ─────────────────────────────────────────────────────────────────────────
+    [AllowAnonymous]
+    [HttpGet("check-license")]
+    public async Task<IActionResult> CheckLicense(
+        [FromQuery] string licenseNumber,
+        [FromQuery] string fullName,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(licenseNumber) || string.IsNullOrWhiteSpace(fullName))
+            return BadRequest(new { error = "licenseNumber and fullName are required." });
+
+        var result = await _licenseService.VerifyLicenseAsync(
+            licenseNumber.Trim(), fullName.Trim(), cancellationToken);
+
+        if (result.IsValid && result.IsActive)
+            return Ok(new { valid = true, registeredName = result.RegisteredName });
+
+        return UnprocessableEntity(new
+        {
+            valid         = false,
+            failureReason = result.FailureReason ?? "License not found or not active in the Ministry of Health registry."
+        });
     }
 
     [AllowAnonymous]

@@ -34,11 +34,12 @@ const TherapistAuthPage = () => {
   const licenseRef = useRef();
 
   // Shared UI state
-  const [loading,      setLoading]      = useState(false);
-  const [verifying,    setVerifying]    = useState(false); // מצב אימות רישיון
-  const [error,        setError]        = useState("");
-  const [errors,       setErrors]       = useState({});
-  const [registeredId, setRegisteredId] = useState(null);
+  const [loading,         setLoading]         = useState(false);
+  const [verifying,       setVerifying]       = useState(false); // שלב 2 — אימות תמונות
+  const [checkingLicense, setCheckingLicense] = useState(false); // שלב 1 — בדיקת רשם
+  const [error,           setError]           = useState("");
+  const [errors,          setErrors]          = useState({});
+  const [registeredId,    setRegisteredId]    = useState(null);
 
   // ── Validation ────────────────────────────────────────────────────────────
   const validateStep1 = () => {
@@ -100,6 +101,31 @@ const TherapistAuthPage = () => {
     e.preventDefault();
     setError("");
     if (!validateStep1()) return;
+
+    // ── Phase A: verify license against Ministry of Health registry ────────
+    setCheckingLicense(true);
+    try {
+      const params = new URLSearchParams({ licenseNumber, fullName });
+      const chkRes  = await fetch(
+        `https://localhost:7160/api/Therapists/check-license?${params}`
+      );
+      const chkData = await chkRes.json().catch(() => ({}));
+
+      if (!chkRes.ok) {
+        setError(
+          chkData.failureReason ||
+          "Your license was not found or is not active in the Ministry of Health registry. Please check your details."
+        );
+        return;
+      }
+    } catch {
+      setError("Could not reach the verification server. Please try again.");
+      return;
+    } finally {
+      setCheckingLicense(false);
+    }
+
+    // ── Phase B: license is valid — create the account ─────────────────────
     setLoading(true);
     try {
       const res  = await fetch("https://localhost:7160/api/Therapists/register", {
@@ -253,8 +279,22 @@ const TherapistAuthPage = () => {
                   <FieldRow icon={Award} placeholder="License number (27-XXXXX)"   value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
                   <FieldRow icon={Lock}  placeholder="Password"                    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
                   {error && <ErrBox msg={error} />}
-                  <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
-                    {loading
+                  {/* License-check loading banner */}
+                  {checkingLicense && (
+                    <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
+                      <Loader2 size={16} className="animate-spin shrink-0" />
+                      <span>Verifying your license with the Ministry of Health registry… This may take up to 30 seconds.</span>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full rounded-xl h-12 text-base font-medium"
+                    disabled={loading || checkingLicense}
+                  >
+                    {checkingLicense
+                      ? <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Verifying license…</span>
+                      : loading
                       ? <Loader2 size={18} className="animate-spin" />
                       : <span className="flex items-center gap-2">Continue <ChevronRight size={16} /></span>
                     }
