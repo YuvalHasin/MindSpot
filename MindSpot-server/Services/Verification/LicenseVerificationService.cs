@@ -56,21 +56,45 @@ namespace MindSpot_server.Services.Verification
                 "Invoking license verification script for license: {License}, name: {Name}",
                 licenseNumber, fullName);
 
+            var safeLicense = SanitiseArg(licenseNumber);
+            var safeName    = SanitiseArg(fullName);
+
+            // On Windows the configured executable may not be on the PATH of the server
+            // process. We try a ranked list so that at least one succeeds.
+            var candidates = BuildExecutableCandidates(_pythonExecutable);
+
+            foreach (var exe in candidates)
+            {
+                var result = await TryRunScriptAsync(exe, safeLicense, safeName, cancellationToken);
+                if (result is not null)
+                    return result;
+            }
+
+            return Failed(
+                "Python interpreter not found. " +
+                "Please install Python and ensure 'py', 'python', or 'python3' is on the system PATH.");
+        }
+
+        // ── Try a single Python executable; return null if the executable was not found ──
+        private async Task<LicenseVerificationResult?> TryRunScriptAsync(
+            string exe, string safeLicense, string safeName,
+            CancellationToken cancellationToken)
+        {
             try
             {
-                // Sanitise inputs to prevent shell-injection via argument values
-                var safeLicense = SanitiseArg(licenseNumber);
-                var safeName    = SanitiseArg(fullName);
-
                 var psi = new ProcessStartInfo
                 {
-                    FileName               = _pythonExecutable,
-                    ArgumentList           = { _scriptPath, "--license", safeLicense, "--name", safeName },
+                    FileName               = exe,
                     RedirectStandardOutput = true,
                     RedirectStandardError  = true,
                     UseShellExecute        = false,
                     CreateNoWindow         = true
                 };
+                psi.ArgumentList.Add(_scriptPath);
+                psi.ArgumentList.Add("--license");
+                psi.ArgumentList.Add(safeLicense);
+                psi.ArgumentList.Add("--name");
+                psi.ArgumentList.Add(safeName);
 
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(ScriptTimeout);
@@ -85,29 +109,50 @@ namespace MindSpot_server.Services.Verification
                 var stdout = await stdoutTask;
                 var stderr = await stderrTask;
 
+                // Exit code 9009 (Windows) or 127 (Unix) = interpreter not found → try next
+                if (process.ExitCode is 9009 or 127)
+                {
+                    _logger.LogDebug("Executable '{Exe}' not found (exit {Code}), trying next.", exe, process.ExitCode);
+                    return null;
+                }
+
                 if (!string.IsNullOrWhiteSpace(stderr))
-                    _logger.LogDebug("Script stderr: {Stderr}", stderr);
+                    _logger.LogDebug("[{Exe}] stderr: {Stderr}", exe, stderr);
 
                 if (process.ExitCode != 0)
                 {
                     _logger.LogError(
-                        "License verification script exited with code {Code}. Stderr: {Stderr}",
-                        process.ExitCode, stderr);
+                        "License verification script exited with code {Code} (exe={Exe}). Stderr: {Stderr}",
+                        process.ExitCode, exe, stderr);
                     return Failed($"Verification script failed (exit code {process.ExitCode}).");
                 }
 
-                return ParseOutput(stdout, licenseNumber);
+                return ParseOutput(stdout, safeLicense);
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("License verification script timed out for license {License}", licenseNumber);
+                _logger.LogWarning("License verification script timed out for license {License}", safeLicense);
                 return Failed("License verification timed out.");
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Executable not found on this platform → try next candidate
+                _logger.LogDebug("Executable '{Exe}' not found on this system, trying next.", exe);
+                return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error running license verification script");
+                _logger.LogError(ex, "Unexpected error running license verification script with '{Exe}'", exe);
                 return Failed($"Service error: {ex.Message}");
             }
+        }
+
+        // ── Build an ordered list of Python executables to try ─────────────────
+        private static IReadOnlyList<string> BuildExecutableCandidates(string configured)
+        {
+            // Always try the configured one first, then common fallbacks
+            var all = new[] { configured, "py", "python", "python3" };
+            return all.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         // -----------------------------------------------------------------------
