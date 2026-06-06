@@ -34,9 +34,10 @@ const TherapistAuthPage = () => {
   const licenseRef = useRef();
 
   // Shared UI state
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const [errors,  setErrors]  = useState({});
+  const [loading,      setLoading]      = useState(false);
+  const [verifying,    setVerifying]    = useState(false); // מצב אימות רישיון
+  const [error,        setError]        = useState("");
+  const [errors,       setErrors]       = useState({});
   const [registeredId, setRegisteredId] = useState(null);
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -134,7 +135,9 @@ const TherapistAuthPage = () => {
     e.preventDefault();
     setError("");
     if (!validateStep2()) return;
+
     setLoading(true);
+    setVerifying(true);
     try {
       const form = new FormData();
       form.append("therapistId",          registeredId);
@@ -142,15 +145,26 @@ const TherapistAuthPage = () => {
       form.append("selfieImage",          selfieFile);
       form.append("licenseImage",         licenseFile);
 
-      // Fire-and-forget — verification runs async, UI moves on immediately
-      fetch("https://localhost:7160/api/Therapists/verify", { method: "POST", body: form })
-        .catch(() => {});
+      const resp = await fetch("https://localhost:7160/api/Therapists/verify", {
+        method: "POST",
+        body: form,
+      });
 
-      setRegStep(STEP.PENDING);
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.ok && data.isVerified) {
+        // הרישיון אומת בהצלחה — ממשיכים לשלב ההמתנה
+        setRegStep(STEP.PENDING);
+      } else {
+        // הרישיון לא אומת — מציגים שגיאה ונשארים בשלב 2
+        const reason = data.failureReason || "License verification failed. Please check your details.";
+        setError(reason);
+      }
     } catch {
-      setError("Upload failed. Please try again.");
+      setError("Upload failed or server unreachable. Please try again.");
     } finally {
       setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -311,15 +325,26 @@ const TherapistAuthPage = () => {
 
                   {error && <ErrBox msg={error} />}
 
+                  {/* הודעת מצב אימות */}
+                  {verifying && (
+                    <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
+                      <Loader2 size={16} className="animate-spin shrink-0" />
+                      <span>Verifying your license with the Ministry of Health registry… This may take up to 30 seconds.</span>
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <Button
                       type="button" variant="outline" className="rounded-xl h-12 px-5"
                       onClick={() => { setRegStep(STEP.DETAILS); setErrors({}); setError(""); }}
+                      disabled={loading}
                     >
                       Back
                     </Button>
                     <Button type="submit" className="flex-1 rounded-xl h-12 text-base font-medium" disabled={loading}>
-                      {loading ? <Loader2 size={18} className="animate-spin" /> : "Submit Application"}
+                      {loading
+                        ? <Loader2 size={18} className="animate-spin" />
+                        : "Submit Application"}
                     </Button>
                   </div>
                 </form>

@@ -25,34 +25,34 @@ import json
 import argparse
 import time
 import logging
+import urllib.parse
 from dataclasses import dataclass, asdict
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait, Select
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 
-# webdriver-manager auto-downloads the correct ChromeDriver version
 try:
     from webdriver_manager.chrome import ChromeDriverManager
     USE_DRIVER_MANAGER = True
 except ImportError:
     USE_DRIVER_MANAGER = False
 
-# Write logs to stderr so they don't pollute the JSON stdout
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-
-REGISTRY_URL      = "https://practitioners.health.gov.il/Practitioners/Search"
+REGISTRY_BASE     = "https://practitioners.health.gov.il/Practitioners/search"
 PAGE_LOAD_TIMEOUT = 30
-ELEMENT_TIMEOUT   = 20
-POST_SUBMIT_WAIT  = 3.0   # seconds to wait after submitting the form
+ANGULAR_BOOT_WAIT = 4    # seconds for initial Angular render before scrolling
+ELEMENT_TIMEOUT   = 15
+
 
 # ── Data model ────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ class VerificationResult:
 
 def create_driver() -> webdriver.Chrome:
     opts = Options()
-    opts.add_argument("--headless=new")
+    #opts.add_argument("--headless=new")   # הסר # כשמפעילים על שרת ללא מסך
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
@@ -101,119 +101,128 @@ def verify_license(license_number: str, full_name: str) -> VerificationResult:
     driver = None
     try:
         driver = create_driver()
-        wait   = WebDriverWait(driver, ELEMENT_TIMEOUT)
 
-        logger.info("Navigating to %s", REGISTRY_URL)
-        driver.get(REGISTRY_URL)
+        # ── ניווט ישיר ל-URL עם query params ────────────────────────────────
+        # האתר תומך ב: /Practitioners/search?name=...&license=...
+        # (lowercase 'search' — uppercase 'Search' מפנה לדף ריק)
+        params = urllib.parse.urlencode({"name": full_name, "license": license_number})
+        search_url = f"{REGISTRY_BASE}?{params}"
+        logger.info("Navigating directly to: %s", search_url)
+        driver.get(search_url)
 
-        # ── 1. Enter license number ───────────────────────────────────────────
-        license_input = _find_first(wait, [
-            "input[name='LicenseNumber']",
-            "#licenseNumber",
-            "input[placeholder*='רישיון']",
-            "input[placeholder*='מספר']",
-            "input[id*='icense']",
-            "input[id*='License']",
-            "input[type='text']",   # last-resort: first text input on page
-        ], "license input")
+        # ── המתנה קצרה ל-Angular לטעון את ה-component ──────────────────────
+        logger.info("Waiting for Angular initial render...")
+        time.sleep(4)
 
-        if license_input is None:
-            # Dump page source to stderr for debugging
-            logger.error("Could not find license input. Page title: %s", driver.title)
-            logger.debug("Page source (first 2000 chars):\n%s", driver.page_source[:2000])
-            return _fail(license_number, "Could not locate the license number input field. The government site may have changed its layout.")
+        logger.info("Page title: %s | URL: %s", driver.title, driver.current_url)
 
-        license_input.clear()
-        license_input.send_keys(license_number)
-        logger.info("Typed license number: %s", license_number)
+        # ── גלילה למטה לחשיפת אזור התוצאות לפני שמחפשים שורות ──────────────
+        logger.info("Scrolling down to reveal results area...")
+        driver.execute_script("window.scrollBy(0, 400);")
+        time.sleep(1)
+        driver.execute_script("window.scrollBy(0, 400);")
+        time.sleep(1)
 
-        # ── 2. Enter name if field exists ─────────────────────────────────────
-        name_input = _find_first(
-            WebDriverWait(driver, 4), [
-                "input[name='FullName']",
-                "input[name='Name']",
-                "#fullName",
-                "input[placeholder*='שם']",
-                "input[placeholder*='Name']",
-            ],
-            "name input",
-            required=False
-        )
-        if name_input:
-            name_input.clear()
-            name_input.send_keys(full_name)
-            logger.info("Typed full name: %s", full_name)
+        # ── 6. המתנה נוספת ואז JS scan ישיר על ה-DOM ────────────────────────
+        # CSS selectors לא אמינים ב-Angular — נשתמש ב-JS שסורק את כל הדף
+        time.sleep(2)
 
-        # ── 3. Submit ─────────────────────────────────────────────────────────
-        submit = _find_first(wait, [
-            "button[type='submit']",
-            "input[type='submit']",
-            "button.search-btn",
-            "button.btn-search",
-            ".search-button",
-            "[data-testid='search-btn']",
-            "button:contains('חיפוש')",
-        ], "submit button")
+        logger.info("Scanning page via JavaScript...")
+        js_result = driver.execute_script("""
+            var licenseTarget = arguments[0];
 
-        if submit is None:
-            logger.error("Submit button not found. Page title: %s", driver.title)
-            return _fail(license_number, "Could not locate the search submit button.")
+            // --- ניסיון 1: חיפוש ב-mat-row / tr ב-DOM ---
+            var rowSelectors = ['mat-row', 'tr', '[role="row"]', '.mat-row'];
+            for (var s = 0; s < rowSelectors.length; s++) {
+                var rows = document.querySelectorAll(rowSelectors[s]);
+                for (var i = 0; i < rows.length; i++) {
+                    var txt = (rows[i].textContent || '').trim();
+                    if (!txt || !txt.includes(licenseTarget)) continue;
 
-        submit.click()
-        logger.info("Submitted. Waiting %.1fs for results…", POST_SUBMIT_WAIT)
-        time.sleep(POST_SUBMIT_WAIT)
+                    var cells = rows[i].querySelectorAll('mat-cell, td, [role="gridcell"], [role="cell"]');
+                    var cellTexts = Array.from(cells).map(function(c){ return c.textContent.trim(); });
 
-        # ── 4. Look for result rows ───────────────────────────────────────────
-        row_selectors = [
-            "tr.result-row",
-            ".practitioner-row",
-            "tbody > tr",
-            ".search-result-item",
-            ".practitioner-card",
-            "li.result",
-        ]
-        rows = _find_all(wait, row_selectors, timeout=ELEMENT_TIMEOUT)
+                    // חיפוש שם (תא ראשון עם תוכן)
+                    var firstName = cellTexts.find(function(t){ return t.length > 1; }) || '';
+                    // חיפוש סטטוס (תא עם מילת מפתח)
+                    var statusKeywords = ['בתוקף','מורשה','פעיל','מוקפא','לא פעיל','active','inactive','valid'];
+                    var statusCell = '';
+                    for (var k = 0; k < statusKeywords.length; k++) {
+                        var found = cellTexts.find(function(t){ return t.includes(statusKeywords[k]); });
+                        if (found) { statusCell = found; break; }
+                    }
+                    // fallback: התא האחרון עם תוכן
+                    if (!statusCell) {
+                        for (var j = cellTexts.length-1; j >= 0; j--) {
+                            if (cellTexts[j].length > 1) { statusCell = cellTexts[j]; break; }
+                        }
+                    }
 
-        if not rows:
-            logger.warning("No result rows found for license %s", license_number)
-            logger.debug("Page after submit (first 3000):\n%s", driver.page_source[:3000])
-            return VerificationResult(
-                isValid=False, isActive=False,
-                registeredName="", licenseNumber=license_number,
-                failureReason=f"License {license_number!r} was not found in the Ministry of Health registry."
-            )
+                    return { rowText: txt.substring(0,300), firstName: firstName,
+                             statusCell: statusCell, cellTexts: cellTexts };
+                }
+            }
 
-        logger.info("Found %d result row(s)", len(rows))
+            // --- ניסיון 2: חיפוש ב-innerText של כל body ---
+            var bodyText = document.body.innerText || '';
+            if (bodyText.includes(licenseTarget)) {
+                // מציאת הקטע שמכיל את מספר הרישיון
+                var idx = bodyText.indexOf(licenseTarget);
+                var snippet = bodyText.substring(Math.max(0, idx-100), idx+200);
+                return { rowText: snippet, firstName: '', statusCell: '', bodyFallback: true };
+            }
 
-        # ── 5. Parse rows ─────────────────────────────────────────────────────
-        for row in rows:
-            text = row.text.strip()
-            if not text or license_number not in text:
-                continue
+            return null;
+        """, license_number)
 
-            name = _cell_text(row, [
-                ".name-cell", "td:first-child", ".practitioner-name",
-                "[data-label='שם']", "[data-label='Name']",
-            ])
-            status_raw = _cell_text(row, [
-                ".status-cell", "td.status", ".license-status",
-                "[data-label='סטטוס']", "[data-label='Status']",
-            ])
-            status = status_raw.lower()
-            is_active = any(kw in status for kw in ("פעיל", "active", "valid", "בתוקף"))
+        if not js_result:
+            # בדיקה מפורשת אם יש "0 תוצאות"
+            page_text = driver.page_source
+            no_result_phrases = ["נמצאו 0 תוצאות", "לא נמצאו תוצאות", "0 results"]
+            if any(p in page_text for p in no_result_phrases):
+                return VerificationResult(
+                    isValid=False, isActive=False,
+                    registeredName="", licenseNumber=license_number,
+                    failureReason=f"License {license_number!r} was not found in the Ministry of Health registry."
+                )
+            logger.debug("Page source:\n%s", page_text[:5000])
+            return _fail(license_number, "License not found in page after scroll and JS scan.")
 
-            logger.info("Match: name=%r status=%r active=%s", name, status_raw, is_active)
+        logger.info("JS scan result: %s", json.dumps(js_result, ensure_ascii=False))
+
+        if js_result.get("bodyFallback"):
+            # מצאנו את הרישיון בטקסט הדף אבל לא בתוך שורת טבלה מוגדרת
+            snippet = js_result.get("rowText", "")
+            status_raw = ""
+            for kw in ("בתוקף", "מורשה", "פעיל", "active", "valid"):
+                if kw in snippet:
+                    # חלץ את המשפט שמכיל את מילת המפתח
+                    for part in snippet.split("\n"):
+                        if kw in part:
+                            status_raw = part.strip()
+                            break
+                    break
+            is_active = bool(status_raw)
             return VerificationResult(
                 isValid=True, isActive=is_active,
-                registeredName=name, licenseNumber=license_number,
-                failureReason="" if is_active else f"License found but status is: {status_raw!r}"
+                registeredName=full_name, licenseNumber=license_number,
+                failureReason="" if is_active else "License found but status unclear."
             )
 
-        logger.warning("License %s not found in any row text", license_number)
+        status_raw   = js_result.get("statusCell", "")
+        status_lower = status_raw.lower()
+        is_active    = any(kw in status_lower for kw in
+                           ("בתוקף", "מורשה", "פעיל", "active", "valid"))
+
+        registered_name = js_result.get("firstName", full_name) or full_name
+
+        logger.info("Match: name=%r status=%r active=%s", registered_name, status_raw, is_active)
         return VerificationResult(
-            isValid=False, isActive=False,
-            registeredName="", licenseNumber=license_number,
-            failureReason=f"License {license_number!r} was not matched in the registry results."
+            isValid=True,
+            isActive=is_active,
+            registeredName=registered_name,
+            licenseNumber=license_number,
+            failureReason="" if is_active else f"License found but status is: {status_raw!r}"
         )
 
     except WebDriverException as exc:
@@ -231,40 +240,295 @@ def verify_license(license_number: str, full_name: str) -> VerificationResult:
             logger.info("Browser closed.")
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── JS-based input discovery ──────────────────────────────────────────────────
 
-def _find_first(wait: WebDriverWait, selectors: list, label: str, required: bool = True):
-    """Return the first element matched by any selector, or None if not found."""
-    for sel in selectors:
+def _log_all_buttons(driver):
+    """לוג לכל הכפתורים שנמצאו — לאבחון."""
+    result = driver.execute_script("""
+        return Array.from(document.querySelectorAll('button')).map(function(el) {
+            return {
+                type:      el.type || '',
+                text:      el.textContent.trim().substring(0, 60),
+                className: el.className.substring(0, 100),
+                disabled:  el.disabled,
+                visible:   el.offsetParent !== null,
+                attrs:     Array.from(el.attributes).map(function(a){
+                               return a.name + '=' + a.value.substring(0,30);
+                           }).join(' | ')
+            };
+        });
+    """)
+    logger.info("=== ALL BUTTONS ON PAGE (%d found) ===", len(result))
+    for i, btn in enumerate(result):
+        logger.info("  button[%d]: visible=%s disabled=%s text=%r class=%r attrs=%r",
+                    i, btn['visible'], btn['disabled'],
+                    btn['text'], btn['className'][:80], btn['attrs'][:120])
+
+
+def _log_all_inputs(driver):
+    """לוג לכל ה-inputs שנמצאו — שימושי לאבחון."""
+    result = driver.execute_script("""
+        var inputs = document.querySelectorAll('input');
+        return Array.from(inputs).map(function(el) {
+            return {
+                id:               el.id || '',
+                name:             el.name || '',
+                type:             el.type || '',
+                placeholder:      el.placeholder || '',
+                formcontrolname:  el.getAttribute('formcontrolname') || '',
+                ngReflectName:    el.getAttribute('ng-reflect-name') || '',
+                ariaLabel:        el.getAttribute('aria-label') || '',
+                className:        el.className.substring(0, 80)
+            };
+        });
+    """)
+    logger.info("=== ALL INPUTS ON PAGE (%d found) ===", len(result))
+    for i, inp in enumerate(result):
+        filtered = {k: v for k, v in inp.items() if v}
+        logger.info("  input[%d]: %s", i, json.dumps(filtered, ensure_ascii=False))
+
+
+def _get_visible_text_inputs(driver) -> list:
+    """מחזיר את כל ה-inputs הנראים מסוג text/number לפי סדר ה-DOM."""
+    return driver.execute_script("""
+        return Array.from(document.querySelectorAll('input')).filter(function(el) {
+            return (el.type === 'text' || el.type === 'number' || el.type === '') &&
+                   el.offsetParent !== null;
+        });
+    """)
+
+
+def _find_input_by_js(driver, license_number: str):
+    """
+    מחפש את שדה מספר הרישיון.
+    ב-Angular Material ה-label הוא <mat-label> ולא placeholder על ה-input —
+    לכן מחפשים את ה-mat-form-field שה-mat-label שלו מכיל 'רישיון'.
+    """
+    el = driver.execute_script("""
+        // priority 1: formcontrolname / ng-reflect-name על ה-input עצמו
+        var inputs = Array.from(document.querySelectorAll('input'));
+        var byFcn = inputs.find(function(el) {
+            var fcn = (el.getAttribute('formcontrolname') || '').toLowerCase();
+            var ngr = (el.getAttribute('ng-reflect-name') || '').toLowerCase();
+            return fcn.includes('license') || fcn.includes('רישיון') ||
+                   ngr.includes('license') || ngr.includes('רישיון');
+        });
+        if (byFcn) return byFcn;
+
+        // priority 2: placeholder רגיל על ה-input
+        var byPh = inputs.find(function(el) {
+            var ph = (el.placeholder || '').toLowerCase();
+            return ph.includes('רישיון') || ph.includes('license');
+        });
+        if (byPh) return byPh;
+
+        // priority 3: mat-label בתוך אותו mat-form-field
+        // (Angular Material שם את ה-label ב-<mat-label> ולא כ-placeholder)
+        var fields = Array.from(document.querySelectorAll('mat-form-field'));
+        for (var i = 0; i < fields.length; i++) {
+            var label = fields[i].querySelector('mat-label, label');
+            if (label) {
+                var txt = label.textContent.toLowerCase();
+                if (txt.includes('רישיון') || txt.includes('license') || txt.includes('מספר רישיון')) {
+                    var inp = fields[i].querySelector('input');
+                    if (inp) return inp;
+                }
+            }
+        }
+
+        // priority 4: aria-label
+        var byAria = inputs.find(function(el) {
+            var al = (el.getAttribute('aria-label') || '').toLowerCase();
+            return al.includes('רישיון') || al.includes('license');
+        });
+        if (byAria) return byAria;
+
+        // priority 5: input הנראה ה-2 (שם=1, רישיון=2, מומחיות=3)
+        var visible = inputs.filter(function(el) {
+            return (el.type === 'text' || el.type === 'number' || el.type === '') &&
+                   el.offsetParent !== null;
+        });
+        return visible.length >= 2 ? visible[1] : (visible[0] || null);
+    """)
+    return el
+
+
+def _find_name_input(driver):
+    """
+    מחפש שדה שם — mat-label 'שם' תחילה, אחרת ה-input הנראה הראשון.
+    """
+    return driver.execute_script("""
+        var inputs = Array.from(document.querySelectorAll('input'));
+
+        // priority 1: formcontrolname / ng-reflect-name
+        var byAttr = inputs.find(function(el) {
+            var fcn = (el.getAttribute('formcontrolname') || '').toLowerCase();
+            var ngr = (el.getAttribute('ng-reflect-name') || '').toLowerCase();
+            var ph  = (el.placeholder || '').toLowerCase();
+            var al  = (el.getAttribute('aria-label') || '').toLowerCase();
+            return fcn.includes('name') || fcn.includes('שם') ||
+                   ngr.includes('name') || ngr.includes('שם') ||
+                   ph.includes('שם')   || ph.includes('name') ||
+                   al.includes('שם')   || al.includes('name');
+        });
+        if (byAttr) return byAttr;
+
+        // priority 2: mat-label 'שם'
+        var fields = Array.from(document.querySelectorAll('mat-form-field'));
+        for (var i = 0; i < fields.length; i++) {
+            var label = fields[i].querySelector('mat-label, label');
+            if (label) {
+                var txt = label.textContent.trim();
+                if (txt === 'שם' || txt.toLowerCase().includes('name')) {
+                    var inp = fields[i].querySelector('input');
+                    if (inp) return inp;
+                }
+            }
+        }
+
+        // priority 3: ראשון נראה (שדה השם ראשון בדף)
+        return inputs.find(function(el) {
+            return (el.type === 'text' || el.type === '') &&
+                   el.offsetParent !== null;
+        }) || null;
+    """)
+
+
+def _angular_fill(driver, element, value: str):
+    """
+    מזין ערך לשדה mat-autocomplete-trigger של Angular.
+    שלבים: לחיצה → ניקוי → הקלדה → סגירת ה-autocomplete dropdown → אירועי Angular.
+    """
+    # 1. לחיצה להפעלת ה-focus
+    element.click()
+    time.sleep(0.3)
+
+    # 2. ניקוי תוכן קיים
+    element.send_keys(Keys.CONTROL + "a")
+    element.send_keys(Keys.DELETE)
+    time.sleep(0.2)
+
+    # 3. הקלדה תו-תו (מפעיל keydown/keypress/keyup — Angular מאזין לכולם)
+    element.send_keys(value)
+    time.sleep(0.4)
+
+    # 4. Escape — סוגר את ה-mat-autocomplete dropdown בלי לאבד את מה שהוקלד
+    element.send_keys(Keys.ESCAPE)
+    time.sleep(0.2)
+
+    # 5. dispatch ידני של אירועי Angular reactive-forms
+    driver.execute_script("""
+        var el = arguments[0];
+        var val = arguments[1];
+
+        // כתיבה ישירה לתכונת value דרך ה-native setter
+        var setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype, 'value').set;
+        setter.call(el, val);
+
+        // אירועים שAngular's ReactiveFormsModule מאזין להם
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur',   { bubbles: true }));
+    """, element, value)
+    time.sleep(0.3)
+
+
+# ── Submit button ─────────────────────────────────────────────────────────────
+
+def _find_submit(driver):
+    """מחפש כפתור חיפוש — CSS לפני XPath."""
+    css_selectors = [
+        # הכפתור הספציפי של אתר משרד הבריאות
+        "button.icon-search",
+        "button[aria-label='חיפוש']",
+        "button[aria-label='Search']",
+        # type=submit רגיל
+        "button[type='submit']",
+        "input[type='submit']",
+        # Angular Material FAB
+        "button[mat-fab]",
+        "button[mat-mini-fab]",
+        "button.mat-fab",
+        "button.mat-mini-fab",
+        "button.mdc-fab",
+        # Angular Material רגיל
+        "button[mat-raised-button]",
+        "button[mat-flat-button]",
+        "button[mat-icon-button]",
+        "button.mat-raised-button",
+        "button.mat-flat-button",
+        "button.mat-primary",
+    ]
+    for sel in css_selectors:
         try:
-            return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, sel)))
+            return WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
+            )
         except TimeoutException:
             continue
-    if required:
-        logger.warning("Element not found: %s (tried %d selectors)", label, len(selectors))
+
+    # XPath — aria-label ואיקון עדשה
+    for xpath in [
+        "//button[@aria-label='חיפוש']",
+        "//button[@aria-label='Search']",
+        "//button[contains(@class,'icon-search')]",
+        "//button[.//mat-icon[contains(text(),'search')]]",
+        "//button[contains(., 'חיפוש') and not(@style[contains(.,'display:none')])]",
+        "//input[@value='חיפוש']",
+        "//input[@value='Search']",
+    ]:
+        try:
+            return WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+        except TimeoutException:
+            continue
+
+    # אחרון: כל כפתור נראה שיש לו mat-icon בתוכו (כפתורי אייקון)
+    try:
+        buttons = driver.find_elements(By.CSS_SELECTOR, "button")
+        for btn in buttons:
+            if btn.is_displayed() and btn.is_enabled():
+                icon = None
+                try:
+                    icon = btn.find_element(By.TAG_NAME, "mat-icon")
+                except Exception:
+                    pass
+                if icon is not None:
+                    logger.info("Found icon button: class=%s text=%r",
+                                btn.get_attribute("class"), btn.text.strip())
+                    return btn
+    except Exception:
+        pass
+
     return None
 
 
-def _find_all(wait: WebDriverWait, selectors: list, timeout: int = 15) -> list:
-    """Return the first non-empty list of elements matched by any selector."""
+# ── Generic helpers ───────────────────────────────────────────────────────────
+
+def _extract_column(row, selectors: list) -> str:
     for sel in selectors:
         try:
-            elements = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, sel)))
-            if elements:
-                return elements
-        except TimeoutException:
-            continue
-    return []
-
-
-def _cell_text(row, selectors: list) -> str:
-    for sel in selectors:
-        try:
-            return row.find_element(By.CSS_SELECTOR, sel).text.strip()
+            el = row.find_element(By.CSS_SELECTOR, sel)
+            text = el.text.strip()
+            if text:
+                return text
         except NoSuchElementException:
             continue
-    # Fallback: return full row text (will be cleaned by caller)
     return ""
+
+
+def _digits_exact_match(target: str, row_digits: str) -> bool:
+    """בדיקה שהמספר מופיע כמספר עצמאי ולא כחלק ממספר אחר."""
+    idx = row_digits.find(target)
+    while idx != -1:
+        before = (idx == 0) or not row_digits[idx - 1].isdigit()
+        after  = (idx + len(target) == len(row_digits)) or not row_digits[idx + len(target)].isdigit()
+        if before and after:
+            return True
+        idx = row_digits.find(target, idx + 1)
+    return False
 
 
 def _fail(license_number: str, reason: str) -> VerificationResult:

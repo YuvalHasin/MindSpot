@@ -62,6 +62,16 @@ const Footer = () => {
             Made with <Heart size={14} className="text-primary" /> for your wellbeing
           </p>
         </div>
+
+        {/* קישור אדמין חבוי */}
+        <div className="mt-6 flex justify-center">
+          <Link
+            to="/admin-login"
+            className="text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors duration-300 select-none"
+          >
+            ·
+          </Link>
+        </div>
       </div>
     </footer>
   );

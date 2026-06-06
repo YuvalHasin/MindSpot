@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
@@ -64,10 +65,10 @@ const Navbar = () => {
           <Button size="sm" variant="outline" onClick={handleTherapistClick}>
             Join as Therapist
           </Button>
-          
           <Button size="sm" onClick={handleSupportClick}>
             Personal Area
           </Button>
+          <LanguageToggle />
         </div>
 
         {/* Mobile toggle */}
@@ -104,9 +105,11 @@ const Navbar = () => {
           </Link>
           
           <Button className="mt-2 w-full" size="sm" onClick={handleSupportClick}>
-              Personal Area
+            Personal Area
           </Button>
-
+          <div className="mt-3 flex justify-center">
+            <LanguageToggle />
+          </div>
         </motion.div>
       )}
     </motion.nav>
