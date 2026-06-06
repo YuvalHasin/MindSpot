@@ -53,6 +53,39 @@ PAGE_LOAD_TIMEOUT = 30
 ANGULAR_BOOT_WAIT = 4    # seconds for initial Angular render before scrolling
 ELEMENT_TIMEOUT   = 15
 
+# ── Hebrew character range (Unicode block) ────────────────────────────────────
+_HEB_START = 'א'
+_HEB_END   = 'ת'
+
+
+def _is_hebrew(text: str) -> bool:
+    """Return True if the string contains at least one Hebrew letter."""
+    return any(_HEB_START <= ch <= _HEB_END for ch in text)
+
+
+def ensure_hebrew(name: str) -> str:
+    """
+    If *name* is written in Latin script (English), translate it to Hebrew
+    using Google Translate via deep-translator before the registry lookup.
+    Hebrew names are returned as-is.
+    """
+    if _is_hebrew(name):
+        return name                          # already Hebrew (or mixed)
+
+    logger.info("Name '%s' appears to be in Latin script — translating to Hebrew…", name)
+    try:
+        from deep_translator import GoogleTranslator          # pip install deep-translator
+        translated = GoogleTranslator(source="auto", target="iw").translate(name)
+        logger.info("Translated '%s' → '%s'", name, translated)
+        return translated
+    except ImportError:
+        logger.warning("deep-translator not installed (pip install deep-translator). "
+                       "Searching with original name.")
+        return name
+    except Exception as exc:
+        logger.warning("Translation failed (%s) — falling back to original name.", exc)
+        return name
+
 
 # ── Data model ────────────────────────────────────────────────────────────────
 
@@ -102,10 +135,13 @@ def verify_license(license_number: str, full_name: str) -> VerificationResult:
     try:
         driver = create_driver()
 
+        # ── המרת שם מלטינית לעברית אם נדרש ─────────────────────────────────
+        hebrew_name = ensure_hebrew(full_name)
+
         # ── ניווט ישיר ל-URL עם query params ────────────────────────────────
         # האתר תומך ב: /Practitioners/search?name=...&license=...
         # (lowercase 'search' — uppercase 'Search' מפנה לדף ריק)
-        params = urllib.parse.urlencode({"name": full_name, "license": license_number})
+        params = urllib.parse.urlencode({"name": hebrew_name, "license": license_number})
         search_url = f"{REGISTRY_BASE}?{params}"
         logger.info("Navigating directly to: %s", search_url)
         driver.get(search_url)
