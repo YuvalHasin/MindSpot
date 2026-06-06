@@ -235,7 +235,7 @@ export default function BookSessionPage() {
     setIsLoading(true);
 
     try {
-      const patientId = sessionStorage.getItem("userId");
+      const patientId = sessionStorage.getItem("patientId");
 
       const bookRes = await fetch(`https://localhost:7160/api/billing/book`, {
         method:  "POST",
@@ -495,7 +495,7 @@ export default function BookSessionPage() {
               Your payment was successful. You&apos;ll receive a confirmation shortly.
             </p>
             <Button
-              onClick={() => navigate("/patient/dashboard")}
+              onClick={() => navigate("/patient-dashboard")}
               className="rounded-xl px-6 py-2.5 font-semibold"
             >
               Go to Dashboard

@@ -79,6 +79,41 @@ namespace MindSpot_server.Services.Verification
                 "AI check passed for therapist {Id}. Extracted name: {Name}, licence: {Licence}",
                 fullId, result.AiResult.ExtractedFullName, result.AiResult.ExtractedLicenseNumber);
 
+            // ── Step 2b: Cross-check extracted name against registered form name ─
+            // Loads the therapist document to get the name they typed in step 1,
+            // and verifies it reasonably matches the name on the license document.
+            using (var session = _store.OpenAsyncSession())
+            {
+                var therapistDoc = await session.LoadAsync<Therapist>(fullId, cancellationToken);
+                if (therapistDoc is not null)
+                {
+                    var formName      = therapistDoc.FullName?.Trim().ToLowerInvariant() ?? "";
+                    var extractedName = result.AiResult.ExtractedFullName?.Trim().ToLowerInvariant() ?? "";
+
+                    if (!string.IsNullOrEmpty(formName) && !string.IsNullOrEmpty(extractedName))
+                    {
+                        // Accept if any word from the form name appears in the extracted name (and vice-versa)
+                        var formWords      = formName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        var extractedWords = extractedName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        bool anyWordMatch  = formWords.Any(w => extractedName.Contains(w))
+                                         || extractedWords.Any(w => formName.Contains(w));
+
+                        if (!anyWordMatch)
+                        {
+                            _logger.LogWarning(
+                                "Name mismatch for therapist {Id}: form='{Form}' vs document='{Doc}'",
+                                fullId, therapistDoc.FullName, result.AiResult.ExtractedFullName);
+                            return await FailAsync(
+                                fullId, result,
+                                $"The name on your license document ('{result.AiResult.ExtractedFullName}') " +
+                                $"does not match the name you registered with ('{therapistDoc.FullName}'). " +
+                                "Please upload your own license.",
+                                cancellationToken);
+                        }
+                    }
+                }
+            }
+
             // ── Step 3: Government registry check ─────────────────────────────
             result.LicenseResult = await _licenseService.VerifyLicenseAsync(
                 result.AiResult.ExtractedLicenseNumber,

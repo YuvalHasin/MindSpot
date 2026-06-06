@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -28,7 +29,11 @@
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+<<<<<<< HEAD
     "react-i18next": "^15.7.4",
+=======
+    "react-i18next": "^15.5.1",
+>>>>>>> fd0c85582e32af296a0d14c9e9f61ecc25d0383a
     "react-router-dom": "^7.13.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7"
