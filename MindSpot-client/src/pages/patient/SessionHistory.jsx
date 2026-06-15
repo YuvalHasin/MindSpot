@@ -213,7 +213,7 @@ const SessionHistory = () => {
                           variants={item}
                           className="border-b border-border/40 last:border-none hover:bg-muted/10 transition-colors align-top"
                         >
-                          <td className="px-6 py-5 text-muted-foreground whitespace-nowrap">{s.CreatedAt}</td>
+                          <td className="px-6 py-5 text-muted-foreground whitespace-nowrap">{s.Date}</td>
                           <td className="px-6 py-5">
                             <div className="flex items-start gap-3">
                               <div className="mt-1 p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
@@ -226,7 +226,7 @@ const SessionHistory = () => {
                           </td>
                           <td className="px-6 py-5">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 text-[11px] font-medium">
-                              <Users size={10} /> {s.TherapistName}
+                              <Users size={10} /> {s.Detail}
                             </span>
                           </td>
                         </motion.tr>
@@ -244,7 +244,7 @@ const SessionHistory = () => {
                       className="bg-card border border-border/60 rounded-2xl p-5 space-y-3 shadow-sm"
                     >
                       <div className="flex justify-between items-center border-b border-border/40 pb-2">
-                        <span className="text-xs font-medium text-muted-foreground">{s.CreatedAt}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{s.Date}</span>
                         <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase">
                           <Bot size={10} /> AI
                         </span>
@@ -252,7 +252,7 @@ const SessionHistory = () => {
                       <p className="text-sm text-foreground leading-relaxed italic">"{s.Summary}"</p>
                       <div className="p-3 bg-muted/30 rounded-xl border border-border/40">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Recommendation</p>
-                        <p className="text-xs font-medium text-green-700">{s.TherapistName}</p>
+                        <p className="text-xs font-medium text-green-700">{s.Detail}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -270,7 +270,7 @@ const SessionHistory = () => {
                 icon={CalendarDays}
                 title="No appointments yet"
                 desc="Book a session with a therapist to see it here."
-                linkTo="/patient-dashboard/chat"
+                linkTo="/patient-dashboard/triage"
                 linkLabel="Find a Therapist"
               />
             ) : (
