@@ -37,7 +37,9 @@ const AdminRequests = () => {
   const handleAction = async (id, action) => {
     setActionLoading(id);
     const token = sessionStorage.getItem("token");
-    const url = `https://localhost:7160/api/admin/therapists/${id}/${action}`;
+    // RavenDB IDs look like "Therapists/1-A" — extract only the numeric part for the URL
+    const safeId = id.includes("/") ? id.split("/")[1] : id;
+    const url = `https://localhost:7160/api/admin/therapists/${safeId}/${action}`;
     
     try {
       const response = await fetch(url, {

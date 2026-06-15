@@ -16,10 +16,7 @@ const PatientSidebar = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // מומלץ לנקות את כל המידע הרלוונטי ב-Logout
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userRole");
+    sessionStorage.clear();
     navigate("/");
   };
 

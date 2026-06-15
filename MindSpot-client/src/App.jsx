@@ -50,6 +50,7 @@ import ChatRoomPage from "./pages/patient/ChatRoomPage";
 // Therapist Pages & Layout
 import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
 import TherapistPage from "./pages/therapist/TherapistPage";
+import TherapistDashboard from "./pages/therapist/TherapistDashboard";
 import ActiveSession from "./pages/therapist/ActiveSession";
 import StatsOverview from "./pages/therapist/StatsOverview";
 import RecentSessions from "./pages/therapist/RecentSessions";
@@ -102,11 +103,11 @@ const App = () => (
             }
           >
             {/* אלו הילדים שירוססו בתוך ה-Sidebar לפי מה שנבחר */}
-            <Route index element={<StatsOverview />} /> {/* או קומפוננטת ה-Overview שלך */}
-            <Route path="consultations" element={<SessionHistory />} /> {/* קומפוננטת הייעוצים של המטפל */}
-            <Route path="clients" element={<PatientManagement />} /> {/* קומפוננטת המטופלים של המטפל */}
-            <Route path="schedule" element={<ProfileSettings />} /> {/* קומפוננטת הלו"ז של המטפל */}
-            <Route path="analytics" element={<StatsOverview />} />  
+            <Route index element={<TherapistDashboard />} />
+            <Route path="consultations" element={<SessionHistory />} />
+            <Route path="clients" element={<PatientManagement />} />
+            <Route path="schedule" element={<ProfileSettings />} />
+            <Route path="analytics" element={<StatsOverview />} />
             <Route path="settings" element={<ProfileSettings />} />
           </Route>
 

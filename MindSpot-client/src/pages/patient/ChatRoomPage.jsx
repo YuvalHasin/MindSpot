@@ -41,7 +41,7 @@ const ChatRoomPage = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          setMessages(data.messages || []);
+          setMessages(Array.isArray(data) ? data : []);
         }
       } catch {
         // history fetch failure is non-fatal

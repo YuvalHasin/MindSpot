@@ -57,12 +57,12 @@ const PatientAuthPage = () => {
         if (isLogin) {
           // --- לוגיקה למקרה של התחברות (Login) ---
           // ProtectedRoute קורא מ-sessionStorage — חייב להיות עקבי
-          if (data.token) {
-              sessionStorage.setItem("token", data.token);
-          }
+          if (data.token)    sessionStorage.setItem("token",     data.token);
           if (data.userId) {
-              sessionStorage.setItem("userId", data.userId);
+              sessionStorage.setItem("userId",    data.userId);
+              sessionStorage.setItem("patientId", data.userId);
           }
+          if (data.fullName) sessionStorage.setItem("name", data.fullName);
           // ProtectedRoute מצפה ל-"patient" (אותיות קטנות)
           sessionStorage.setItem("role", "patient");
 

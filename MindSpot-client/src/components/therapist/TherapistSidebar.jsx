@@ -36,12 +36,8 @@ const TherapistSidebar = ({ fullName }) => {
   };
 
   const handleLogout = () => {
-    // מנקים את כל ה-Tokens כדי למנוע זליגת הרשאות
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("role");
-    localStorage.removeItem("therapistToken");
-    localStorage.removeItem("therapistId");
-    navigate("/therapist-auth"); 
+    sessionStorage.clear();
+    navigate("/therapist-auth");
   };
 
   return (

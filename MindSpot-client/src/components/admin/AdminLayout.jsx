@@ -5,7 +5,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 const AdminLayout = () => {
   const navigate = useNavigate();
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+    const token = sessionStorage.getItem("token");
     if (!token) {
       navigate("/admin-login", { replace: true });
     }

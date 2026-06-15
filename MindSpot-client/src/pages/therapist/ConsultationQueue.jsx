@@ -76,10 +76,8 @@ const ConsultationQueue = () => {
       });
     } catch (_) {}
 
-    // נווט לצ'אט עם המטופל
-    navigate("/therapist-dashboard/chat", {
-      state: { patientId: item.patientId, patientName: item.name }
-    });
+    // נווט לרשימת הפגישות לאחר אישור
+    navigate("/therapist/consultations");
   };
 
   return (

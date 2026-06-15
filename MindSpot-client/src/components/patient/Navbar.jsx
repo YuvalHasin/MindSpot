@@ -18,10 +18,11 @@ const Navbar = () => {
 
   // פונקציית הבדיקה המשותפת
   const handleSupportClick = () => {
-    const userToken = localStorage.getItem("token");
-    setOpen(false); // סגירת תפריט מובייל אם הוא פתוח
+    const userToken = sessionStorage.getItem("token");
+    const role = sessionStorage.getItem("role");
+    setOpen(false);
 
-    if (userToken) {
+    if (userToken && role === "patient") {
       navigate("/patient-dashboard");
     } else {
       navigate("/patient-auth");
@@ -29,15 +30,16 @@ const Navbar = () => {
   };
 
   const handleTherapistClick = () => {
-  const proToken = localStorage.getItem("therapistToken");
-  setOpen(false);
+    const userToken = sessionStorage.getItem("token");
+    const role = sessionStorage.getItem("role");
+    setOpen(false);
 
-  if (proToken) {
-    navigate("/therapist-dashboard"); 
-  } else {
-    navigate("/therapist-auth"); 
-  }
-};
+    if (userToken && role === "therapist") {
+      navigate("/therapist");
+    } else {
+      navigate("/therapist-auth");
+    }
+  };
 
   return (
     <motion.nav

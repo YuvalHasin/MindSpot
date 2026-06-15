@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Raven.Client.Documents;
 using MindSpot_server.Models;
+using MindSpot_server.Models.Verification;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,22 +21,84 @@ namespace server.Controllers
             _store = store;
         }
 
-        // 1. קבלת כל המטפלים לטבלת הניהול
+        // ── GET /api/admin/details?id=admins/1-A
+        // שליפת פרטי האדמין המחובר (לדף ההגדרות)
+        [HttpGet("details")]
+        public async Task<IActionResult> GetAdminDetails([FromQuery] string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { message = "id is required." });
+
+            string fullId = id.Contains("/") ? id : $"Admins/{id}";
+            using var session = _store.OpenAsyncSession();
+            var admin = await session.LoadAsync<Admin>(fullId);
+            if (admin == null) return NotFound(new { message = "Admin not found." });
+
+            return Ok(new { fullName = admin.FullName, email = admin.Email });
+        }
+
+        // ── GET /api/admin/therapists
+        // כל המטפלים לטבלת הניהול
         [HttpGet("therapists")]
         public async Task<IActionResult> GetAllTherapists()
         {
             using var session = _store.OpenAsyncSession();
-
-            // מושך את כל המטפלים מקולקציית Therapists
             var therapists = await session.Query<Therapist>()
                 .OrderBy(t => t.FullName)
                 .ToListAsync();
-
             return Ok(therapists);
         }
 
+        // ── GET /api/admin/therapists/pending
+        // מטפלים הממתינים לאישור (VerificationStatus == Pending)
+        [HttpGet("therapists/pending")]
+        public async Task<IActionResult> GetPendingTherapists()
+        {
+            using var session = _store.OpenAsyncSession();
+            var pending = await session.Query<Therapist>()
+                .Where(t => t.VerificationStatus == VerificationStatus.Pending)
+                .OrderBy(t => t.FullName)
+                .ToListAsync();
+            return Ok(pending);
+        }
 
-        // 2. קבלת כל המטופלים לטבלת הניהול
+        // ── PUT /api/admin/therapists/{id}/approve
+        // אישור מטפל — שינוי סטטוס ל-Approved
+        [HttpPut("therapists/{id}/approve")]
+        public async Task<IActionResult> ApproveTherapist(string id)
+        {
+            string fullId = id.Contains("/") ? id : $"Therapists/{id}";
+            using var session = _store.OpenAsyncSession();
+            var therapist = await session.LoadAsync<Therapist>(fullId);
+            if (therapist == null)
+                return NotFound(new { message = "Therapist not found." });
+
+            therapist.VerificationStatus    = VerificationStatus.Approved;
+            therapist.VerificationUpdatedAt = DateTime.UtcNow;
+            await session.SaveChangesAsync();
+            return Ok(new { message = "Therapist approved." });
+        }
+
+        // ── DELETE /api/admin/therapists/{id}/reject
+        // דחיית מטפל — שינוי סטטוס ל-Verification_Failed (לא מוחק)
+        [HttpDelete("therapists/{id}/reject")]
+        public async Task<IActionResult> RejectTherapist(string id)
+        {
+            string fullId = id.Contains("/") ? id : $"Therapists/{id}";
+            using var session = _store.OpenAsyncSession();
+            var therapist = await session.LoadAsync<Therapist>(fullId);
+            if (therapist == null)
+                return NotFound(new { message = "Therapist not found." });
+
+            therapist.VerificationStatus        = VerificationStatus.Verification_Failed;
+            therapist.VerificationFailureReason = "Rejected by admin.";
+            therapist.VerificationUpdatedAt     = DateTime.UtcNow;
+            await session.SaveChangesAsync();
+            return Ok(new { message = "Therapist rejected." });
+        }
+
+        // ── GET /api/admin/patients
+        // כל המטופלים לטבלת הניהול
         [HttpGet("patients")]
         public async Task<IActionResult> GetAllPatients()
         {
@@ -44,96 +107,97 @@ namespace server.Controllers
             return Ok(patients);
         }
 
-        // 2. קבלת סטטיסטיקות כלליות ל-Dashboard (Overview)
+        // ── DELETE /api/admin/delete-patient/{id}
+        // מחיקת מטופל מהפלטפורמה
+        [HttpDelete("delete-patient/{id}")]
+        public async Task<IActionResult> DeletePatient(string id)
+        {
+            string fullId = id.Contains("/") ? id : $"Patients/{id}";
+            using var session = _store.OpenAsyncSession();
+            session.Delete(fullId);
+            await session.SaveChangesAsync();
+            return Ok(new { message = "Patient deleted successfully." });
+        }
+
+        // ── GET /api/admin/summary
+        // סטטיסטיקות כלליות ל-Dashboard
         [HttpGet("summary")]
         public async Task<IActionResult> GetPlatformSummary()
         {
             using var session = _store.OpenAsyncSession();
 
-            // ספירת כמות המטפלים
-            var totalTherapists = await session.Query<Therapist>().CountAsync();
+            var totalTherapists   = await session.Query<Therapist>()
+                .CountAsync(t => t.VerificationStatus == VerificationStatus.Approved);
+            var totalPatients     = await session.Query<Patient>().CountAsync();
+            var pendingTherapists = await session.Query<Therapist>()
+                .CountAsync(t => t.VerificationStatus == VerificationStatus.Pending);
 
-            // ספירת כמות המטופלים
-            var totalPatients = await session.Query<Patient>().CountAsync();
-
-            // כאן אפשר להוסיף לוגיקה לחישוב הכנסות או בקשות ממתינות
             return Ok(new
             {
-                totalTherapists = totalTherapists,
-                activePatients = totalPatients,
+                totalTherapists,
+                totalPatients,
+                pendingTherapists,
             });
         }
 
-        // 3. עדכון פרטי מטפל (למשל שינוי סטטוס או התמחות)
+        // ── PUT /api/admin/therapists/{id}
+        // עדכון פרטי מטפל
         [HttpPut("therapists/{id}")]
         public async Task<IActionResult> UpdateTherapist(string id, [FromBody] Therapist updatedData)
         {
+            string fullId = id.Contains("/") ? id : $"Therapists/{id}";
             using var session = _store.OpenAsyncSession();
-
-            // טעינת המטפל הקיים (ה-ID מגיע בפורמט therapists/1)
-            var therapist = await session.LoadAsync<Therapist>(id);
-
+            var therapist = await session.LoadAsync<Therapist>(fullId);
             if (therapist == null)
-                return NotFound(new { message = "Therapist not found" });
+                return NotFound(new { message = "Therapist not found." });
 
-            // עדכון השדות
-            therapist.FullName = updatedData.FullName;
-            therapist.Specialties = updatedData.Specialties;
-            therapist.Bio = updatedData.Bio;
+            therapist.FullName      = updatedData.FullName;
+            therapist.Specialties   = updatedData.Specialties;
+            therapist.Bio           = updatedData.Bio;
             therapist.LicenseNumber = updatedData.LicenseNumber;
-
             await session.SaveChangesAsync();
-            return Ok(new { message = "Therapist updated successfully" });
+            return Ok(new { message = "Therapist updated successfully." });
         }
 
-        // 4. מחיקת מטפל מהפלטפורמה
+        // ── DELETE /api/admin/therapists/{id}
+        // מחיקת מטפל מהפלטפורמה
         [HttpDelete("therapists/{id}")]
         public async Task<IActionResult> DeleteTherapist(string id)
         {
+            string fullId = id.Contains("/") ? id : $"Therapists/{id}";
             using var session = _store.OpenAsyncSession();
-
-            session.Delete(id);
+            session.Delete(fullId);
             await session.SaveChangesAsync();
-
-            return Ok(new { message = "Therapist deleted successfully" });
+            return Ok(new { message = "Therapist deleted successfully." });
         }
 
-        // עדכון שם ומייל
+        // ── PUT /api/admin/update-profile
         [HttpPut("update-profile")]
         public async Task<IActionResult> UpdateAdminProfile([FromBody] Admin updatedData)
         {
             using var session = _store.OpenAsyncSession();
-            var admin = await session.LoadAsync<Admin>("admins/1"); // או המזהה האמיתי
-
+            var admin = await session.LoadAsync<Admin>("admins/1");
             if (admin == null) return NotFound();
-
             admin.FullName = updatedData.FullName;
-            admin.Email = updatedData.Email;
-
+            admin.Email    = updatedData.Email;
             await session.SaveChangesAsync();
-            return Ok(new { message = "Profile updated successfully" });
+            return Ok(new { message = "Profile updated successfully." });
         }
 
-        // עדכון סיסמה בלבד
+        // ── PUT /api/admin/change-password
         [HttpPut("change-password")]
         public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest request)
         {
             using var session = _store.OpenAsyncSession();
             var admin = await session.LoadAsync<Admin>("admins/1");
-
             if (admin == null) return NotFound();
 
-            // בדיקת סיסמה ישנה
             if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, admin.PasswordHash))
-            {
-                return BadRequest(new { message = "Current password is incorrect" });
-            }
+                return BadRequest(new { message = "Current password is incorrect." });
 
-            // הצפנת סיסמה חדשה
             admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-
             await session.SaveChangesAsync();
-            return Ok(new { message = "Password changed successfully" });
+            return Ok(new { message = "Password changed successfully." });
         }
     }
 }

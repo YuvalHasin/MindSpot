@@ -86,7 +86,8 @@ const TherapistAuthPage = () => {
         sessionStorage.setItem("token",       data.token);
         sessionStorage.setItem("role",        "therapist");
         sessionStorage.setItem("therapistId", data.userId);
-        setTimeout(() => navigate("/therapist-dashboard"), 800);
+        if (data.fullName) sessionStorage.setItem("name", data.fullName);
+        setTimeout(() => navigate("/therapist"), 800);
       } else {
         setError(data.message || "Login failed.");
       }

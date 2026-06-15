@@ -15,8 +15,8 @@ const TherapistManagement = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        // סינון: מציגים רק מטפלים מאושרים (isActive: true)
-        const activeOnly = data.filter(t => t.isActive);
+        // סינון: מציגים רק מטפלים מאושרים (verificationStatus === "Approved")
+        const activeOnly = data.filter(t => t.verificationStatus === "Approved");
         setTherapists(activeOnly);
       }
     } catch (error) {

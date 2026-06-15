@@ -43,7 +43,9 @@ const PatientManagement = () => {
     setActionLoading(id);
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch(`https://localhost:7160/api/admin/delete-patient/${id}`, {
+      // RavenDB IDs look like "Patients/1-A" — extract numeric part for the URL
+      const safeId = id.includes("/") ? id.split("/")[1] : id;
+      const response = await fetch(`https://localhost:7160/api/admin/delete-patient/${safeId}`, {
         method: "DELETE",
         headers: {
           'Authorization': `Bearer ${token}`

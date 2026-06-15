@@ -73,12 +73,32 @@ namespace server.Controllers
 
             if (userId != null)
             {
+                // Fetch the display name for the logged-in user
+                string fullName = "";
+                using var nameSession = _store.OpenAsyncSession();
+                if (userRole == "Patient")
+                {
+                    var p = await nameSession.LoadAsync<Patient>(userId);
+                    fullName = p?.FullName ?? "";
+                }
+                else if (userRole == "Therapist")
+                {
+                    var t = await nameSession.LoadAsync<Therapist>(userId);
+                    fullName = t?.FullName ?? "";
+                }
+                else if (userRole == "Admin")
+                {
+                    var a = await nameSession.LoadAsync<Admin>(userId);
+                    fullName = a?.FullName ?? "";
+                }
+
                 var token = GenerateJwtToken(userId, userRole);
                 return Ok(new
                 {
-                    token = token,
-                    userId = userId,
-                    role = userRole 
+                    token    = token,
+                    userId   = userId,
+                    role     = userRole,
+                    fullName = fullName
                 });
             }
 

@@ -181,7 +181,7 @@ const ChatPage = () => {
                       totalReviews={ratingData?.totalReviews}
                     />
                     <button
-                      onClick={() => navigate(`/therapist/${therapist.id}`)}
+                      onClick={() => navigate(`/therapist-profile/${therapist.id}`)}
                       className="text-[10px] text-primary underline underline-offset-2 mb-3 block hover:opacity-70 transition-opacity"
                     >
                       View Profile

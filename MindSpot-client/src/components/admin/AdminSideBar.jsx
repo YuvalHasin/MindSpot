@@ -29,10 +29,7 @@ const AdminSidebar = () => {
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
-    // ניקוי ה-Token מה-LocalStorage
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("token");
-    // חזרה לדף הלוגין
+    sessionStorage.clear();
     navigate("/admin-login");
   };
 
