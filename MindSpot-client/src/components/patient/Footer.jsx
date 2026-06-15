@@ -1,7 +1,10 @@
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer id="contact" className="py-16 border-t border-border">
       <div className="container mx-auto px-6">
@@ -11,55 +14,55 @@ const Footer = () => {
               Mind<span className="text-primary">Spot</span>
             </h3>
             <p className="text-muted-foreground leading-relaxed text-sm">
-              On-demand micro-therapy with certified professionals. Immediate, focused, and private.
+              {t("footer.tagline")}
             </p>
           </div>
           <div>
             <h4 className="font-semibold text-foreground mb-4 text-sm tracking-wide uppercase">
-              Quick Links
+              {t("footer.quickLinks")}
             </h4>
             <div className="flex flex-col gap-2.5">
               <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                How It Works
+                {t("footer.howItWorks")}
               </a>
               <a href="#services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Services
+                {t("footer.services")}
               </a>
               <a href="#therapists" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Our Professionals
+                {t("footer.ourProfessionals")}
               </a>
               <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                About Us
+                {t("footer.about")}
               </Link>
               <Link to="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                FAQ
+                {t("footer.faq")}
               </Link>
               <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Contact
+                {t("footer.contact")}
               </Link>
               <Link to="/policies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Privacy & Payment Policy
+                {t("footer.privacy")}
               </Link>
             </div>
           </div>
           <div>
             <h4 className="font-semibold text-foreground mb-4 text-sm tracking-wide uppercase">
-              Crisis Support
+              {t("footer.crisis")}
             </h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              If you're in crisis, please call the{" "}
-              <span className="text-foreground font-medium">988 Suicide & Crisis Lifeline</span>{" "}
-              by dialing 988.
+              {t("footer.crisisText")}{" "}
+              <span className="text-foreground font-medium">{t("footer.crisisLine")}</span>{" "}
+              {t("footer.crisisDial")}
             </p>
           </div>
         </div>
 
         <div className="border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2026 MindSpot. All rights reserved.
+            {t("footer.copyright")}
           </p>
           <p className="text-sm text-muted-foreground flex items-center gap-1">
-            Made with <Heart size={14} className="text-primary" /> for your wellbeing
+            {t("footer.madeWith")} <Heart size={14} className="text-primary" />
           </p>
         </div>
 

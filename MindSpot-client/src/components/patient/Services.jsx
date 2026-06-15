@@ -1,30 +1,17 @@
 import { motion } from "framer-motion";
 import { Lock, Clock, Brain, Sparkles } from "lucide-react";
-
-const features = [
-  {
-    icon: Brain,
-    title: "AI-Driven Triage",
-    description: "Our classification engine identifies emotional issues, assesses urgency levels, and performs risk evaluation in real-time.",
-  },
-  {
-    icon: Clock,
-    title: "Instant Availability",
-    description: "Connect with professionals in minutes, not weeks. Our platform ensures high availability around the clock.",
-  },
-  {
-    icon: Lock,
-    title: "Complete Privacy",
-    description: "End-to-end encrypted conversations. Your mental health data is protected with the highest security standards.",
-  },
-  {
-    icon: Sparkles,
-    title: "Smart Matching",
-    description: "Our algorithm analyzes your needs, preferences, and urgency to pair you with the ideal certified professional.",
-  },
-];
+import { useTranslation } from "react-i18next";
 
 const Services = () => {
+  const { t } = useTranslation();
+
+  const features = [
+    { icon: Brain,    title: t("services.feat1Title"), description: t("services.feat1Desc") },
+    { icon: Clock,    title: t("services.feat2Title"), description: t("services.feat2Desc") },
+    { icon: Lock,     title: t("services.feat3Title"), description: t("services.feat3Desc") },
+    { icon: Sparkles, title: t("services.feat4Title"), description: t("services.feat4Desc") },
+  ];
+
   return (
     <section id="services" className="py-24">
       <div className="container mx-auto px-6">
@@ -36,10 +23,10 @@ const Services = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-4">
-            Why MindSpot
+            {t("services.title")}
           </h2>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Purpose-built for immediate, on-demand micro-therapy sessions.
+            {t("services.subtitle")}
           </p>
         </motion.div>
 

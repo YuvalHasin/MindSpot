@@ -4,41 +4,34 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import LanguageToggle from "@/components/LanguageToggle";
-
-const navLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Services", href: "#services" },
-  { label: "Professionals", href: "#therapists" },
-  { label: "Contact", href: "#contact" },
-];
+import { useTranslation } from "react-i18next";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  // פונקציית הבדיקה המשותפת
+  const navLinks = [
+    { label: t("nav.howItWorks"), href: "#how-it-works" },
+    { label: t("nav.services"),   href: "#services" },
+    { label: t("nav.professionals"), href: "#therapists" },
+    { label: t("nav.contact"),    href: "#contact" },
+  ];
+
   const handleSupportClick = () => {
     const userToken = sessionStorage.getItem("token");
     const role = sessionStorage.getItem("role");
     setOpen(false);
-
-    if (userToken && role === "patient") {
-      navigate("/patient-dashboard");
-    } else {
-      navigate("/patient-auth");
-    }
+    if (userToken && role === "patient") navigate("/patient-dashboard");
+    else navigate("/patient-auth");
   };
 
   const handleTherapistClick = () => {
     const userToken = sessionStorage.getItem("token");
     const role = sessionStorage.getItem("role");
     setOpen(false);
-
-    if (userToken && role === "therapist") {
-      navigate("/therapist");
-    } else {
-      navigate("/therapist-auth");
-    }
+    if (userToken && role === "therapist") navigate("/therapist");
+    else navigate("/therapist-auth");
   };
 
   return (
@@ -65,10 +58,10 @@ const Navbar = () => {
             </a>
           ))}
           <Button size="sm" variant="outline" onClick={handleTherapistClick}>
-            Join as Therapist
+            {t("nav.joinTherapist")}
           </Button>
           <Button size="sm" onClick={handleSupportClick}>
-            Personal Area
+            {t("nav.personalArea")}
           </Button>
           <LanguageToggle />
         </div>
@@ -102,12 +95,11 @@ const Navbar = () => {
           ))}
           <Link to="/therapist-auth">
             <Button className="mt-2 w-full" size="sm" variant="outline">
-              For Professionals
+              {t("nav.joinTherapist")}
             </Button>
           </Link>
-          
           <Button className="mt-2 w-full" size="sm" onClick={handleSupportClick}>
-            Personal Area
+            {t("nav.personalArea")}
           </Button>
           <div className="mt-3 flex justify-center">
             <LanguageToggle />

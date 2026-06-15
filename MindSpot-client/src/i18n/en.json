@@ -1,9 +1,157 @@
 {
-  "nav": { "home": "Home", "about": "About", "contact": "Contact", "login": "Sign In" },
-  "chat": { "placeholder": "Talk to Serenity...", "send": "Send", "assistant_title": "Serenity", "subtitle": "AI Assistant" },
-  "booking": { "title": "Book a Session", "connect": "Connect Now", "view_profile": "View Profile", "no_slots": "No availability set. Please contact the therapist directly.", "select_slot": "Select a time slot", "prev_week": "Previous week", "next_week": "Next week" },
-  "session": { "booked": "Booked Appointments", "ai": "AI Sessions", "cancel": "Cancel", "rate": "Rate Session", "no_appointments": "No appointments yet." },
-  "profile": { "bio": "About", "specialties": "Specialties", "rating": "Rating", "reviews": "Reviews", "verified": "Verified" },
-  "auth": { "login": "Sign In", "register": "Register", "email": "Email", "password": "Password", "name": "Full Name" },
-  "common": { "loading": "Loading...", "error": "Something went wrong.", "back": "Back", "save": "Save", "cancel": "Cancel" }
+  "nav": {
+    "howItWorks": "How It Works",
+    "services": "Services",
+    "professionals": "Professionals",
+    "contact": "Contact",
+    "joinTherapist": "Join as Therapist",
+    "personalArea": "Personal Area"
+  },
+  "hero": {
+    "badge": "On-Demand Micro-Therapy",
+    "title1": "Immediate support,",
+    "title2": "when you need it",
+    "subtitle": "Connect with certified professionals for focused, one-time micro-consultations. No commitments, no waiting — just the right help at the right moment.",
+    "cta": "Start a Micro-Consultation",
+    "learnMore": "Learn More",
+    "encrypted": "End-to-end encrypted",
+    "avgConnect": "Avg. 3 min to connect",
+    "professionals": "200+ certified professionals"
+  },
+  "howItWorks": {
+    "title": "How MindSpot Works",
+    "subtitle": "From assessment to consultation in under 5 minutes.",
+    "step": "Step",
+    "step1Title": "AI Assessment",
+    "step1Desc": "Our AI engine classifies your emotional state, assesses urgency, and evaluates risk to personalize your experience.",
+    "step2Title": "Smart Matching",
+    "step2Desc": "Our algorithm connects you with the most suitable certified professional based on your specific needs.",
+    "step3Title": "Micro-Consultation",
+    "step3Desc": "Have a focused, private chat session with your matched professional — no long-term commitments required."
+  },
+  "services": {
+    "title": "Why MindSpot",
+    "subtitle": "Purpose-built for immediate, on-demand micro-therapy sessions.",
+    "feat1Title": "AI-Driven Triage",
+    "feat1Desc": "Our classification engine identifies emotional issues, assesses urgency levels, and performs risk evaluation in real-time.",
+    "feat2Title": "Instant Availability",
+    "feat2Desc": "Connect with professionals in minutes, not weeks. Our platform ensures high availability around the clock.",
+    "feat3Title": "Complete Privacy",
+    "feat3Desc": "End-to-end encrypted conversations. Your mental health data is protected with the highest security standards.",
+    "feat4Title": "Smart Matching",
+    "feat4Desc": "Our algorithm analyzes your needs, preferences, and urgency to pair you with the ideal certified professional."
+  },
+  "footer": {
+    "tagline": "On-demand micro-therapy with certified professionals. Immediate, focused, and private.",
+    "quickLinks": "Quick Links",
+    "howItWorks": "How It Works",
+    "services": "Services",
+    "ourProfessionals": "Our Professionals",
+    "about": "About Us",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "privacy": "Privacy & Payment Policy",
+    "crisis": "Crisis Support",
+    "crisisText": "If you're in crisis, please call the",
+    "crisisLine": "988 Suicide & Crisis Lifeline",
+    "crisisDial": "by dialing 988.",
+    "copyright": "© 2026 MindSpot. All rights reserved.",
+    "madeWith": "Made with"
+  },
+  "sidebar": {
+    "portal": "Patient Portal",
+    "overview": "Overview",
+    "newSession": "New Session",
+    "sessionHistory": "Session History",
+    "profileSettings": "Profile Settings",
+    "security": "Security",
+    "logout": "Log Out"
+  },
+  "overview": {
+    "welcomeBack": "Welcome back,",
+    "sessionsCompleted": "AI sessions so far. Keep going!",
+    "totalSessions": "Total Sessions",
+    "thisMonth": "This Month",
+    "aiProgress": "Your AI Progress",
+    "noAssessment": "No recent assessment found. Start one to see your AI insights here.",
+    "startAssessment": "Start New Assessment"
+  },
+  "history": {
+    "title": "Activity History",
+    "subtitle": "Review your AI sessions and booked therapy appointments.",
+    "aiSessions": "AI Sessions",
+    "bookedAppts": "Booked Appointments",
+    "noAiSessions": "No AI sessions yet",
+    "noAiDesc": "Complete a triage assessment to see your history.",
+    "startAssessment": "Start Assessment",
+    "noAppts": "No appointments yet",
+    "noApptDesc": "Book a session with a therapist to see it here.",
+    "findTherapist": "Find a Therapist",
+    "date": "Date",
+    "aiSummary": "AI Clinical Summary",
+    "topMatch": "Top Match",
+    "recommendation": "Recommendation",
+    "noSummary": "No summary available",
+    "back": "Back to dashboard",
+    "paid": "Paid",
+    "refund": "Refund",
+    "rateSession": "Rate session",
+    "cancel": "Cancel"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signUp": "Sign up",
+    "signIn": "Sign in"
+  },
+  "chat": {
+    "placeholder": "Talk to Serenity...",
+    "send": "Send",
+    "assistant_title": "Serenity",
+    "subtitle": "AI Assistant",
+    "backToDashboard": "Back to Dashboard",
+    "aiPowered": "AI-powered mental health support",
+    "matchedTherapists": "Your Matched Therapists",
+    "bookSession": "Book Session",
+    "viewProfile": "View Profile",
+    "noRatings": "No ratings"
+  },
+  "booking": {
+    "title": "Book a Session",
+    "connect": "Connect Now",
+    "view_profile": "View Profile",
+    "no_slots": "No availability set. Please contact the therapist directly.",
+    "select_slot": "Select a time slot",
+    "prev_week": "Previous week",
+    "next_week": "Next week"
+  },
+  "profile": {
+    "bio": "About",
+    "specialties": "Specialties",
+    "rating": "Rating",
+    "reviews": "Reviews",
+    "verified": "Verified"
+  },
+  "triage": {
+    "title": "AI Mental Health Assessment",
+    "subtitle": "Answer a few questions so we can match you with the right professional.",
+    "finding": "Finding your match...",
+    "submit": "Submit",
+    "next": "Next",
+    "back": "Back",
+    "question": "Question"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong.",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
 }

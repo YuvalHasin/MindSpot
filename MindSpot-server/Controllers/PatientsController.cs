@@ -150,15 +150,15 @@ public class PatientsController : ControllerBase
 
                     result.Add(new
                     {
-                        Id = s.Id,
-                        Date = s.CreatedAt.ToString("MMM dd, yyyy"), // פורמט תאריך יפה לטבלה
-                        Type = "AI Session",
-                        Summary = s.Summary,
+                        id = s.Id,
+                        date = s.CreatedAt.ToString("MMM dd, yyyy"), // פורמט תאריך יפה לטבלה
+                        type = "AI Session",
+                        summary = s.Summary,
                         // פירוט נוסף שיוצג מתחת לסיכום
-                        Detail = recommendedTherapist != null
+                        detail = recommendedTherapist != null
                                  ? $"Recommended: {recommendedTherapist.FullName} ({recommendedTherapist.Specialties})"
                                  : "Analysis complete - No specific match",
-                        TherapistId = s.RecommendedTherapistId
+                        therapistId = s.RecommendedTherapistId
                     });
                 }
 

@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "../../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const CHAT_URL = "https://localhost:7160/api/chat/send";
 
@@ -41,6 +42,7 @@ const StarRating = ({ rating, totalReviews }) => {
 const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { matches, summary } = location.state || { matches: [], summary: "" };
 
   const [messages, setMessages] = useState([
@@ -143,8 +145,8 @@ const ChatPage = () => {
           </Button>
         </Link>
         <div>
-          <h1 className="font-bold text-lg leading-none">Serenity</h1>
-          <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">AI Assistant</p>
+          <h1 className="font-bold text-lg leading-none">{t("chat.assistant_title")}</h1>
+          <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">{t("chat.subtitle")}</p>
         </div>
       </header>
 
@@ -184,14 +186,14 @@ const ChatPage = () => {
                       onClick={() => navigate(`/therapist-profile/${therapist.id}`)}
                       className="text-[10px] text-primary underline underline-offset-2 mb-3 block hover:opacity-70 transition-opacity"
                     >
-                      View Profile
+                      {t("chat.viewProfile")}
                     </button>
                   </div>
                   <Button
                     onClick={() => handleConnectClick(therapist)}
                     className="w-full rounded-xl h-10 text-xs font-bold shadow-sm"
                   >
-                    Connect Now
+                    {t("chat.bookSession")}
                   </Button>
                 </motion.div>
               );
@@ -225,7 +227,7 @@ const ChatPage = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Talk to Serenity..."
+            placeholder={t("chat.placeholder")}
             className="flex-1 bg-transparent border-none px-4 py-3 text-sm focus:outline-none resize-none min-h-[44px]"
             rows={1}
           />

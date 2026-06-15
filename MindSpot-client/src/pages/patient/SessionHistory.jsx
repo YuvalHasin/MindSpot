@@ -3,24 +3,33 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item      = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
-// ── Status badge ──────────────────────────────────────────────────────────────
 function AppointmentStatusBadge({ status }) {
-  const map = {
-    Confirmed:            { label: "Confirmed", color: "bg-green-50 text-green-700 border-green-100" },
-    Pending:              { label: "Pending",   color: "bg-yellow-50 text-yellow-700 border-yellow-100" },
-    Completed:            { label: "Completed", color: "bg-blue-50 text-blue-700 border-blue-100" },
-    CancelledByPatient:   { label: "Cancelled", color: "bg-red-50 text-red-600 border-red-100" },
-    CancelledByTherapist: { label: "Cancelled", color: "bg-red-50 text-red-600 border-red-100" },
-    NoShow:               { label: "No Show",   color: "bg-gray-100 text-gray-500 border-gray-200" },
+  const statusLabels = {
+    Confirmed:            "Confirmed",
+    Pending:              "Pending",
+    Completed:            "Completed",
+    CancelledByPatient:   "Cancelled",
+    CancelledByTherapist: "Cancelled",
+    NoShow:               "No Show",
   };
-  const cfg = map[status] ?? { label: status, color: "bg-muted text-muted-foreground border-border" };
+  const colorMap = {
+    Confirmed:            "bg-green-50 text-green-700 border-green-100",
+    Pending:              "bg-yellow-50 text-yellow-700 border-yellow-100",
+    Completed:            "bg-blue-50 text-blue-700 border-blue-100",
+    CancelledByPatient:   "bg-red-50 text-red-600 border-red-100",
+    CancelledByTherapist: "bg-red-50 text-red-600 border-red-100",
+    NoShow:               "bg-gray-100 text-gray-500 border-gray-200",
+  };
+  const label = statusLabels[status] ?? status;
+  const color = colorMap[status] ?? "bg-muted text-muted-foreground border-border";
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${cfg.color}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${color}`}>
+      {label}
     </span>
   );
 }
@@ -31,19 +40,18 @@ function formatTime(iso) {
 }
 
 const SessionHistory = () => {
+  const { t } = useTranslation();
   const [activeTab,    setActiveTab]    = useState("ai");
   const [aiSessions,   setAiSessions]   = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [loading,      setLoading]      = useState(true);
 
-  // Cancel dialog state
-  const [cancelTarget,  setCancelTarget]  = useState(null);   // appointment to cancel
+  const [cancelTarget,  setCancelTarget]  = useState(null);
   const [cancelReason,  setCancelReason]  = useState("");
   const [cancelling,    setCancelling]    = useState(false);
   const [cancelError,   setCancelError]   = useState("");
 
-  // Rating dialog state
-  const [rateTarget,    setRateTarget]    = useState(null);   // appointment to rate
+  const [rateTarget,    setRateTarget]    = useState(null);
   const [ratingValue,   setRatingValue]   = useState(0);
   const [ratingHover,   setRatingHover]   = useState(0);
   const [ratingComment, setRatingComment] = useState("");
@@ -74,7 +82,6 @@ const SessionHistory = () => {
     fetchAll();
   }, []);
 
-  // ── Cancel appointment ──────────────────────────────────────────────────────
   const handleCancel = async () => {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -88,7 +95,6 @@ const SessionHistory = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to cancel.");
-      // Update local state
       setAppointments(prev =>
         prev.map(a => a.id === cancelTarget.id ? { ...a, status: "CancelledByPatient" } : a)
       );
@@ -101,7 +107,6 @@ const SessionHistory = () => {
     }
   };
 
-  // ── Submit rating ───────────────────────────────────────────────────────────
   const handleRateSubmit = async () => {
     if (!rateTarget || ratingValue === 0) return;
     setSubmittingRate(true);
@@ -146,21 +151,19 @@ const SessionHistory = () => {
         to="/patient-dashboard"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2 transition-colors text-sm font-medium"
       >
-        <ArrowLeft size={16} /> Back to dashboard
+        <ArrowLeft size={16} /> {t("history.back")}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="font-display text-2xl font-bold text-foreground">Activity History</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Review your AI sessions and booked therapy appointments.
-        </p>
+        <h1 className="font-display text-2xl font-bold text-foreground">{t("history.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("history.subtitle")}</p>
       </motion.div>
 
       {/* Tabs */}
       <div className="flex bg-muted rounded-xl p-1 w-fit">
         {[
-          { id: "ai",    label: "AI Sessions",         count: aiSessions.length },
-          { id: "appts", label: "Booked Appointments", count: appointments.length },
+          { id: "ai",    label: t("history.aiSessions"),  count: aiSessions.length },
+          { id: "appts", label: t("history.bookedAppts"), count: appointments.length },
         ].map(({ id, label, count }) => (
           <button
             key={id}
@@ -189,10 +192,10 @@ const SessionHistory = () => {
             {aiSessions.length === 0 ? (
               <EmptyState
                 icon={Bot}
-                title="No AI sessions yet"
-                desc="Complete a triage assessment to see your history."
+                title={t("history.noAiSessions")}
+                desc={t("history.noAiDesc")}
                 linkTo="/patient-dashboard/triage"
-                linkLabel="Start Assessment"
+                linkLabel={t("history.startAssessment")}
               />
             ) : (
               <>
@@ -201,32 +204,32 @@ const SessionHistory = () => {
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-muted/30 text-muted-foreground border-b border-border/60">
                       <tr>
-                        <th className="px-6 py-4 font-semibold w-32">Date</th>
-                        <th className="px-6 py-4 font-semibold">AI Clinical Summary</th>
-                        <th className="px-6 py-4 font-semibold">Top Match</th>
+                        <th className="px-6 py-4 font-semibold w-32">{t("history.date")}</th>
+                        <th className="px-6 py-4 font-semibold">{t("history.aiSummary")}</th>
+                        <th className="px-6 py-4 font-semibold">{t("history.topMatch")}</th>
                       </tr>
                     </thead>
                     <motion.tbody variants={container} initial="hidden" animate="show">
                       {aiSessions.map((s, i) => (
                         <motion.tr
-                          key={s.Id || i}
+                          key={s.id || i}
                           variants={item}
                           className="border-b border-border/40 last:border-none hover:bg-muted/10 transition-colors align-top"
                         >
-                          <td className="px-6 py-5 text-muted-foreground whitespace-nowrap">{s.Date}</td>
+                          <td className="px-6 py-5 text-muted-foreground whitespace-nowrap">{s.date}</td>
                           <td className="px-6 py-5">
                             <div className="flex items-start gap-3">
                               <div className="mt-1 p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
                                 <Bot size={16} />
                               </div>
                               <p className="text-foreground leading-relaxed text-sm italic">
-                                "{s.Summary || "No summary available"}"
+                                "{s.summary || t("history.noSummary")}"
                               </p>
                             </div>
                           </td>
                           <td className="px-6 py-5">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 text-[11px] font-medium">
-                              <Users size={10} /> {s.Detail}
+                              <Users size={10} /> {s.detail}
                             </span>
                           </td>
                         </motion.tr>
@@ -239,20 +242,20 @@ const SessionHistory = () => {
                 <div className="md:hidden space-y-4">
                   {aiSessions.map((s, i) => (
                     <motion.div
-                      key={s.Id || `m-${i}`}
+                      key={s.id || `m-${i}`}
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       className="bg-card border border-border/60 rounded-2xl p-5 space-y-3 shadow-sm"
                     >
                       <div className="flex justify-between items-center border-b border-border/40 pb-2">
-                        <span className="text-xs font-medium text-muted-foreground">{s.Date}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{s.date}</span>
                         <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase">
                           <Bot size={10} /> AI
                         </span>
                       </div>
-                      <p className="text-sm text-foreground leading-relaxed italic">"{s.Summary}"</p>
+                      <p className="text-sm text-foreground leading-relaxed italic">"{s.summary}"</p>
                       <div className="p-3 bg-muted/30 rounded-xl border border-border/40">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Recommendation</p>
-                        <p className="text-xs font-medium text-green-700">{s.Detail}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t("history.recommendation")}</p>
+                        <p className="text-xs font-medium text-green-700">{s.detail}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -268,10 +271,10 @@ const SessionHistory = () => {
             {appointments.length === 0 ? (
               <EmptyState
                 icon={CalendarDays}
-                title="No appointments yet"
-                desc="Book a session with a therapist to see it here."
+                title={t("history.noAppts")}
+                desc={t("history.noApptDesc")}
                 linkTo="/patient-dashboard/triage"
-                linkLabel="Find a Therapist"
+                linkLabel={t("history.findTherapist")}
               />
             ) : (
               <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
@@ -309,34 +312,31 @@ const SessionHistory = () => {
 
                     {/* Actions */}
                     <div className="shrink-0 flex flex-col items-end gap-2">
-                      {/* Payment status */}
                       <span className="text-[11px] font-semibold">
                         {a.paymentStatus === "Succeeded"
-                          ? <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={13} /> Paid</span>
+                          ? <span className="flex items-center gap-1 text-green-600"><CheckCircle2 size={13} /> {t("history.paid")}</span>
                           : a.paymentStatus === "RefundPending" || a.paymentStatus === "FullyRefunded"
-                            ? <span className="flex items-center gap-1 text-orange-500"><AlertCircle size={13} /> Refund</span>
+                            ? <span className="flex items-center gap-1 text-orange-500"><AlertCircle size={13} /> {t("history.refund")}</span>
                             : <span className="flex items-center gap-1 text-muted-foreground"><XCircle size={13} /> {a.paymentStatus}</span>
                         }
                       </span>
 
-                      {/* Rate button — only for Completed + not yet rated */}
                       {a.status === "Completed" && !a.rated && (
                         <button
                           onClick={() => setRateTarget(a)}
                           className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
                         >
-                          <Star size={12} /> Rate session
+                          <Star size={12} /> {t("history.rateSession")}
                         </button>
                       )}
 
-                      {/* Cancel button — only for Pending/Confirmed in the future */}
                       {(a.status === "Pending" || a.status === "Confirmed") &&
                         new Date(a.appointmentAt) > new Date() && (
                         <button
                           onClick={() => { setCancelTarget(a); setCancelError(""); }}
                           className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:underline"
                         >
-                          <Trash2 size={12} /> Cancel
+                          <Trash2 size={12} /> {t("history.cancel")}
                         </button>
                       )}
                     </div>
@@ -408,7 +408,6 @@ const SessionHistory = () => {
               <h3 className="font-display text-lg font-bold text-foreground mb-1">Rate Your Session</h3>
               <p className="text-sm text-muted-foreground mb-4">with {rateTarget.therapistName}</p>
 
-              {/* Stars */}
               <div className="flex justify-center gap-2 mb-4">
                 {[1,2,3,4,5].map(n => (
                   <button

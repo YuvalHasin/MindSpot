@@ -2,26 +2,22 @@ import { motion } from "framer-motion";
 import { Button } from "../ui/button";
 import { Zap, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import heroBg from "../../assets/hero-bg.jpg";
 
 const Hero = () => {
-  
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleStartAction = () => {
-    // בדיקה אם קיים טוקן של המשתמש ב-LocalStorage
-    // (וודאי שזה השם שבו את שומרת את הטוקן בשרת שלך, למשל 'token' או 'user_session')
-    const userToken = localStorage.getItem("token");
-
+    const userToken = sessionStorage.getItem("token");
     if (userToken) {
-      // המשתמש מחובר -> מעבירים ישירות לשירות
-      navigate("/triage");
+      navigate("/patient-dashboard/triage");
     } else {
-      // המשתמש לא מחובר -> מעבירים לדף ההתחברות/הרשמה
       navigate("/patient-auth");
     }
   };
-  
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
       <div className="absolute inset-0 z-0">
@@ -43,7 +39,7 @@ const Hero = () => {
           >
             <span className="inline-flex items-center gap-2 text-sm font-medium text-primary bg-accent px-4 py-1.5 rounded-full mb-6">
               <Zap size={14} />
-              On-Demand Micro-Therapy
+              {t("hero.badge")}
             </span>
           </motion.div>
 
@@ -53,9 +49,9 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-tight text-foreground mb-6"
           >
-            Immediate support,
+            {t("hero.title1")}
             <br />
-            <span className="text-gradient-sage">when you need it</span>
+            <span className="text-gradient-sage">{t("hero.title2")}</span>
           </motion.h1>
 
           <motion.p
@@ -64,8 +60,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg leading-relaxed"
           >
-            Connect with certified professionals for focused, one-time micro-consultations.
-            No commitments, no waiting — just the right help at the right moment.
+            {t("hero.subtitle")}
           </motion.p>
 
           <motion.div
@@ -74,16 +69,19 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="flex flex-col sm:flex-row gap-4"
           >
-         
             <Button size="lg" className="text-base px-8" onClick={handleStartAction}>
               <Zap size={18} className="mr-2" />
-              Start a Micro-Consultation
+              {t("hero.cta")}
             </Button>
 
-            <Button variant="outline" size="lg" className="text-base px-8" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
-              Learn More
+            <Button
+              variant="outline"
+              size="lg"
+              className="text-base px-8"
+              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              {t("hero.learnMore")}
             </Button>
-
           </motion.div>
 
           <motion.div
@@ -94,15 +92,15 @@ const Hero = () => {
           >
             <span className="flex items-center gap-1.5">
               <Shield size={14} className="text-primary" />
-              End-to-end encrypted
+              {t("hero.encrypted")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-primary" />
-              Avg. 3 min to connect
+              {t("hero.avgConnect")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-sand-warm" />
-              200+ certified professionals
+              {t("hero.professionals")}
             </span>
           </motion.div>
         </div>
