@@ -3,8 +3,10 @@ import { Check, X, UserPlus, Phone, Loader2, ShieldAlert, BadgeCheck } from "luc
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const AdminRequests = () => {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -24,7 +26,7 @@ const AdminRequests = () => {
     setRequests(data); 
   } catch (error) {
     console.error("Error fetching requests:", error);
-    toast({ title: "Error loading requests", variant: "destructive" });
+    toast({ title: t("adminRequests.errorLoading"), variant: "destructive" });
   } finally {
     setLoading(false);
   }
@@ -50,12 +52,12 @@ const AdminRequests = () => {
       if (response.ok) {
         setRequests(prev => prev.filter(r => r.id !== id));
         toast({
-          title: action === 'approve' ? "Approved!" : "Rejected",
-          description: action === 'approve' ? "Therapist is now active." : "Request removed.",
+          title: action === 'approve' ? t("adminRequests.approvedTitle") : t("adminRequests.rejectedTitle"),
+          description: action === 'approve' ? t("adminRequests.approvedDesc") : t("adminRequests.rejectedDesc"),
         });
       }
     } catch (error) {
-      toast({ title: "Action failed", variant: "destructive" });
+      toast({ title: t("adminRequests.actionFailed"), variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
@@ -64,7 +66,7 @@ const AdminRequests = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 space-y-4">
       <Loader2 className="animate-spin text-primary w-10 h-10" />
-      <p className="text-muted-foreground">Filtering pending requests...</p>
+      <p className="text-muted-foreground">{t("adminRequests.filteringRequests")}</p>
     </div>
   );
 
@@ -73,12 +75,12 @@ const AdminRequests = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <UserPlus className="text-primary" /> Join Requests
+            <UserPlus className="text-primary" /> {t("adminRequests.title")}
           </h1>
-          <p className="text-muted-foreground text-sm">Review incoming practitioner applications.</p>
+          <p className="text-muted-foreground text-sm">{t("adminRequests.subtitle")}</p>
         </div>
         <div className="bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">
-          <ShieldAlert size={14} /> {requests.length} Pending {requests.length !== 1 ? 's' : ''}
+          <ShieldAlert size={14} /> {requests.length} {t("adminRequests.pending")} {requests.length !== 1 ? t("adminRequests.pendingPlural") : ''}
         </div>
       </div>
 
@@ -87,11 +89,11 @@ const AdminRequests = () => {
           <table className="w-full text-left border-collapse text-sm">
             <thead className="bg-muted/30 text-muted-foreground font-semibold border-b">
               <tr>
-                <th className="px-6 py-4">Therapist</th>
-                <th className="px-6 py-4">License</th>
-                <th className="px-6 py-4">Bio</th>
-                <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4 text-right">Verification</th>
+                <th className="px-6 py-4">{t("adminRequests.colTherapist")}</th>
+                <th className="px-6 py-4">{t("adminRequests.colLicense")}</th>
+                <th className="px-6 py-4">{t("adminRequests.colBio")}</th>
+                <th className="px-6 py-4">{t("adminRequests.colContact")}</th>
+                <th className="px-6 py-4 text-right">{t("adminRequests.colVerification")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -99,7 +101,7 @@ const AdminRequests = () => {
                 {requests.length === 0 ? (
                   <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <td colSpan="5" className="px-6 py-20 text-center text-muted-foreground italic">
-                      All caught up! No pending therapists.
+                      {t("adminRequests.noPending")}
                     </td>
                   </motion.tr>
                 ) : (
@@ -127,7 +129,7 @@ const AdminRequests = () => {
                       {/* עמודה 3: ביו (בנפרד) */}
                       <td className="px-6 py-4">
                         <div className="text-xs text-muted-foreground italic max-w-[200px] line-clamp-2">
-                          {req.bio || "No bio provided."}
+                          {req.bio || t("adminRequests.noBio")}
                         </div>
                       </td>
 
@@ -148,7 +150,7 @@ const AdminRequests = () => {
                             className="bg-green-600 hover:bg-green-700 h-8 rounded-lg shadow-sm"
                           >
                             {actionLoading === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check size={16} className="mr-1" />} 
-                            Approve
+                            {t("adminRequests.approve")}
                           </Button>
                           <Button 
                             size="sm" 

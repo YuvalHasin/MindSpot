@@ -4,11 +4,13 @@ import { Button } from "../../components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { HubConnectionBuilder } from "@microsoft/signalr";
+import { useTranslation } from "react-i18next";
 
 const HISTORY_URL = "https://localhost:7160/api/chat/history";
 const HUB_URL = "https://localhost:7160/hubs/chat";
 
 const ChatRoomPage = () => {
+  const { t } = useTranslation();
   const { appointmentId } = useParams();
   const navigate = useNavigate();
 
@@ -120,13 +122,13 @@ const ChatRoomPage = () => {
           <ArrowLeft size={20} />
         </Button>
         <div>
-          <h1 className="font-bold text-lg leading-none font-display">Session Chat</h1>
+          <h1 className="font-bold text-lg leading-none font-display">{t("chat.sessionChat")}</h1>
           {connecting ? (
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" /> Connecting…
+              <Loader2 size={10} className="animate-spin" /> {t("chat.connecting")}
             </p>
           ) : (
-            <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Live</p>
+            <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">{t("chat.live")}</p>
           )}
         </div>
       </header>
@@ -173,7 +175,7 @@ const ChatRoomPage = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message…"
+            placeholder={t("chat.typePlaceholder")}
             className="flex-1 bg-transparent border-none px-4 py-3 text-sm focus:outline-none resize-none min-h-[44px]"
             rows={1}
             disabled={connecting}

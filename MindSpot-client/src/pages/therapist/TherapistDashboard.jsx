@@ -3,6 +3,7 @@ import { Calendar, User, Clock } from "lucide-react";
 import StatsOverview from "./StatsOverview";
 import ConsultationQueue from "./ConsultationQueue";
 import ActiveSession from "./ActiveSession";
+import { useTranslation } from "react-i18next";
 import RecentSessions from "./RecentSessions";
 
 /**
@@ -10,6 +11,7 @@ import RecentSessions from "./RecentSessions";
  * Receives therapistData + notifications via Outlet context from TherapistPage.
  */
 const TherapistDashboard = () => {
+  const { t } = useTranslation();
   const { notifications } = useOutletContext();
   const navigate = useNavigate();
   const unreadNotifications = notifications?.filter((n) => !n.isRead) ?? [];
@@ -23,7 +25,7 @@ const TherapistDashboard = () => {
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="text-primary" size={18} />
-            <h2 className="font-bold text-lg">New Booking Requests</h2>
+            <h2 className="font-bold text-lg">{t("therapistDashboard.newBookingRequests")}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {unreadNotifications.map((notif) => (
@@ -46,7 +48,7 @@ const TherapistDashboard = () => {
                     {new Date(notif.createdAt).toLocaleDateString()}
                   </div>
                   <button className="text-primary font-bold hover:underline" onClick={() => navigate("/therapist/consultations")}>
-                    Accept Request
+                    {t("therapistDashboard.acceptRequest")}
                   </button>
                 </div>
               </div>

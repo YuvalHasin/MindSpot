@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   Lock, User, ArrowLeft, Loader2, Award, Briefcase,
   Phone, Upload, CheckCircle2, Clock, ChevronRight,
@@ -11,6 +12,7 @@ import {
 const STEP = { DETAILS: 1, PROFESSIONAL: 2, PENDING: 3 };
 
 const TherapistAuthPage = () => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [regStep, setRegStep] = useState(STEP.DETAILS);
   const navigate = useNavigate();
@@ -213,7 +215,7 @@ const TherapistAuthPage = () => {
           to="/"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors text-sm"
         >
-          <ArrowLeft size={16} /> Back to home
+          <ArrowLeft size={16} /> {t("therapistAuth.backToHome")}
         </Link>
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
@@ -229,12 +231,12 @@ const TherapistAuthPage = () => {
               Mind<span className="text-primary">Spot</span>{" "}
               <span className="text-sm font-normal text-muted-foreground tracking-wide uppercase">Pro</span>
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">Join our network of certified professionals</p>
+            <p className="text-muted-foreground text-sm mt-1">{t("therapistAuth.proSubtitle")}</p>
           </div>
 
           {/* Tabs */}
           <div className="flex bg-muted rounded-xl p-1 mb-6">
-            {["Therapist Login", "Apply to Join"].map((label, i) => (
+            {[t("therapistAuth.loginTab"), t("therapistAuth.applyTab")].map((label, i) => (
               <button
                 key={label}
                 type="button"
@@ -260,11 +262,11 @@ const TherapistAuthPage = () => {
                 onSubmit={handleLogin}
                 className="space-y-4"
               >
-                <FieldRow icon={Award} placeholder="License number (27-XXXXX)" value={loginLicense}  onChange={setLoginLicense}  ic={ic} />
-                <FieldRow icon={Lock}  placeholder="Password"                  value={loginPassword} onChange={setLoginPassword} ic={ic} type="password" />
+                <FieldRow icon={Award} placeholder={t("therapistAuth.licensePlaceholder")} value={loginLicense}  onChange={setLoginLicense}  ic={ic} />
+                <FieldRow icon={Lock}  placeholder={t("therapistAuth.passwordPlaceholder")} value={loginPassword} onChange={setLoginPassword} ic={ic} type="password" />
                 {error && <ErrBox msg={error} />}
                 <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign In"}
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : t("therapistAuth.signIn")}
                 </Button>
               </motion.form>
             )}
@@ -273,18 +275,18 @@ const TherapistAuthPage = () => {
             {!isLogin && regStep === STEP.DETAILS && (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <StepBar current={1} total={2} />
-                <p className="text-sm font-semibold text-foreground mb-4">Step 1 — Personal Details</p>
+                <p className="text-sm font-semibold text-foreground mb-4">{t("therapistAuth.step1Label")}</p>
                 <form onSubmit={handleStep1Submit} className="space-y-3">
-                  <FieldRow icon={User}  placeholder="Full name"                   value={fullName}      onChange={setFullName}      ic={ic} err={errors.fullName} />
-                  <FieldRow icon={Phone} placeholder="Phone (e.g. 050-1234567)"    value={phoneNumber}   onChange={setPhoneNumber}   ic={ic} err={errors.phoneNumber} />
-                  <FieldRow icon={Award} placeholder="License number (27-XXXXX)"   value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
-                  <FieldRow icon={Lock}  placeholder="Password"                    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
+                  <FieldRow icon={User}  placeholder={t("therapistAuth.fullNamePlaceholder")}    value={fullName}      onChange={setFullName}      ic={ic} err={errors.fullName} />
+                  <FieldRow icon={Phone} placeholder={t("therapistAuth.phonePlaceholder")}       value={phoneNumber}   onChange={setPhoneNumber}   ic={ic} err={errors.phoneNumber} />
+                  <FieldRow icon={Award} placeholder={t("therapistAuth.licenseNumPlaceholder")}  value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
+                  <FieldRow icon={Lock}  placeholder={t("therapistAuth.passwordPlaceholder")}    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
                   {error && <ErrBox msg={error} />}
                   {/* License-check loading banner */}
                   {checkingLicense && (
                     <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
                       <Loader2 size={16} className="animate-spin shrink-0" />
-                      <span>Verifying your license with the Ministry of Health registry… This may take up to 30 seconds.</span>
+                      <span>{t("therapistAuth.verifyingLicense")}</span>
                     </div>
                   )}
 
@@ -294,10 +296,10 @@ const TherapistAuthPage = () => {
                     disabled={loading || checkingLicense}
                   >
                     {checkingLicense
-                      ? <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Verifying license…</span>
+                      ? <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> {t("therapistAuth.verifyingLicenseBtn")}</span>
                       : loading
                       ? <Loader2 size={18} className="animate-spin" />
-                      : <span className="flex items-center gap-2">Continue <ChevronRight size={16} /></span>
+                      : <span className="flex items-center gap-2">{t("therapistAuth.continue")} <ChevronRight size={16} /></span>
                     }
                   </Button>
                 </form>
@@ -308,7 +310,7 @@ const TherapistAuthPage = () => {
             {!isLogin && regStep === STEP.PROFESSIONAL && (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <StepBar current={2} total={2} />
-                <p className="text-sm font-semibold text-foreground mb-4">Step 2 — Professional Profile</p>
+                <p className="text-sm font-semibold text-foreground mb-4">{t("therapistAuth.step2Label")}</p>
                 <form onSubmit={handleStep2Submit} className="space-y-4">
 
                   {/* Specialties */}
@@ -317,7 +319,7 @@ const TherapistAuthPage = () => {
                       <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         type="text"
-                        placeholder="Specialties (comma separated)"
+                        placeholder={t("therapistAuth.specialtiesPlaceholder")}
                         value={specialties}
                         onChange={(e) => setSpecialties(e.target.value)}
                         className={ic(!!errors.specialties)}
@@ -332,7 +334,7 @@ const TherapistAuthPage = () => {
                       <User size={15} className="absolute left-3 top-3.5 text-muted-foreground" />
                       <textarea
                         rows={3}
-                        placeholder="Short professional bio…"
+                        placeholder={t("therapistAuth.bioPlaceholder")}
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         className={`${ic(!!errors.bio)} resize-none pt-3`}
@@ -343,24 +345,24 @@ const TherapistAuthPage = () => {
 
                   {/* Photo uploads */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Verification Photos</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("therapistAuth.verificationPhotos")}</p>
 
                     <FilePicker
-                      label="Upload a selfie photo"
+                      label={t("therapistAuth.uploadSelfie")}
                       file={selfieFile}
                       onFile={setSelfieFile}
                       inputRef={selfieRef}
                       err={errors.selfie}
                     />
                     <FilePicker
-                      label="Upload license / ID document"
+                      label={t("therapistAuth.uploadLicense")}
                       file={licenseFile}
                       onFile={setLicenseFile}
                       inputRef={licenseRef}
                       err={errors.license}
                     />
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Used for identity verification only — never shown publicly.
+                      {t("therapistAuth.photoDisclaimer")}
                     </p>
                   </div>
 
@@ -370,7 +372,7 @@ const TherapistAuthPage = () => {
                   {verifying && (
                     <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
                       <Loader2 size={16} className="animate-spin shrink-0" />
-                      <span>Verifying your license with the Ministry of Health registry… This may take up to 30 seconds.</span>
+                      <span>{t("therapistAuth.verifyingLicense")}</span>
                     </div>
                   )}
 
@@ -380,12 +382,12 @@ const TherapistAuthPage = () => {
                       onClick={() => { setRegStep(STEP.DETAILS); setErrors({}); setError(""); }}
                       disabled={loading}
                     >
-                      Back
+                      {t("therapistAuth.back")}
                     </Button>
                     <Button type="submit" className="flex-1 rounded-xl h-12 text-base font-medium" disabled={loading}>
                       {loading
                         ? <Loader2 size={18} className="animate-spin" />
-                        : "Submit Application"}
+                        : t("therapistAuth.submitApplication")}
                     </Button>
                   </div>
                 </form>
@@ -402,17 +404,17 @@ const TherapistAuthPage = () => {
                 <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                   <Clock size={30} className="text-primary animate-pulse" />
                 </div>
-                <h2 className="font-display text-xl font-bold text-foreground">Application Submitted!</h2>
+                <h2 className="font-display text-xl font-bold text-foreground">{t("therapistAuth.applicationSubmitted")}</h2>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-xs mx-auto">
-                  We're running automated verification of your license and identity. This usually takes a few minutes.
+                  {t("therapistAuth.pendingDesc")}
                 </p>
 
                 <div className="mt-5 space-y-2 text-left">
                   {[
-                    { label: "Personal details",    done: true  },
-                    { label: "Professional profile", done: true  },
-                    { label: "License verification", done: false },
-                    { label: "Admin approval",       done: false },
+                    { label: t("therapistAuth.personalDetails"),    done: true  },
+                    { label: t("therapistAuth.professionalProfile"), done: true  },
+                    { label: t("therapistAuth.licenseVerification"), done: false },
+                    { label: t("therapistAuth.adminApproval"),       done: false },
                   ].map(({ label, done }) => (
                     <div key={label} className="flex items-center gap-3 rounded-xl bg-muted/40 px-4 py-2.5 text-sm">
                       {done
@@ -425,14 +427,14 @@ const TherapistAuthPage = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground mt-4">
-                  You'll be notified once your account is approved.
+                  {t("therapistAuth.notifiedOnApproval")}
                 </p>
 
                 <Button
                   variant="outline" className="mt-5 rounded-xl"
                   onClick={() => { setIsLogin(true); setRegStep(STEP.DETAILS); setError(""); setErrors({}); }}
                 >
-                  Back to Login
+                  {t("therapistAuth.backToLogin")}
                 </Button>
               </motion.div>
             )}
@@ -442,7 +444,7 @@ const TherapistAuthPage = () => {
           {isLogin && (
             <div className="mt-5 text-center text-sm">
               <Link to="/patient-auth" className="text-muted-foreground hover:text-foreground transition-colors">
-                Not a therapist? Patient portal →
+                {t("therapistAuth.notATherapist")}
               </Link>
             </div>
           )}

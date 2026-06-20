@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -21,6 +22,7 @@ function StatusDot({ status }) {
 }
 
 const RecentSessions = () => {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showAll,  setShowAll]  = useState(false);
@@ -57,7 +59,7 @@ const RecentSessions = () => {
       className="rounded-2xl border border-border bg-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-semibold text-foreground">Upcoming &amp; Recent</h3>
+        <h3 className="font-display font-semibold text-foreground">{t("recentSessions.title")}</h3>
         {sessions.length > 5 && (
           <Button
             variant="ghost"
@@ -65,7 +67,7 @@ const RecentSessions = () => {
             className="text-xs text-muted-foreground"
             onClick={() => setShowAll(v => !v)}
           >
-            {showAll ? "Show Less" : "View All"}
+            {showAll ? t("recentSessions.showLess") : t("recentSessions.viewAll")}
           </Button>
         )}
       </div>
@@ -76,7 +78,7 @@ const RecentSessions = () => {
         </div>
       ) : sessions.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          No appointments yet.
+          {t("recentSessions.noAppointments")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -98,7 +100,7 @@ const RecentSessions = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-foreground truncate">
-                    Patient · {s.durationMinutes} min
+                    {t("recentSessions.patient")} · {s.durationMinutes} min
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">

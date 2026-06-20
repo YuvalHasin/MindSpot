@@ -69,7 +69,7 @@ const Footer = () => {
         {/* קישור אדמין חבוי */}
         <div className="mt-6 flex justify-center">
           <Link
-            to="/admin-login"
+            to="/admin/login"
             className="text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors duration-300 select-none"
           >
             ·

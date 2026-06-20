@@ -3,8 +3,10 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, CalendarDays, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const TherapistSchedule = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -88,14 +90,14 @@ const TherapistSchedule = () => {
         to="/therapist"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors text-sm font-medium"
       >
-        <ArrowLeft size={16} /> Back to dashboard
+        <ArrowLeft size={16} /> {t("therapistSchedule.backToDashboard")}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-          <CalendarDays className="text-primary" size={22} /> Schedule &amp; Availability
+          <CalendarDays className="text-primary" size={22} /> {t("therapistSchedule.title")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Set your available hours and practice city.</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("therapistSchedule.subtitle")}</p>
       </motion.div>
 
       <motion.div
@@ -106,11 +108,11 @@ const TherapistSchedule = () => {
         <form onSubmit={handleSave} className="space-y-5">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
-              <CalendarDays size={13} className="text-primary" /> Availability Hours
+              <CalendarDays size={13} className="text-primary" /> {t("therapistSchedule.availabilityHours")}
             </label>
             <textarea
               rows={4}
-              placeholder={"e.g. Sunday–Thursday 09:00–18:00\nFriday 09:00–13:00"}
+              placeholder={t("therapistSchedule.availabilityPlaceholder")}
               value={form.availabilityHours}
               onChange={(e) => setForm((p) => ({ ...p, availabilityHours: e.target.value }))}
               className="w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground
@@ -120,11 +122,11 @@ const TherapistSchedule = () => {
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
-              <MapPin size={13} className="text-primary" /> City
+              <MapPin size={13} className="text-primary" /> {t("therapistSchedule.city")}
             </label>
             <input
               type="text"
-              placeholder="e.g. Tel Aviv"
+              placeholder={t("therapistSchedule.cityPlaceholder")}
               value={form.city}
               onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
               className="w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground
@@ -146,9 +148,9 @@ const TherapistSchedule = () => {
             {isSaving ? (
               <Loader2 className="animate-spin w-5 h-5 mx-auto" />
             ) : isSuccess ? (
-              "Saved Successfully ✓"
+              t("therapistSchedule.savedSuccessfully")
             ) : (
-              "Save Availability"
+              t("therapistSchedule.saveAvailability")
             )}
           </Button>
         </form>

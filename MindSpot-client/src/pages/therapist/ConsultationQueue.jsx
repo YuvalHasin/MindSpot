@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Clock, AlertTriangle, User, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const API = "https://localhost:7160";
 
@@ -34,6 +35,7 @@ function formatAge(iso) {
 }
 
 const ConsultationQueue = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [queue,      setQueue]      = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -88,21 +90,21 @@ const ConsultationQueue = () => {
       className="rounded-2xl border border-border bg-card overflow-hidden"
     >
       <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-        <h3 className="font-display font-semibold text-foreground">Booking Requests</h3>
+        <h3 className="font-display font-semibold text-foreground">{t("consultationQueue.title")}</h3>
         <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-          {loading ? "…" : `${queue.length} new`}
+          {loading ? "…" : `${queue.length} ${t("consultationQueue.new")}`}
         </span>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-10 text-muted-foreground">
-          <Loader2 size={18} className="animate-spin mr-2" /> Loading…
+          <Loader2 size={18} className="animate-spin mr-2" /> {t("consultationQueue.loading")}
         </div>
       )}
 
       {!loading && queue.length === 0 && (
         <div className="py-10 text-center text-sm text-muted-foreground">
-          No new booking requests
+          {t("consultationQueue.noRequests")}
         </div>
       )}
 
@@ -148,7 +150,7 @@ const ConsultationQueue = () => {
                     className="w-full rounded-xl gap-2"
                     onClick={(e) => { e.stopPropagation(); handleAccept(item); }}
                   >
-                    <MessageCircle size={14} /> Accept & Start Chat
+                    <MessageCircle size={14} /> {t("consultationQueue.acceptChat")}
                   </Button>
                 </motion.div>
               )}

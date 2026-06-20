@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const TherapistSettings = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState({
     fullName: "",
@@ -53,14 +55,14 @@ const TherapistSettings = () => {
         to="/therapist"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors text-sm font-medium"
       >
-        <ArrowLeft size={16} /> Back to dashboard
+        <ArrowLeft size={16} /> {t("therapistSettings.backToDashboard")}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-          <ShieldCheck className="text-primary" size={22} /> Profile Settings
+          <ShieldCheck className="text-primary" size={22} /> {t("therapistSettings.title")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Your therapist profile information.</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("therapistSettings.subtitle")}</p>
       </motion.div>
 
       <motion.div
@@ -75,14 +77,14 @@ const TherapistSettings = () => {
           <div>
             <p className="font-semibold text-foreground text-lg">{profile.fullName || "Therapist"}</p>
             <p className="text-xs text-primary font-bold tracking-widest uppercase bg-primary/5 px-2 py-1 rounded inline-block mt-1">
-              Licensed Therapist
+              {t("therapistSettings.licensedTherapist")}
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground ml-1">Full Name</label>
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("therapistSettings.fullName")}</label>
             <input
               type="text"
               value={profile.fullName}
@@ -92,7 +94,7 @@ const TherapistSettings = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground ml-1">Specialties</label>
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("therapistSettings.specialties")}</label>
             <input
               type="text"
               value={profile.specialties}
@@ -102,7 +104,7 @@ const TherapistSettings = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground ml-1">License Number</label>
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("therapistSettings.licenseNumber")}</label>
             <input
               type="text"
               value={profile.licenseNumber}
@@ -113,7 +115,7 @@ const TherapistSettings = () => {
         </div>
 
         <div className="rounded-xl border border-border/40 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-          Profile editing is coming soon. Contact support to update your details.
+          {t("therapistSettings.editComingSoon")}
         </div>
       </motion.div>
     </div>

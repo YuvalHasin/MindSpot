@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import TherapistSidebar from "../../components/therapist/TherapistSidebar";
 import { Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * TherapistPage — layout wrapper for all /therapist/* routes.
@@ -9,6 +10,7 @@ import { Bell } from "lucide-react";
  * then passes them down via Outlet context so child pages can use them.
  */
 const TherapistPage = () => {
+  const { t } = useTranslation();
   const [therapistData, setTherapistData]   = useState(null);
   const [notifications, setNotifications]   = useState([]);
   const [loading, setLoading]               = useState(true);
@@ -51,14 +53,14 @@ const TherapistPage = () => {
   if (loading)
     return (
       <div className="flex h-screen items-center justify-center font-display text-muted-foreground">
-        Loading dashboard…
+        {t("therapistPage.loadingDashboard")}
       </div>
     );
 
   if (!therapistData)
     return (
       <div className="flex h-screen items-center justify-center text-destructive">
-        Error loading therapist data. Please log in again.
+        {t("therapistPage.errorLoading")}
       </div>
     );
 
@@ -73,10 +75,10 @@ const TherapistPage = () => {
         <div className="max-w-6xl mx-auto px-6 pt-8 pb-2 flex justify-between items-start">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">
-              Welcome back, {therapistData.fullName}
+              {t("therapistPage.welcomeBack")} {therapistData.fullName}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              License:{" "}
+              {t("therapistPage.license")}{" "}
               <span className="font-semibold text-primary">
                 {therapistData.licenseNumber}
               </span>

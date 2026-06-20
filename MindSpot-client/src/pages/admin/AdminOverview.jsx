@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Users, Clock, UserCheck, Bell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getToken, onMessage } from "firebase/messaging";
+import { useTranslation } from "react-i18next";
 import { messaging, VAPID_KEY } from "../../firebaseConfig";
 import { useToast } from "@/hooks/use-toast";
 
 const AdminOverview = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -111,18 +113,18 @@ const AdminOverview = () => {
     return () => unsubscribe(); 
   }, [toast]);
 
-  if (loading) return <div className="p-8 text-center animate-pulse">Loading MindSpot Dashboard...</div>;
+  if (loading) return <div className="p-8 text-center animate-pulse">{t("adminOverview.loadingDashboard")}</div>;
   if (error) return <div className="p-8 text-center text-destructive">Error: {error}</div>;
 
   const stats = [
-    { label: "Active Therapists", value: data.totalTherapists || 0, icon: Users },
-    { label: "Total Patients", value: data.totalPatients || 0, icon: UserCheck },
-    { 
-      label: "Pending Approvals", 
-      value: data.pendingTherapists || 0, 
+    { label: t("adminOverview.activeTherapists"), value: data.totalTherapists || 0, icon: Users },
+    { label: t("adminOverview.totalPatients"), value: data.totalPatients || 0, icon: UserCheck },
+    {
+      label: t("adminOverview.pendingApprovals"),
+      value: data.pendingTherapists || 0,
       icon: Clock,
       color: "text-orange-500",
-      trend: data.pendingTherapists > 0 ? "Action Required" : null
+      trend: data.pendingTherapists > 0 ? t("adminOverview.actionRequired") : null
     },
   ];
 
@@ -131,8 +133,8 @@ const AdminOverview = () => {
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">Platform Overview</h1>
-          <p className="text-muted-foreground text-sm">Real-time monitoring of MindSpot ecosystem.</p>
+          <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">{t("adminOverview.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("adminOverview.subtitle")}</p>
         </div>
 
         {Notification.permission !== "granted" && (
@@ -147,7 +149,7 @@ const AdminOverview = () => {
             ) : (
               <Bell size={16} className="mr-2" />
             )}
-            Enable Push Notifications
+            {t("adminOverview.enableNotifications")}
           </Button>
         )}
       </div>
@@ -166,9 +168,9 @@ const AdminOverview = () => {
                 <Users className="text-orange-600" size={24} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-orange-900">Therapist Registration Requests</h3>
+                <h3 className="text-sm font-bold text-orange-900">{t("adminOverview.pendingBannerTitle")}</h3>
                 <p className="text-xs text-orange-700">
-                  There are <strong>{data.pendingTherapists}</strong> therapists waiting for your verification.
+                  {t("adminOverview.pendingBannerDesc", { count: data.pendingTherapists })}
                 </p>
               </div>
             </div>
@@ -176,7 +178,7 @@ const AdminOverview = () => {
               onClick={() => window.location.href = "/admin/requests"} 
               className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-6 font-bold"
             >
-              Review Now
+              {t("adminOverview.reviewNow")}
             </Button>
           </motion.div>
         )}

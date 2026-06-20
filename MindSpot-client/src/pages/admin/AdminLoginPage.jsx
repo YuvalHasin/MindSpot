@@ -3,11 +3,13 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowLeft, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { AuthError } from "@/components/ui/AuthError";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebaseConfig";
 
 const AdminLoginPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -79,15 +81,15 @@ const AdminLoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8">
-          <ArrowLeft size={16} /> Back to home
+          <ArrowLeft size={16} /> {t("adminLogin.backToHome")}
         </Link>
 
         <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><ShieldCheck size={20} className="text-primary" /></div>
             <div>
-              <h1 className="font-display text-xl font-bold text-foreground">Admin Portal</h1>
-              <p className="text-xs text-muted-foreground">MindSpot Platform Administration</p>
+              <h1 className="font-display text-xl font-bold text-foreground">{t("adminLogin.title")}</h1>
+              <p className="text-xs text-muted-foreground">{t("adminLogin.subtitle")}</p>
             </div>
           </div>
 
@@ -95,7 +97,7 @@ const AdminLoginPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">{t("adminLogin.emailLabel")}</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -109,7 +111,7 @@ const AdminLoginPage = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Password</label>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">{t("adminLogin.passwordLabel")}</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -123,7 +125,7 @@ const AdminLoginPage = () => {
             </div>
 
             <Button type="submit" className="w-full rounded-xl h-11 font-medium" disabled={loading}>
-              {loading ? "Signing in…" : "Sign In"}
+              {loading ? t("adminLogin.signingIn") : t("adminLogin.signIn")}
             </Button>
           </form>
         </div>

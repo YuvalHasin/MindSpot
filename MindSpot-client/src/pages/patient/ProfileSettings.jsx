@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ProfileSettings = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "" });
@@ -48,11 +50,11 @@ const ProfileSettings = () => {
 
     // ולדיציה בסיסית
     if (!form.fullName.trim()) {
-      setErrorField({ field: "fullName", message: "Full name is required." });
+      setErrorField({ field: "fullName", message: t("profileSettings.errorFullNameRequired") });
       return;
     }
     if (!form.email.includes("@")) {
-      setErrorField({ field: "email", message: "Please enter a valid email." });
+      setErrorField({ field: "email", message: t("profileSettings.errorEmailInvalid") });
       return;
     }
 
@@ -75,10 +77,10 @@ const ProfileSettings = () => {
         setTimeout(() => setIsSuccess(false), 3000);
       } else {
         const data = await response.json();
-        setErrorField({ field: "general", message: data.message || "Update failed." });
+        setErrorField({ field: "general", message: data.message || t("profileSettings.errorUpdateFailed") });
       }
     } catch (err) {
-      setErrorField({ field: "general", message: "Server connection error." });
+      setErrorField({ field: "general", message: t("profileSettings.errorServerConnection") });
     }
   };
 
@@ -99,16 +101,16 @@ const ProfileSettings = () => {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       <Link
-        to="/patient-dashboard" // או הנתיב המדויק של דף האוברביו שלך
+        to="/patient-dashboard"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors text-sm font-medium"
       >
         <ArrowLeft size={16} />
-        Back to dashboard
+        {t("profileSettings.backToDashboard")}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="font-display text-2xl font-bold text-foreground">Profile Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your personal information.</p>
+        <h1 className="font-display text-2xl font-bold text-foreground">{t("profileSettings.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("profileSettings.subtitle")}</p>
       </motion.div>
 
       <motion.div 
@@ -127,16 +129,16 @@ const ProfileSettings = () => {
             </button>
           </div>
           <div>
-            <p className="font-medium text-foreground">{form.fullName || "User"}</p>
-            <p className="text-xs text-muted-foreground">Patient Account</p>
+            <p className="font-medium text-foreground">{form.fullName || t("profileSettings.defaultUser")}</p>
+            <p className="text-xs text-muted-foreground">{t("profileSettings.patientAccount")}</p>
           </div>
         </div>
 
         {/* Form Fields */}
         <div className="space-y-4">
           {[
-            { label: "Full Name", field: "fullName", icon: <User size={16} /> },
-            { label: "Email Address", field: "email", icon: <Mail size={16} />, type: "email" },
+            { label: t("profileSettings.fullName"), field: "fullName", icon: <User size={16} /> },
+            { label: t("profileSettings.emailAddress"), field: "email", icon: <Mail size={16} />, type: "email" },
           ].map(({ label, field, type, icon }) => (
             <div key={field} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground ml-1">{label}</label>
@@ -174,7 +176,7 @@ const ProfileSettings = () => {
               isSuccess ? "bg-green-600 hover:bg-green-700 text-white" : ""
             }`}
           >
-            {isSuccess ? "Saved Successfully ✓" : "Save Changes"}
+            {isSuccess ? t("profileSettings.savedSuccessfully") : t("profileSettings.saveChanges")}
           </Button>
           
           {errorField.field === "general" && (

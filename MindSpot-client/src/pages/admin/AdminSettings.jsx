@@ -3,8 +3,10 @@ import { motion } from "framer-motion";
 import { User, Mail, Loader2, ArrowLeft, ShieldCheck, Lock, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const AdminSettings = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false); // למניעת לחיצות כפולות
   const [isSuccess, setIsSuccess] = useState(false);
@@ -84,14 +86,14 @@ const AdminSettings = () => {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       <Link to="/admin" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors text-sm font-medium">
-        <ArrowLeft size={16} /> Back to dashboard
+        <ArrowLeft size={16} /> {t("adminSettings.backToDashboard")}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
-          <ShieldCheck className="text-primary" size={24} /> Admin Settings
+          <ShieldCheck className="text-primary" size={24} /> {t("adminSettings.title")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Update your administrative profile and security credentials.</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("adminSettings.subtitle")}</p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border/60 rounded-2xl p-6 space-y-6 shadow-sm">
@@ -103,7 +105,7 @@ const AdminSettings = () => {
           </div>
           <div>
             <p className="font-medium text-foreground text-lg">{form.fullName || "Admin"}</p>
-            <p className="text-xs text-primary font-bold tracking-widest uppercase bg-primary/5 px-2 py-1 rounded inline-block">System Administrator</p>
+            <p className="text-xs text-primary font-bold tracking-widest uppercase bg-primary/5 px-2 py-1 rounded inline-block">{t("adminSettings.systemAdministrator")}</p>
           </div>
         </div>
 
@@ -111,14 +113,14 @@ const AdminSettings = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground ml-1">Full Name</label>
+              <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.fullName")}</label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input type="text" value={form.fullName} onChange={(e) => setForm({...form, fullName: e.target.value})} className={inputClass("fullName")} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground ml-1">Email Address</label>
+              <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.emailAddress")}</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className={inputClass("email")} />
@@ -128,18 +130,18 @@ const AdminSettings = () => {
 
           <div className="relative py-4">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/40"></span></div>
-            <div className="relative flex justify-start text-[10px] uppercase tracking-widest font-bold"><span className="bg-card pr-3 text-muted-foreground/60">Security Verification</span></div>
+            <div className="relative flex justify-start text-[10px] uppercase tracking-widest font-bold"><span className="bg-card pr-3 text-muted-foreground/60">{t("adminSettings.securityVerification")}</span></div>
           </div>
 
           {/* Password Fields */}
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground ml-1">Current Password (Required to save any changes)</label>
+              <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.currentPasswordLabel")}</label>
               <div className="relative">
                 <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input 
                     type="password" 
-                    placeholder="Enter current password" 
+                    placeholder={t("adminSettings.currentPasswordPlaceholder")}
                     value={form.currentPassword} 
                     onChange={(e) => setForm({...form, currentPassword: e.target.value})} 
                     className={inputClass("currentPassword")} 
@@ -150,17 +152,17 @@ const AdminSettings = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground ml-1">New Password (Optional)</label>
+                <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.newPasswordLabel")}</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input type="password" placeholder="Min. 6 characters" value={form.newPassword} onChange={(e) => setForm({...form, newPassword: e.target.value})} className={inputClass("newPassword")} />
+                  <input type="password" placeholder={t("adminSettings.newPasswordPlaceholder")} value={form.newPassword} onChange={(e) => setForm({...form, newPassword: e.target.value})} className={inputClass("newPassword")} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground ml-1">Confirm New Password</label>
+                <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.confirmPasswordLabel")}</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input type="password" placeholder="Repeat new password" value={form.confirmPassword} onChange={(e) => setForm({...form, confirmPassword: e.target.value})} className={inputClass("confirmPassword")} />
+                  <input type="password" placeholder={t("adminSettings.confirmPasswordPlaceholder")} value={form.confirmPassword} onChange={(e) => setForm({...form, confirmPassword: e.target.value})} className={inputClass("confirmPassword")} />
                 </div>
                 {errorField.field === "confirmPassword" && <p className="text-[11px] text-destructive font-medium ml-1 mt-1">{errorField.message}</p>}
               </div>
@@ -180,9 +182,9 @@ const AdminSettings = () => {
             {isSaving ? (
                 <Loader2 className="animate-spin w-5 h-5 mx-auto" />
             ) : isSuccess ? (
-                "Settings Saved Successfully ✓"
+                t("adminSettings.savedSuccessfully")
             ) : (
-                "Save All Changes"
+                t("adminSettings.saveAllChanges")
             )}
           </Button>
           {errorField.field === "general" && <p className="text-center text-xs text-destructive mt-3 font-medium bg-destructive/10 py-2 rounded-lg">{errorField.message}</p>}

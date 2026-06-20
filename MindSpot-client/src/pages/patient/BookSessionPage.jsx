@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { CalendarDays, User, FileText, CheckCircle2, Lock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PaymentForm } from "../../components/patient/PaymentForm";
+import { useTranslation } from "react-i18next";
 
 // ── Stripe singleton (load once, outside component) ───────────────────────────
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -66,6 +67,7 @@ const fadeUp = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } };
 
 // ── SlotPicker sub-component ──────────────────────────────────────────────────
 function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
+  const { t } = useTranslation();
   const [weekStart, setWeekStart]   = useState(() => getMondayOf(new Date()));
   const [slots,     setSlots]       = useState([]);
   const [loading,   setLoading]     = useState(false);
@@ -114,7 +116,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
       {/* Label */}
       <label className="block text-sm font-medium text-foreground mb-2">
         <span className="flex items-center gap-1.5">
-          <CalendarDays size={13} className="text-primary" /> Pick a time slot
+          <CalendarDays size={13} className="text-primary" /> {t("booking.pickSlot")}
         </span>
       </label>
 
@@ -124,7 +126,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
           type="button"
           onClick={() => shiftWeek(-1)}
           className="p-1 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-          aria-label="Previous week"
+          aria-label={t("booking.prev_week")}
         >
           <ChevronLeft size={16} />
         </button>
@@ -133,7 +135,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
           type="button"
           onClick={() => shiftWeek(1)}
           className="p-1 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-          aria-label="Next week"
+          aria-label={t("booking.next_week")}
         >
           <ChevronRight size={16} />
         </button>
@@ -146,7 +148,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
-          Loading availability…
+          {t("booking.loadingAvailability")}
         </div>
       )}
 
@@ -158,7 +160,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
 
       {!loading && !fetchError && slots.length === 0 && (
         <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-5 text-sm text-muted-foreground text-center">
-          This therapist hasn&apos;t set their availability yet. Please contact them directly.
+          {t("booking.noAvailability")}
         </div>
       )}
 
@@ -205,6 +207,7 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
 
 // ── Main page component ───────────────────────────────────────────────────────
 export default function BookSessionPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate  = useNavigate();
 
@@ -228,7 +231,7 @@ export default function BookSessionPage() {
   const handleBooking = useCallback(async (e) => {
     e.preventDefault();
     if (!selectedSlot) {
-      setError("Please select a time slot.");
+      setError(t("booking.selectSlotFirst"));
       return;
     }
     setError("");
@@ -327,10 +330,10 @@ export default function BookSessionPage() {
           className="mb-8 text-center"
         >
           <h1 className="font-display text-3xl font-bold text-foreground">
-            Book a Session
+            {t("booking.title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Secure payment powered by Stripe
+            {t("booking.subtitle")}
           </p>
         </motion.div>
 
@@ -346,7 +349,7 @@ export default function BookSessionPage() {
             className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
           >
             <h2 className="font-display text-lg font-semibold text-foreground mb-5">
-              Session Details
+              {t("booking.sessionDetails")}
             </h2>
 
             {error && (
@@ -372,13 +375,13 @@ export default function BookSessionPage() {
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
                     <span className="flex items-center gap-1.5">
-                      <User size={13} className="text-primary" /> Therapist ID
+                      <User size={13} className="text-primary" /> {t("booking.therapistId")}
                     </span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Therapists/1-A"
+                    placeholder={t("booking.therapistIdPlaceholder")}
                     value={therapistId}
                     onChange={(e) => setTherapistId(e.target.value)}
                     className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
@@ -397,7 +400,7 @@ export default function BookSessionPage() {
               {/* Selected slot summary */}
               {selectedSlot && (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-primary font-medium">
-                  Selected: {new Date(selectedSlot).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                  {t("booking.selected")} {new Date(selectedSlot).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
                 </div>
               )}
 
@@ -405,13 +408,13 @@ export default function BookSessionPage() {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <FileText size={13} className="text-primary" /> Notes
-                    <span className="text-muted-foreground font-normal">(optional)</span>
+                    <FileText size={13} className="text-primary" /> {t("booking.notes")}
+                    <span className="text-muted-foreground font-normal">({t("booking.notesOptional")})</span>
                   </span>
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Any topics you'd like to focus on…"
+                  placeholder={t("booking.notesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
@@ -421,7 +424,7 @@ export default function BookSessionPage() {
 
               {/* Price summary */}
               <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-sm">
-                <span className="text-muted-foreground">50-minute session</span>
+                <span className="text-muted-foreground">{t("booking.sessionDuration")}</span>
                 <span className="font-bold text-foreground">₪{SESSION_PRICE}</span>
               </div>
 
@@ -430,7 +433,7 @@ export default function BookSessionPage() {
                 disabled={isLoading || !selectedSlot}
                 className="w-full rounded-xl py-6 h-auto text-base font-semibold shadow-sm shadow-primary/20 transition-transform hover:scale-[1.01] active:scale-[0.98]"
               >
-                {isLoading ? "Preparing payment…" : "Continue to Payment →"}
+                {isLoading ? t("booking.preparingPayment") : t("booking.continueToPayment")}
               </Button>
             </form>
           </motion.div>
@@ -445,7 +448,7 @@ export default function BookSessionPage() {
             className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
           >
             <h2 className="font-display text-lg font-semibold text-foreground mb-5">
-              Secure Payment
+              {t("booking.securePayment")}
             </h2>
 
             {error && (
@@ -472,7 +475,7 @@ export default function BookSessionPage() {
               onClick={() => { setStep(STEP.SELECT); setError(""); }}
               className="mt-4 w-full text-sm text-muted-foreground hover:text-foreground underline transition-colors"
             >
-              ← Back to session details
+              {t("booking.backToDetails")}
             </button>
           </motion.div>
         )}
@@ -489,16 +492,16 @@ export default function BookSessionPage() {
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <h2 className="font-display text-xl font-bold text-foreground mb-2">
-              Session Booked!
+              {t("booking.sessionBooked")}
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Your payment was successful. You&apos;ll receive a confirmation shortly.
+              {t("booking.paymentSuccess")}
             </p>
             <Button
               onClick={() => navigate("/patient-dashboard")}
               className="rounded-xl px-6 py-2.5 font-semibold"
             >
-              Go to Dashboard
+              {t("booking.goToDashboard")}
             </Button>
           </motion.div>
         )}
@@ -510,10 +513,11 @@ export default function BookSessionPage() {
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
 function StepIndicator({ current }) {
+  const { t } = useTranslation();
   const steps = [
-    { key: STEP.SELECT,  label: "Details",  icon: CalendarDays },
-    { key: STEP.PAYMENT, label: "Payment",  icon: Lock         },
-    { key: STEP.SUCCESS, label: "Confirmed", icon: CheckCircle2 },
+    { key: STEP.SELECT,  label: t("booking.stepDetails"),   icon: CalendarDays },
+    { key: STEP.PAYMENT, label: t("booking.stepPayment"),   icon: Lock         },
+    { key: STEP.SUCCESS, label: t("booking.stepConfirmed"), icon: CheckCircle2 },
   ];
 
   const idx = steps.findIndex((s) => s.key === current);

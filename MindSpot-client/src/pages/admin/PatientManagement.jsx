@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 const PatientManagement = () => {
+  const { t } = useTranslation();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,7 +40,7 @@ const PatientManagement = () => {
 
   // 2. פונקציית מחיקה
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this patient?")) return;
+    if (!window.confirm(t("patientManagement.confirmDelete"))) return;
 
     setActionLoading(id);
     try {
@@ -74,7 +76,7 @@ const PatientManagement = () => {
   if (loading) return (
     <div className="p-20 text-center flex flex-col items-center gap-4">
       <Loader2 className="animate-spin text-primary w-10 h-10" />
-      <p className="text-muted-foreground">Loading patients...</p>
+      <p className="text-muted-foreground">{t("patientManagement.loading")}</p>
     </div>
   );
   
@@ -91,8 +93,8 @@ const PatientManagement = () => {
       className="space-y-6"
     >
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Patient Management</h1>
-        <p className="text-muted-foreground text-sm mt-1">View and manage {patients.length} registered patients.</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">{t("patientManagement.title")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("patientManagement.subtitle", { count: patients.length })}</p>
       </div>
 
       {/* Toolbar */}
@@ -101,7 +103,7 @@ const PatientManagement = () => {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by name or email…"
+            placeholder={t("patientManagement.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
@@ -115,9 +117,9 @@ const PatientManagement = () => {
          <table className="w-full text-sm text-left">
   <thead className="bg-muted/30 text-muted-foreground font-semibold border-b border-border">
     <tr>
-      <th className="px-6 py-4">Patient</th>
-      <th className="px-6 py-4">Contact Info</th>
-      <th className="px-6 py-4 text-right">Actions</th>
+      <th className="px-6 py-4">{t("patientManagement.colPatient")}</th>
+      <th className="px-6 py-4">{t("patientManagement.colContact")}</th>
+      <th className="px-6 py-4 text-right">{t("patientManagement.colActions")}</th>
     </tr>
   </thead>
   <tbody className="divide-y divide-border">
@@ -168,7 +170,7 @@ const PatientManagement = () => {
 </table>
           {filtered.length === 0 && (
             <div className="p-12 text-center text-muted-foreground font-medium">
-              No patients found.
+              {t("patientManagement.noPatients")}
             </div>
           )}
         </div>

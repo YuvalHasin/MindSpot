@@ -3,8 +3,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const PatientAuthPage = () => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,7 +72,7 @@ const PatientAuthPage = () => {
         } else {
           // --- לוגיקה למקרה של הרשמה (Register) ---
           // במקום לעבור דף, אנחנו מעבירים את הטופס למצב "התחברות"
-          alert("Registration successful! Please sign in with your password.");
+          alert(t("auth.registerSuccess"));
           setIsLogin(true); 
           setPassword(""); // איפוס סיסמה לביטחון
         }
@@ -112,7 +114,7 @@ const PatientAuthPage = () => {
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to home
+          {t("auth.backToHome")}
         </Link>
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-card">
@@ -121,13 +123,13 @@ const PatientAuthPage = () => {
               Mind<span className="text-primary">Spot</span>
             </h1>
             <p className="text-muted-foreground text-sm mt-2">
-              {isLogin ? "Welcome back" : "Create your account"}
+              {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
             </p>
           </div>
 
           {/* Toggle */}
           <div className="flex bg-muted rounded-xl p-1 mb-6">
-            {["Sign In", "Create Account"].map((label, i) => {
+            {[t("auth.signInTab"), t("auth.createAccountTab")].map((label, i) => {
               const active = i === 0 ? isLogin : !isLogin;
               return (
                 <button
@@ -161,7 +163,7 @@ const PatientAuthPage = () => {
                     <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="text"
-                      placeholder="Full name"
+                      placeholder={t("auth.fullNamePlaceholder")}
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       className={inputClass}
@@ -175,7 +177,7 @@ const PatientAuthPage = () => {
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="email"
-                placeholder="Email address"
+                placeholder={t("auth.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputClass}
@@ -187,7 +189,7 @@ const PatientAuthPage = () => {
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="password"
-                placeholder="Password"
+                placeholder={t("auth.passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
@@ -212,21 +214,21 @@ const PatientAuthPage = () => {
               {loading ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : isLogin ? (
-                "Sign In"
+                t("auth.signInTab")
               ) : (
-                "Create Account"
+                t("auth.createAccountTab")
               )}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            {isLogin ? t("auth.noAccount") : t("auth.hasAccount")}{" "}
             <button
               type="button"
               onClick={() => { setIsLogin(!isLogin); setError(""); }}
               className="text-primary font-medium hover:underline"
             >
-              {isLogin ? "Sign up" : "Sign in"}
+              {isLogin ? t("auth.signUp") : t("auth.signIn")}
             </button>
           </p>
         </div>

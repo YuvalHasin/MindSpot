@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Loader2, CheckCircle2, Star } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 const StarRating = ({ rating, size = 16 }) => {
   const stars = [];
@@ -27,6 +28,7 @@ const StarRating = ({ rating, size = 16 }) => {
 };
 
 const TherapistProfilePage = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -69,9 +71,9 @@ const TherapistProfilePage = () => {
   if (error || !profile) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-foreground">
-        <p className="text-lg font-semibold text-muted-foreground">Therapist not found</p>
+        <p className="text-lg font-semibold text-muted-foreground">{t("therapistProfile.notFound")}</p>
         <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} className="mr-2" /> Go Back
+          <ArrowLeft size={16} className="mr-2" /> {t("therapistProfile.goBack")}
         </Button>
       </div>
     );
@@ -90,7 +92,7 @@ const TherapistProfilePage = () => {
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={16} />
-          Back
+          {t("therapistProfile.back")}
         </button>
       </div>
 
@@ -114,7 +116,7 @@ const TherapistProfilePage = () => {
           {profile.verificationStatus === "Verified" && (
             <div className="flex items-center gap-1.5 mt-3 text-green-600 text-sm font-semibold">
               <CheckCircle2 size={16} />
-              Verified Therapist
+              {t("therapistProfile.verifiedTherapist")}
             </div>
           )}
         </motion.div>
@@ -132,7 +134,9 @@ const TherapistProfilePage = () => {
           <div>
             <StarRating rating={avgRating} size={18} />
             <p className="text-xs text-muted-foreground mt-1">
-              {totalReviews > 0 ? `Based on ${totalReviews} review${totalReviews !== 1 ? "s" : ""}` : "No reviews yet"}
+              {totalReviews > 0
+                ? t("therapistProfile.basedOnReviews", { count: totalReviews })
+                : t("therapistProfile.noReviewsYet")}
             </p>
           </div>
         </motion.div>
@@ -145,7 +149,7 @@ const TherapistProfilePage = () => {
             transition={{ duration: 0.4, delay: 0.15 }}
             className="bg-card border border-border/60 rounded-2xl shadow-sm p-5 mb-5"
           >
-            <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-2">About</h2>
+            <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-2">{t("therapistProfile.about")}</h2>
             <p className="text-sm text-foreground leading-relaxed">{profile.bio}</p>
           </motion.div>
         )}
@@ -159,7 +163,7 @@ const TherapistProfilePage = () => {
             className="bg-card border border-border/60 rounded-2xl shadow-sm p-5"
           >
             <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-4">
-              Recent Reviews
+              {t("therapistProfile.recentReviews")}
             </h2>
             <div className="space-y-4">
               {recentReviews.map((review, i) => (

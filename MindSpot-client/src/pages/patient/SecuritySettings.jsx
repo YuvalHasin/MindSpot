@@ -2,10 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const SecuritySettings = () => {
+  const { t } = useTranslation();
   const [passwords, setPasswords] = useState({ current: "", newPw: "", confirm: "" });
   const [isSuccess, setIsSuccess] = useState(false); // רק בשביל הצבע הירוק
   const [errorField, setErrorField] = useState({ field: "", message: "" });
@@ -58,13 +60,13 @@ const SecuritySettings = () => {
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors text-sm font-medium"
       >
         <ArrowLeft size={16} />
-        Back to dashboard
+        {t("security.backToDashboard")}
       </Link>
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="font-display text-2xl font-bold text-foreground">Security</h1>
-        <p className="text-sm text-muted-foreground mt-1">Keep your account safe and secure.</p>
+        <h1 className="font-display text-2xl font-bold text-foreground">{t("security.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("security.subtitle")}</p>
       </motion.div>
 
       {/* Change Password Card */}
@@ -77,14 +79,14 @@ const SecuritySettings = () => {
            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
               <Lock size={18} />
            </div>
-           <h2 className="font-display text-lg font-semibold text-foreground">Change Password</h2>
+           <h2 className="font-display text-lg font-semibold text-foreground">{t("security.changePassword")}</h2>
         </div>
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
           {[
-            { label: "Current Password", field: "current" },
-            { label: "New Password", field: "newPw" },
-            { label: "Confirm New Password", field: "confirm" },
+            { label: t("security.currentPassword"), field: "current" },
+            { label: t("security.newPassword"), field: "newPw" },
+            { label: t("security.confirmPassword"), field: "confirm" },
          ].map(({ label, field }) => (
           <div key={field} className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{label}</label>
@@ -107,7 +109,7 @@ const SecuritySettings = () => {
             isSuccess ? "bg-green-600 hover:bg-green-700 text-white" : ""
           }`}
         >
-          {isSuccess ? "Password Updated! ✓" : "Update Password"}
+          {isSuccess ? t("security.passwordUpdated") : t("security.updatePassword")}
         </Button>
 
           {errorField.field === "general" && (
