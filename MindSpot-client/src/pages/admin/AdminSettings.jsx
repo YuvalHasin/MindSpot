@@ -50,14 +50,14 @@ const AdminSettings = () => {
   e.preventDefault();
 
   try {
-    const response = await fetch("https://localhost:7160/api/admin/update-profile-full", {
+    const response = await fetch("https://localhost:7160/api/admin/update-profile", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}` 
       },
       body: JSON.stringify({
-        Id: Number(userId),
+        Id: sessionStorage.getItem("userId"),
         FullName: form.fullName,
         Email: form.email,
         CurrentPassword: form.currentPassword,
@@ -68,7 +68,10 @@ const AdminSettings = () => {
     if (response.ok) {
       setIsSuccess(true);
     }
-  } catch (err) {"error updating profile", err}
+  } catch (err) {
+    console.error(err);
+    setIsSaving(false);
+  }
 };
 
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;

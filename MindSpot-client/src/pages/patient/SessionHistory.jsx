@@ -60,7 +60,7 @@ const SessionHistory = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const patientId = sessionStorage.getItem("patientId");
+        const patientId = sessionStorage.getItem("userId");
         const token     = sessionStorage.getItem("token");
         if (!patientId) { setLoading(false); return; }
 
@@ -112,7 +112,7 @@ const SessionHistory = () => {
     setSubmittingRate(true);
     try {
       const token     = sessionStorage.getItem("token");
-      const patientId = sessionStorage.getItem("patientId");
+      const patientId = sessionStorage.getItem("userId");
       await fetch("https://localhost:7160/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

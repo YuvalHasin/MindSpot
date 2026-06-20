@@ -64,7 +64,7 @@ const ProfileSettings = () => {
           "Authorization": `Bearer ${sessionStorage.getItem("token")}`
         },
         body: JSON.stringify({
-          Id: Number(sessionStorage.getItem("userId")),
+          Id: sessionStorage.getItem("userId"),
           FullName: form.fullName,
           Email: form.email
         }),

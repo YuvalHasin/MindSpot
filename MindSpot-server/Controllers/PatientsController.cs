@@ -45,21 +45,26 @@ public class PatientsController : ControllerBase
         }
     }
 
-    [HttpGet("details")] 
-    public IActionResult GetPatientById([FromQuery] string id)
+    [HttpGet("details")]
+    public async Task<IActionResult> GetPatientById([FromQuery] string id)
     {
-        using (var session = _store.OpenSession())
+        using (var session = _store.OpenAsyncSession())
         {
-            var patient = session.Load<Patient>(id);
+            var patient = await session.LoadAsync<Patient>(id);
             if (patient == null) return NotFound();
 
             // שליפת נתונים סטטיסטיים מה-Sessions
-            var totalSessions = session.Query<ChatSession>()
-                .Count(s => s.PatientId == id);
+            var totalSessions = await session.Query<ChatSession>()
+                .CountAsync(s => s.PatientId == id);
 
             var lastMonth = DateTime.UtcNow.AddMonths(-1);
-            var sessionsThisMonth = session.Query<ChatSession>()
-                .Count(s => s.PatientId == id && s.CreatedAt >= lastMonth);
+            var sessionsThisMonth = await session.Query<ChatSession>()
+                .CountAsync(s => s.PatientId == id && s.CreatedAt >= lastMonth);
+
+            var lastSession = await session.Query<ChatSession>()
+                .Where(s => s.PatientId == id)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync();
 
             // מחזירים רק את מה שצריך (בלי סיסמה!)
             return Ok(new
@@ -68,6 +73,7 @@ public class PatientsController : ControllerBase
                 email = patient.Email,
                 totalSessions = totalSessions,
                 sessionsThisMonth = sessionsThisMonth,
+                lastTriageSummary = lastSession?.Summary
             });
         }
     }

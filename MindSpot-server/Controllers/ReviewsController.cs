@@ -29,6 +29,18 @@ namespace MindSpot_server.Controllers
             if (string.IsNullOrWhiteSpace(request.PatientId))
                 return BadRequest(new { error = "PatientId is required." });
 
+            using var session = _store.OpenAsyncSession();
+
+            if (!string.IsNullOrWhiteSpace(request.AppointmentId))
+            {
+                var existing = await session.Query<Review>()
+                    .Where(r => r.AppointmentId == request.AppointmentId && r.PatientId == request.PatientId)
+                    .FirstOrDefaultAsync();
+
+                if (existing != null)
+                    return BadRequest(new { message = "Review already submitted for this appointment." });
+            }
+
             var review = new Review
             {
                 Id            = "Reviews/",
@@ -40,7 +52,6 @@ namespace MindSpot_server.Controllers
                 CreatedAt     = DateTime.UtcNow
             };
 
-            using var session = _store.OpenAsyncSession();
             await session.StoreAsync(review);
             await session.SaveChangesAsync();
 

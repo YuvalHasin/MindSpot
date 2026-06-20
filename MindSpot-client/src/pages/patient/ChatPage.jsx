@@ -139,7 +139,7 @@ const ChatPage = () => {
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative">
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 z-20 shadow-sm">
-        <Link to="/">
+        <Link to="/patient-dashboard">
           <Button variant="ghost" size="icon" className="rounded-full">
             <ArrowLeft size={20} />
           </Button>

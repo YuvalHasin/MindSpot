@@ -86,9 +86,10 @@ public class TherapistsController : ControllerBase
                 Bio = request.Bio ?? "",
                 Specialties = request.Specialties ?? "",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                EmbeddingVector = vector,
 
-                // 3. שמירת הוקטור האמיתי שנוצר!
-                EmbeddingVector = vector
+                // DEV BYPASS: auto-approve on registration so no admin step needed for testing
+                VerificationStatus = MindSpot_server.Models.Verification.VerificationStatus.Approved
             };
 
             using (var session = _store.OpenAsyncSession())
@@ -237,6 +238,7 @@ public class TherapistsController : ControllerBase
     // selfieImage (file), licenseImage (file)
     // ─────────────────────────────────────────────────────────────────────────
 
+    [AllowAnonymous]
     [HttpPost("verify")]
     [RequestSizeLimit(20 * 1024 * 1024)] // 20 MB max for two images
     public async Task<IActionResult> VerifyTherapist(

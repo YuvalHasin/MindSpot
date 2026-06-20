@@ -235,7 +235,7 @@ export default function BookSessionPage() {
     setIsLoading(true);
 
     try {
-      const patientId = sessionStorage.getItem("patientId");
+      const patientId = sessionStorage.getItem("userId");
 
       const bookRes = await fetch(`https://localhost:7160/api/billing/book`, {
         method:  "POST",

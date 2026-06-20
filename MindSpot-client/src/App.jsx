@@ -55,6 +55,9 @@ import ActiveSession from "./pages/therapist/ActiveSession";
 import StatsOverview from "./pages/therapist/StatsOverview";
 import RecentSessions from "./pages/therapist/RecentSessions";
 import ConsultationQueue from "./pages/therapist/ConsultationQueue";
+import TherapistSchedule from "./pages/therapist/TherapistSchedule";
+import TherapistSettings from "./pages/therapist/TherapistSettings";
+import TherapistPatients from "./pages/therapist/TherapistPatients";
 
 // Patient extra pages
 import BookSessionPage from "./pages/patient/BookSessionPage";
@@ -104,11 +107,11 @@ const App = () => (
           >
             {/* אלו הילדים שירוססו בתוך ה-Sidebar לפי מה שנבחר */}
             <Route index element={<TherapistDashboard />} />
-            <Route path="consultations" element={<SessionHistory />} />
-            <Route path="clients" element={<PatientManagement />} />
-            <Route path="schedule" element={<ProfileSettings />} />
+            <Route path="consultations" element={<RecentSessions />} />
+            <Route path="clients" element={<TherapistPatients />} />
+            <Route path="schedule" element={<TherapistSchedule />} />
             <Route path="analytics" element={<StatsOverview />} />
-            <Route path="settings" element={<ProfileSettings />} />
+            <Route path="settings" element={<TherapistSettings />} />
           </Route>
 
           {/* --- נתיבי אדמין (מוגנים) --- */}

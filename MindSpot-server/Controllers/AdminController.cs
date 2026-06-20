@@ -175,8 +175,9 @@ namespace server.Controllers
         [HttpPut("update-profile")]
         public async Task<IActionResult> UpdateAdminProfile([FromBody] Admin updatedData)
         {
+            var adminId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             using var session = _store.OpenAsyncSession();
-            var admin = await session.LoadAsync<Admin>("admins/1");
+            var admin = await session.LoadAsync<Admin>(adminId);
             if (admin == null) return NotFound();
             admin.FullName = updatedData.FullName;
             admin.Email    = updatedData.Email;
@@ -188,8 +189,9 @@ namespace server.Controllers
         [HttpPut("change-password")]
         public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest request)
         {
+            var adminId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             using var session = _store.OpenAsyncSession();
-            var admin = await session.LoadAsync<Admin>("admins/1");
+            var admin = await session.LoadAsync<Admin>(adminId);
             if (admin == null) return NotFound();
 
             if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, admin.PasswordHash))

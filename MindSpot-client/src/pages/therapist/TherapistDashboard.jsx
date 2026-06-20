@@ -1,4 +1,4 @@
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { Calendar, User, Clock } from "lucide-react";
 import StatsOverview from "./StatsOverview";
 import ConsultationQueue from "./ConsultationQueue";
@@ -11,6 +11,7 @@ import RecentSessions from "./RecentSessions";
  */
 const TherapistDashboard = () => {
   const { notifications } = useOutletContext();
+  const navigate = useNavigate();
   const unreadNotifications = notifications?.filter((n) => !n.isRead) ?? [];
 
   return (
@@ -44,7 +45,7 @@ const TherapistDashboard = () => {
                     <Clock size={10} />
                     {new Date(notif.createdAt).toLocaleDateString()}
                   </div>
-                  <button className="text-primary font-bold hover:underline">
+                  <button className="text-primary font-bold hover:underline" onClick={() => navigate("/therapist/consultations")}>
                     Accept Request
                   </button>
                 </div>

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using MindSpot_server.Models;
+using MindSpot_server.Models.Billing;
 using Raven.Client.Documents;
+using System.Security.Claims;
 
 namespace MindSpot_server.Hubs
 {
@@ -14,6 +16,18 @@ namespace MindSpot_server.Hubs
         // Client calls this to join the room for a specific appointment
         public async Task JoinRoom(string appointmentId)
         {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return;
+
+            using var session = _store.OpenAsyncSession();
+            var appointment = await session.LoadAsync<Appointment>(appointmentId);
+            if (appointment == null)
+                return;
+
+            if (appointment.PatientId != userId && appointment.TherapistId != userId)
+                return;
+
             await Groups.AddToGroupAsync(Context.ConnectionId, appointmentId);
         }
 
