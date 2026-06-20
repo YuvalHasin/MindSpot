@@ -5,7 +5,6 @@ import {
   MessageCircle,
   Users,
   Calendar,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -14,12 +13,11 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Overview", icon: LayoutDashboard, path: "/therapist" },
-  { label: "Consultations", icon: MessageCircle, path: "/therapist/consultations" },
-  { label: "My Clients", icon: Users, path: "/therapist/clients" },
-  { label: "Schedule", icon: Calendar, path: "/therapist/schedule" },
-  { label: "Analytics", icon: BarChart3, path: "/therapist/analytics" },
-  { label: "Settings", icon: Settings, path: "/therapist/settings" },
+  { label: "Overview",      icon: LayoutDashboard, path: "/therapist" },
+  { label: "Consultations", icon: MessageCircle,   path: "/therapist/consultations" },
+  { label: "My Clients",    icon: Users,           path: "/therapist/clients" },
+  { label: "Schedule",      icon: Calendar,        path: "/therapist/schedule" },
+  { label: "Settings",      icon: Settings,        path: "/therapist/settings" },
 ];
 
 const TherapistSidebar = ({ fullName }) => {

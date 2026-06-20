@@ -52,7 +52,6 @@ import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
 import TherapistPage from "./pages/therapist/TherapistPage";
 import TherapistDashboard from "./pages/therapist/TherapistDashboard";
 import ActiveSession from "./pages/therapist/ActiveSession";
-import StatsOverview from "./pages/therapist/StatsOverview";
 import RecentSessions from "./pages/therapist/RecentSessions";
 import ConsultationQueue from "./pages/therapist/ConsultationQueue";
 import TherapistSchedule from "./pages/therapist/TherapistSchedule";
@@ -110,7 +109,6 @@ const App = () => (
             <Route path="consultations" element={<RecentSessions />} />
             <Route path="clients" element={<TherapistPatients />} />
             <Route path="schedule" element={<TherapistSchedule />} />
-            <Route path="analytics" element={<StatsOverview />} />
             <Route path="settings" element={<TherapistSettings />} />
           </Route>
 
