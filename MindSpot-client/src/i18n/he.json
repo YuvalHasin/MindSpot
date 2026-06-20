@@ -286,7 +286,10 @@
     "city": "עיר",
     "cityPlaceholder": "לדוגמה: תל אביב",
     "saveAvailability": "שמור זמינות",
-    "savedSuccessfully": "נשמר בהצלחה ✓"
+    "savedSuccessfully": "נשמר בהצלחה ✓",
+    "editAvailability": "עריכת זמינות",
+    "noAvailability": "לא הוגדרה זמינות עדיין. לחץ על 'עריכת זמינות' להגדרת לוח הזמנים.",
+    "cancel": "ביטול"
   },
   "therapistSettings": {
     "title": "הגדרות פרופיל",

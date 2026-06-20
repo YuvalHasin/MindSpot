@@ -20,7 +20,7 @@ const navItems = [
   { label: "Settings",      icon: Settings,        path: "/therapist/settings" },
 ];
 
-const TherapistSidebar = ({ fullName }) => {
+const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,9 +97,9 @@ const TherapistSidebar = ({ fullName }) => {
               >
                 <item.icon size={18} className="shrink-0" />
                 {!collapsed && <span>{item.label}</span>}
-                {!collapsed && item.label === "Consultations" && (
+                {!collapsed && item.path === "/therapist/consultations" && unreadCount > 0 && (
                   <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    3
+                    {unreadCount}
                   </span>
                 )}
               </Link>

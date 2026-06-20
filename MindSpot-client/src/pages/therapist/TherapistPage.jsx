@@ -68,7 +68,7 @@ const TherapistPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF9] flex">
-      <TherapistSidebar fullName={therapistData.fullName} />
+      <TherapistSidebar fullName={therapistData.fullName} unreadCount={unread} />
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
         {/* ── Shared header ─────────────────────────────────────────────── */}

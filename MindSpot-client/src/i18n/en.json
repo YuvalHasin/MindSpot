@@ -286,7 +286,10 @@
     "city": "City",
     "cityPlaceholder": "e.g. Tel Aviv",
     "saveAvailability": "Save Availability",
-    "savedSuccessfully": "Saved Successfully ✓"
+    "savedSuccessfully": "Saved Successfully ✓",
+    "editAvailability": "Edit Availability",
+    "noAvailability": "No availability set yet. Click Edit Availability to define your schedule.",
+    "cancel": "Cancel"
   },
   "therapistSettings": {
     "title": "Profile Settings",
