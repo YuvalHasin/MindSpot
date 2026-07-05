@@ -69,8 +69,10 @@ const ConsultationQueue = () => {
   }, []);
 
   const handleAccept = async (item) => {
-    // סמן כנקרא בשרת
-    const token = sessionStorage.getItem("token");
+    const token       = sessionStorage.getItem("token");
+    const therapistId = sessionStorage.getItem("therapistId");
+
+    // Mark notification as read
     try {
       await fetch(`${API}/api/Therapists/notifications/read?notificationId=${encodeURIComponent(item.id)}`, {
         method: "POST",
@@ -78,7 +80,30 @@ const ConsultationQueue = () => {
       });
     } catch (_) {}
 
-    // נווט לרשימת הפגישות לאחר אישור
+    // Try to find a confirmed or pending appointment with this patient so we can open the chat directly
+    if (item.patientId && therapistId) {
+      try {
+        const cleanId = therapistId.includes("/") ? therapistId.split("/")[1] : therapistId;
+        const res = await fetch(`${API}/api/billing/appointments/therapist?therapistId=${cleanId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const apts = await res.json();
+          const match = apts.find(
+            (a) =>
+              a.patientId === item.patientId &&
+              (a.status === "Confirmed" || a.status === "Pending")
+          );
+          if (match) {
+            const rawId = match.id.includes("/") ? match.id.split("/")[1] : match.id;
+            navigate(`/therapist/chat-room/${rawId}`);
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Fall back to consultations list if no specific appointment found
     navigate("/therapist/consultations");
   };
 

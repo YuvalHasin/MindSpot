@@ -35,30 +35,34 @@ const StatsOverview = () => {
         if (!therapistId || !token) return;
 
         const cleanId = therapistId.includes("/") ? therapistId.split("/")[1] : therapistId;
-        const res = await fetch(
-          `https://localhost:7160/api/billing/appointments/therapist?therapistId=${cleanId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!res.ok) return;
-
-        const appointments = await res.json();
+        const fullId  = therapistId.includes("/") ? therapistId : `Therapists/${therapistId}`;
+        const headers = { Authorization: `Bearer ${token}` };
         const now = new Date();
 
-        const inQueue = appointments.filter(
-          (a) =>
-            (a.status === "Pending" || a.status === "Confirmed") &&
-            new Date(a.appointmentAt) > now
-        ).length;
+        const [apptRes, reviewRes] = await Promise.all([
+          fetch(`https://localhost:7160/api/billing/appointments/therapist?therapistId=${cleanId}`, { headers }),
+          fetch(`https://localhost:7160/api/reviews/therapist?therapistId=${encodeURIComponent(fullId)}`, { headers }),
+        ]);
 
-        const completed = appointments.filter(
-          (a) =>
-            a.status === "Completed" ||
-            (a.status !== "CancelledByPatient" &&
-              a.status !== "CancelledByTherapist" &&
-              new Date(a.appointmentAt) < now)
-        ).length;
+        let inQueue = 0, completed = 0, rating = "—";
 
-        setStats({ inQueue, active: 0, completed, rating: "—" });
+        if (apptRes.ok) {
+          const appointments = await apptRes.json();
+          inQueue   = appointments.filter(
+            (a) => (a.status === "Pending" || a.status === "Confirmed") && new Date(a.appointmentAt) > now
+          ).length;
+          completed = appointments.filter((a) => a.status === "Completed").length;
+        }
+
+        if (reviewRes.ok) {
+          const reviews = await reviewRes.json();
+          if (reviews.length > 0) {
+            const avg = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length;
+            rating = avg.toFixed(1);
+          }
+        }
+
+        setStats({ inQueue, active: 0, completed, rating });
       } catch (err) {
         console.error("Failed to load stats", err);
       }

@@ -97,7 +97,18 @@
     "paid": "שולם",
     "refund": "החזר",
     "rateSession": "דרג פגישה",
-    "cancel": "ביטול"
+    "cancel": "ביטול",
+    "cancelTitle": "ביטול פגישה",
+    "cancelDescEarly": "תקבל החזר מלא כיוון שאתה מבטל יותר מ-24 שעות מראש.",
+    "cancelDescLate": "ביטול מאוחר — לא יינתן החזר בהתאם למדיניות.",
+    "cancelReasonPlaceholder": "סיבת הביטול (אופציונלי)",
+    "keepAppointment": "שמור",
+    "cancelAppointment": "בטל פגישה",
+    "rateTitle": "דרג את הפגישה שלך",
+    "rateWith": "עם",
+    "rateCommentPlaceholder": "ספר לנו על החוויה שלך (אופציונלי)",
+    "skip": "דלג",
+    "submitRating": "שלח דירוג"
   },
   "auth": {
     "login": "כניסה",
@@ -289,7 +300,29 @@
     "savedSuccessfully": "נשמר בהצלחה ✓",
     "editAvailability": "עריכת זמינות",
     "noAvailability": "לא הוגדרה זמינות עדיין. לחץ על 'עריכת זמינות' להגדרת לוח הזמנים.",
-    "cancel": "ביטול"
+    "cancel": "ביטול",
+    "sunday": "ראשון",
+    "monday": "שני",
+    "tuesday": "שלישי",
+    "wednesday": "רביעי",
+    "thursday": "חמישי",
+    "friday": "שישי",
+    "saturday": "שבת",
+    "bookedSlot": "תפוס — לא ניתן להסיר",
+    "gridInstruction": "לחץ לבחירה • גרור לבחירה מרובה • תאים אפורים נעולים (קיימת פגישה)"
+  },
+  "chatRoom": {
+    "sessionChat": "צ'אט פגישה",
+    "connecting": "מתחבר…",
+    "live": "● חי",
+    "endSession": "סיים פגישה",
+    "endTitle": "לסיים את הפגישה?",
+    "endDesc": "הפגישה תסומן כהושלמה. המטופל יוכל להשאיר ביקורת.",
+    "cancel": "ביטול",
+    "confirmEnd": "אשר וסיים",
+    "completed": "הפגישה הסתיימה",
+    "redirecting": "מעביר לרשימת הייעוצים…",
+    "typePlaceholder": "הקלד הודעה…"
   },
   "therapistSettings": {
     "title": "הגדרות פרופיל",
@@ -299,7 +332,13 @@
     "fullName": "שם מלא",
     "specialties": "התמחויות",
     "licenseNumber": "מספר רישיון",
-    "editComingSoon": "עריכת פרופיל בקרוב. צור קשר עם התמיכה לעדכון פרטיך."
+    "bio": "ביוגרפיה",
+    "city": "עיר",
+    "editProfile": "ערוך פרופיל",
+    "saveChanges": "שמור שינויים",
+    "cancel": "ביטול",
+    "savedSuccessfully": "נשמר בהצלחה ✓",
+    "saveFailed": "שמירה נכשלה. נסה שוב."
   },
   "therapistPatients": {
     "title": "המטופלים שלי",
@@ -405,7 +444,7 @@
     "saveChanges": "שמור שינויים",
     "savedSuccessfully": "נשמר בהצלחה ✓",
     "errorFullNameRequired": "שם מלא הוא שדה חובה.",
-    "errorEmailInvalid": "אנא הזן כתובת אימייל תקינה.",
+    "errorEmailInvalid": "נא להזין כתובת אימייל תקינה.",
     "errorUpdateFailed": "העדכון נכשל.",
     "errorServerConnection": "שגיאת חיבור לשרת."
   },
@@ -413,12 +452,12 @@
     "back": "חזרה",
     "goBack": "חזור",
     "notFound": "המטפל לא נמצא",
-    "verifiedTherapist": "מטפל מאומת",
+    "verifiedTherapist": "מטפל מאושר",
     "about": "אודות",
     "recentReviews": "ביקורות אחרונות",
     "basedOnReviews": "מבוסס על {{count}} ביקורת",
     "basedOnReviews_plural": "מבוסס על {{count}} ביקורות",
-    "noReviewsYet": "עדיין אין ביקורות"
+    "noReviewsYet": "אין ביקורות עדיין"
   },
   "therapistPage": {
     "loadingDashboard": "טוען לוח בקרה…",
@@ -428,23 +467,24 @@
   },
   "adminRequests": {
     "title": "בקשות הצטרפות",
-    "subtitle": "סקור בקשות הצטרפות נכנסות של מטפלים.",
-    "pending": "ממתינות",
-    "pendingPlural": "",
+    "subtitle": "סקור בקשות מטפלים נכנסות.",
+    "pending": "ממתין",
+    "pendingPlural": "ים",
     "colTherapist": "מטפל",
     "colLicense": "רישיון",
     "colBio": "ביוגרפיה",
-    "colContact": "קשר",
+    "colContact": "פרטי קשר",
     "colVerification": "אימות",
-    "noPending": "הכל טופל! אין מטפלים ממתינים.",
+    "noPending": "הכל עדכני! אין מטפלים ממתינים.",
     "noBio": "לא סופקה ביוגרפיה.",
     "approve": "אשר",
     "approvedTitle": "אושר!",
     "approvedDesc": "המטפל פעיל כעת.",
     "rejectedTitle": "נדחה",
-    "rejectedDesc": "הבקשה הוסרה.",
-    "actionFailed": "הפעולה נכשלה",
-    "errorLoading": "שגיאה בטעינת בקשות",
-    "filteringRequests": "מסנן בקשות ממתינות..."
+    "rejectedDesc": "הבקשה נדחתה.",
+    "actionFailed": "הפעולה נכשלה. נסה שוב.",
+    "errorLoading": "טעינת הבקשות נכשלה.",
+    "filteringRequests": "טוען בקשות…",
+    "reject": "דחה"
   }
 }

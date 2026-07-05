@@ -55,39 +55,33 @@ const PatientAuthPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (isLogin) {
-          // --- לוגיקה למקרה של התחברות (Login) ---
-          // ProtectedRoute קורא מ-sessionStorage — חייב להיות עקבי
           if (data.token)    sessionStorage.setItem("token",     data.token);
           if (data.userId) {
               sessionStorage.setItem("userId",    data.userId);
               sessionStorage.setItem("patientId", data.userId);
           }
           if (data.fullName) sessionStorage.setItem("name", data.fullName);
-          // ProtectedRoute מצפה ל-"patient" (אותיות קטנות)
           sessionStorage.setItem("role", "patient");
 
           navigate("/patient-dashboard");
         } else {
-          // --- לוגיקה למקרה של הרשמה (Register) ---
-          // במקום לעבור דף, אנחנו מעבירים את הטופס למצב "התחברות"
           alert(t("auth.registerSuccess"));
-          setIsLogin(true); 
-          setPassword(""); // איפוס סיסמה לביטחון
+          setIsLogin(true);
+          setPassword("");
         }
       } else {
-        // ניסיון לחלץ הודעת שגיאה ברורה מהשרת
         const contentType = response.headers.get("content-type");
         let errorMessage = "Authentication failed";
-        
+
         if (contentType && contentType.includes("application/json")) {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
         } else {
             errorMessage = await response.text();
         }
-        
+
         setError(errorMessage);
       }
     } catch (err) {

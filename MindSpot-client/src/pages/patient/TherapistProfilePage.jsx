@@ -113,7 +113,7 @@ const TherapistProfilePage = () => {
               {profile.specialties}
             </span>
           )}
-          {profile.verificationStatus === "Verified" && (
+          {(profile.verificationStatus === "Verified" || profile.verificationStatus === "Approved") && (
             <div className="flex items-center gap-1.5 mt-3 text-green-600 text-sm font-semibold">
               <CheckCircle2 size={16} />
               {t("therapistProfile.verifiedTherapist")}

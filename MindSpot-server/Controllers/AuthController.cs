@@ -58,7 +58,6 @@ namespace server.Controllers
 
             else if (userRole == "Admin")
             {
-                // הוספת collectionName מבטיחה שהוא הולך לקולקציה שראינו בתמונה
                 var admin = await session.Query<Admin>(collectionName: "Admins")
                     .FirstOrDefaultAsync(a => a.Email == request.Email);
 
@@ -121,7 +120,7 @@ namespace server.Controllers
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(2),
+                expires: DateTime.UtcNow.AddHours(8),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

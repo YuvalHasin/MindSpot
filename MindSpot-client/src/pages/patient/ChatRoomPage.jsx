@@ -23,7 +23,7 @@ const ChatRoomPage = () => {
   const bottomRef = useRef(null);
 
   const token = sessionStorage.getItem("token");
-  const patientId = sessionStorage.getItem("patientId");
+  const userId = sessionStorage.getItem("userId");
   const senderRole = sessionStorage.getItem("role") || "patient";
   const senderName = sessionStorage.getItem("name") || "Patient";
 
@@ -107,7 +107,7 @@ const ChatRoomPage = () => {
   };
 
   const isOwn = (msg) =>
-    msg.senderId === patientId || msg.senderRole === "patient";
+    msg.senderId === userId || msg.senderRole === senderRole;
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative">

@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 
 const DAYS = [
-  { key: "sunday",    label: "ראשון" },
-  { key: "monday",    label: "שני" },
-  { key: "tuesday",   label: "שלישי" },
-  { key: "wednesday", label: "רביעי" },
-  { key: "thursday",  label: "חמישי" },
-  { key: "friday",    label: "שישי" },
-  { key: "saturday",  label: "שבת" },
+  { key: "sunday"    },
+  { key: "monday"    },
+  { key: "tuesday"   },
+  { key: "wednesday" },
+  { key: "thursday"  },
+  { key: "friday"    },
+  { key: "saturday"  },
 ];
 
 const DAY_INDEX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
@@ -106,7 +106,7 @@ const ScheduleView = ({ grid, city, onEdit }) => {
             return (
               <div key={d.key} className="flex items-start gap-4">
                 <span className="w-16 shrink-0 text-sm font-semibold text-foreground text-right pt-1">
-                  {d.label}
+                  {t(`therapistSchedule.${d.key}`)}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {slots.map((s) => (
@@ -144,7 +144,7 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
   const tryToggle = (dayKey, slot) => {
     const isOn = grid[dayKey]?.has(slot);
     if (isOn && bookedSet.has(`${dayKey}:${slot}`)) {
-      setWarn(`לא ניתן לבטל ${DAYS.find(d=>d.key===dayKey)?.label} ${slot} — קיימת פגישה מתוכננת בזמן זה.`);
+      setWarn(`${t(`therapistSchedule.${dayKey}`)} ${slot} — ${t("therapistSchedule.bookedSlot")}`);
       setTimeout(() => setWarn(""), 4000);
       return false;
     }
@@ -166,7 +166,7 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
   const handleMouseDown = (dayKey, slot) => {
     const isOn = grid[dayKey]?.has(slot);
     if (isOn && bookedSet.has(`${dayKey}:${slot}`)) {
-      setWarn(`לא ניתן לבטל ${DAYS.find(d=>d.key===dayKey)?.label} ${slot} — קיימת פגישה מתוכננת בזמן זה.`);
+      setWarn(`${t(`therapistSchedule.${dayKey}`)} ${slot} — ${t("therapistSchedule.bookedSlot")}`);
       setTimeout(() => setWarn(""), 4000);
       setDragging(null);
       return;
@@ -239,7 +239,7 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
       </div>
 
       <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm">
-        <p className="text-xs text-muted-foreground mb-4">לחץ על תא לבחירה • גרור לבחירה מרובה • תאים אפורים נעולים (קיימת פגישה)</p>
+        <p className="text-xs text-muted-foreground mb-4">{t("therapistSchedule.gridInstruction", "Click to select • Drag for multiple • Grey cells are locked (existing appointment)")}</p>
 
         <AnimatePresence>
           {warn && (
@@ -261,7 +261,7 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
                 <th className="w-14 pb-3" />
                 {DAYS.map((d) => (
                   <th key={d.key} className="pb-3 px-1 text-center font-semibold text-foreground min-w-[64px]">
-                    {d.label}
+                    {t(`therapistSchedule.${d.key}`)}
                   </th>
                 ))}
               </tr>
@@ -287,7 +287,7 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
                               ? "bg-primary border-primary text-primary-foreground"
                               : "bg-background border-border/40 hover:border-primary/40 hover:bg-primary/5"
                             }`}
-                          title={booked ? "פגישה קיימת — לא ניתן לבטל" : ""}
+                          title={booked ? t("therapistSchedule.bookedSlot") : ""}
                         >
                           {active && <Check size={11} strokeWidth={3} />}
                           {!active && booked && <span className="text-[9px] text-muted-foreground">🔒</span>}

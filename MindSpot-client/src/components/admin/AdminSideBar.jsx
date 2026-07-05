@@ -12,7 +12,6 @@ import {
   LogOut,
 } from "lucide-react";
 
-// רשימת הניווט המעודכנת הכוללת את Patients ו-Analytics
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
   { label: "Therapists", icon: Users, path: "/admin/therapists" },
@@ -25,7 +24,6 @@ const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // בדיקה אם הנתיב הנוכחי פעיל (בלי הגדרת טיפוסים)
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
@@ -35,7 +33,7 @@ const AdminSidebar = () => {
 
   return (
     <>
-      {/* Mobile bottom nav - מופיע רק במסכים קטנים */}
+      {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-background/95 backdrop-blur-md py-2 md:hidden">
         {navItems.map((item) => {
           const active = isActive(item.path);
@@ -54,7 +52,7 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      {/* Desktop sidebar - מופיע במסכים בינוניים ומעלה */}
+      {/* Desktop sidebar */}
       <aside
         className={`hidden md:flex flex-col border-r border-border bg-card/60 backdrop-blur-sm transition-all duration-300 shrink-0 ${
           collapsed ? "w-16" : "w-60"
