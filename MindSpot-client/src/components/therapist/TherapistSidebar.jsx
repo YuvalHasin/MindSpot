@@ -21,11 +21,21 @@ const navItems = [
 ];
 
 const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed,  setCollapsed]  = useState(false);
+  const [available,  setAvailable]  = useState(
+    () => sessionStorage.getItem("therapistAvailable") !== "false"
+  );
   const location = useLocation();
   const navigate = useNavigate();
 
-  // תיקון לוגיקת ה-Active: בודק התאמה מדויקת לנתיב, או אם זה דף הבית הראשי של אזור המטפל
+  const toggleAvailable = () => {
+    setAvailable((prev) => {
+      sessionStorage.setItem("therapistAvailable", String(!prev));
+      return !prev;
+    });
+  };
+
+  // Exact match for root, prefix match for sub-routes
   const isActive = (path) => {
     if (path === "/therapist") {
       return location.pathname === "/therapist" || location.pathname === "/therapist/";
@@ -110,12 +120,17 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
         {/* User Info + Logout Section */}
         <div className="mt-auto border-t border-border/50 p-3 space-y-2">
           {!collapsed && (
-            <div className="flex items-center justify-between bg-primary/5 rounded-xl px-3 py-2 mb-2">
-              <span className="text-xs font-medium text-foreground">Available</span>
-              <div className="w-8 h-4 bg-primary rounded-full relative cursor-pointer">
-                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-primary-foreground rounded-full" />
+            <button
+              onClick={toggleAvailable}
+              className="w-full flex items-center justify-between bg-primary/5 rounded-xl px-3 py-2 mb-2 hover:bg-primary/10 transition-colors"
+            >
+              <span className={`text-xs font-medium ${available ? "text-foreground" : "text-muted-foreground"}`}>
+                {available ? "Available" : "Away"}
+              </span>
+              <div className={`w-8 h-4 rounded-full relative transition-colors ${available ? "bg-primary" : "bg-muted-foreground/40"}`}>
+                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${available ? "right-0.5" : "left-0.5"}`} />
               </div>
-            </div>
+            </button>
           )}
           
           <div className="flex items-center gap-2 px-2 py-1">
@@ -130,7 +145,6 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
             )}
           </div>
 
-          {/* כפתור ה-Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"

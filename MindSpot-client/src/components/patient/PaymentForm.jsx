@@ -55,7 +55,7 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/payment-complete?appointmentId=${appointmentId}`,
+        return_url: `${window.location.origin}/patient-dashboard/sessions?appointmentId=${appointmentId}`,
       },
       redirect: "if_required",
     });

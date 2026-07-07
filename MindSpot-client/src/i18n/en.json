@@ -97,7 +97,18 @@
     "paid": "Paid",
     "refund": "Refund",
     "rateSession": "Rate session",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "cancelTitle": "Cancel Appointment",
+    "cancelDescEarly": "You'll receive a full refund since you're cancelling more than 24 hours in advance.",
+    "cancelDescLate": "Late cancellation — no refund will be issued per our policy.",
+    "cancelReasonPlaceholder": "Reason for cancellation (optional)",
+    "keepAppointment": "Keep",
+    "cancelAppointment": "Cancel Appointment",
+    "rateTitle": "Rate Your Session",
+    "rateWith": "with",
+    "rateCommentPlaceholder": "Tell us about your experience (optional)",
+    "skip": "Skip",
+    "submitRating": "Submit Rating"
   },
   "auth": {
     "login": "Sign In",
@@ -289,7 +300,29 @@
     "savedSuccessfully": "Saved Successfully ✓",
     "editAvailability": "Edit Availability",
     "noAvailability": "No availability set yet. Click Edit Availability to define your schedule.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "bookedSlot": "Booked — cannot remove",
+    "gridInstruction": "Click to select • Drag for multiple • Grey cells are locked (existing appointment)"
+  },
+  "chatRoom": {
+    "sessionChat": "Session Chat",
+    "connecting": "Connecting…",
+    "live": "● Live",
+    "endSession": "End Session",
+    "endTitle": "End this session?",
+    "endDesc": "The session will be marked as Completed. The patient will be able to leave a review.",
+    "cancel": "Cancel",
+    "confirmEnd": "Confirm & End",
+    "completed": "Session Completed",
+    "redirecting": "Redirecting to consultations…",
+    "typePlaceholder": "Type a message…"
   },
   "therapistSettings": {
     "title": "Profile Settings",
@@ -299,7 +332,13 @@
     "fullName": "Full Name",
     "specialties": "Specialties",
     "licenseNumber": "License Number",
-    "editComingSoon": "Profile editing is coming soon. Contact support to update your details."
+    "bio": "Bio",
+    "city": "City",
+    "editProfile": "Edit Profile",
+    "saveChanges": "Save Changes",
+    "cancel": "Cancel",
+    "savedSuccessfully": "Saved Successfully ✓",
+    "saveFailed": "Save failed. Please try again."
   },
   "therapistPatients": {
     "title": "My Patients",
@@ -442,9 +481,10 @@
     "approvedTitle": "Approved!",
     "approvedDesc": "Therapist is now active.",
     "rejectedTitle": "Rejected",
-    "rejectedDesc": "Request removed.",
-    "actionFailed": "Action failed",
-    "errorLoading": "Error loading requests",
-    "filteringRequests": "Filtering pending requests..."
+    "rejectedDesc": "Request has been declined.",
+    "actionFailed": "Action failed. Please try again.",
+    "errorLoading": "Failed to load requests.",
+    "filteringRequests": "Loading requests…",
+    "reject": "Reject"
   }
 }

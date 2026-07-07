@@ -191,9 +191,10 @@ namespace MindSpot_server.Controllers
                 return Conflict(new { error = $"Cannot cancel an appointment with status '{appointment.Status}'." });
             }
 
-            // Determine who is cancelling based on caller context
-            // (In production, read this from the JWT claims)
-            appointment.Status             = AppointmentStatus.CancelledByPatient;
+            var callerRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            appointment.Status             = callerRole == "Therapist"
+                ? AppointmentStatus.CancelledByTherapist
+                : AppointmentStatus.CancelledByPatient;
             appointment.CancelledAt        = DateTime.UtcNow;
             appointment.CancellationReason = request.CancellationReason;
             appointment.UpdatedAt          = DateTime.UtcNow;
@@ -289,21 +290,64 @@ namespace MindSpot_server.Controllers
                 .Take(50)
                 .ToListAsync(ct);
 
-            var result = appointments.Select(a => new
+            // Load patient names in one batch
+            var patientIds = appointments.Select(a => a.PatientId).Distinct().ToList();
+            var patients   = await session.LoadAsync<Patient>(patientIds, ct);
+
+            var result = appointments.Select(a =>
             {
-                id              = a.Id,
-                patientId       = a.PatientId,
-                appointmentAt   = a.AppointmentAt,
-                durationMinutes = a.DurationMinutes,
-                status          = a.Status.ToString(),
-                amount          = a.Amount,
-                currency        = a.Currency,
-                paymentStatus   = a.Payment.Status.ToString(),
-                notes           = a.Notes,
-                cancelledAt     = a.CancelledAt
+                patients.TryGetValue(a.PatientId, out var patient);
+                return new
+                {
+                    id              = a.Id,
+                    patientId       = a.PatientId,
+                    patientName     = patient?.FullName ?? "Patient",
+                    appointmentAt   = a.AppointmentAt,
+                    durationMinutes = a.DurationMinutes,
+                    status          = a.Status.ToString(),
+                    amount          = a.Amount,
+                    currency        = a.Currency,
+                    paymentStatus   = a.Payment.Status.ToString(),
+                    notes           = a.Notes,
+                    cancelledAt     = a.CancelledAt
+                };
             });
 
             return Ok(result);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PUT /api/billing/appointments/{id}/complete
+        // Therapist marks a session as completed — enables patient review flow.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Authorize]
+        [HttpPut("appointments/{id}/complete")]
+        public async Task<IActionResult> CompleteAppointment(
+            string id,
+            CancellationToken ct)
+        {
+            using var session = _store.OpenAsyncSession();
+
+            // URL routing strips slashes — id arrives as "1-A", rebuild full RavenDB ID
+            var fullId = id.Contains("/") ? id : $"Appointments/{id}";
+            var appointment = await session.LoadAsync<Appointment>(fullId, ct);
+
+            if (appointment is null)
+                return NotFound(new { error = "Appointment not found." });
+
+            if (appointment.Status == AppointmentStatus.Completed)
+                return Ok(new { message = "Already completed." });
+
+            if (appointment.Status is AppointmentStatus.CancelledByPatient or
+                AppointmentStatus.CancelledByTherapist)
+                return Conflict(new { error = "Cannot complete a cancelled appointment." });
+
+            appointment.Status    = AppointmentStatus.Completed;
+            appointment.UpdatedAt = DateTime.UtcNow;
+            await session.SaveChangesAsync(ct);
+
+            return Ok(new { message = "Session marked as completed." });
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -362,11 +406,8 @@ namespace MindSpot_server.Controllers
             appointment.UpdatedAt          = DateTime.UtcNow;
 
             await session.SaveChangesAsync();
+            _logger.LogInformation("Payment succeeded for appointment {AppointmentId}", appointment.Id);
 
-            _logger.LogInformation(
-                "Payment succeeded for appointment {AppointmentId}", appointment.Id);
-
-            // Send booking confirmation email to the patient
             try
             {
                 var patient   = await session.LoadAsync<Patient>(appointment.PatientId);
@@ -382,9 +423,7 @@ namespace MindSpot_server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to send booking confirmation email for appointment {AppointmentId}",
-                    appointment.Id);
+                _logger.LogError(ex, "Failed to send booking confirmation for appointment {AppointmentId}", appointment.Id);
             }
         }
 
@@ -393,7 +432,6 @@ namespace MindSpot_server.Controllers
             if (e.Data.Object is not PaymentIntent intent) return;
 
             using var session = _store.OpenAsyncSession();
-
             var appointment = await session.Query<Appointment>()
                 .FirstOrDefaultAsync(a => a.Payment.StripePaymentIntentId == intent.Id);
 
@@ -404,9 +442,7 @@ namespace MindSpot_server.Controllers
             appointment.UpdatedAt             = DateTime.UtcNow;
 
             await session.SaveChangesAsync();
-
-            _logger.LogWarning(
-                "Payment failed for appointment {AppointmentId}: {Reason}",
+            _logger.LogWarning("Payment failed for appointment {AppointmentId}: {Reason}",
                 appointment.Id, appointment.Payment.FailureReason);
         }
     }

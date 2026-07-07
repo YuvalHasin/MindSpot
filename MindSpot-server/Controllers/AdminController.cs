@@ -114,7 +114,9 @@ namespace server.Controllers
         {
             string fullId = id.Contains("/") ? id : $"Patients/{id}";
             using var session = _store.OpenAsyncSession();
-            session.Delete(fullId);
+            var patient = await session.LoadAsync<Patient>(fullId);
+            if (patient == null) return NotFound(new { message = "Patient not found." });
+            session.Delete(patient);
             await session.SaveChangesAsync();
             return Ok(new { message = "Patient deleted successfully." });
         }
@@ -166,7 +168,9 @@ namespace server.Controllers
         {
             string fullId = id.Contains("/") ? id : $"Therapists/{id}";
             using var session = _store.OpenAsyncSession();
-            session.Delete(fullId);
+            var therapist = await session.LoadAsync<Therapist>(fullId);
+            if (therapist == null) return NotFound(new { message = "Therapist not found." });
+            session.Delete(therapist);
             await session.SaveChangesAsync();
             return Ok(new { message = "Therapist deleted successfully." });
         }

@@ -26,10 +26,8 @@ public class ChatController : ControllerBase
     {
         try
         {
-            // 1. תיקון קריטי: מגדירים במפורש שהרשימה מיועדת עבור OpenAI.Chat.ChatMessage
             var chatMessages = new List<OpenAI.Chat.ChatMessage>();
 
-            // הוספת הוראת מערכת (System Prompt) כדי לקבוע את האישיות של הבוט
             chatMessages.Add(new SystemChatMessage(
                 "You are Serenity, a supportive and empathetic AI wellness companion for MindSpot. " +
                 "Your goal is to listen, provide emotional support, and help users feel heard. " +
@@ -37,7 +35,6 @@ public class ChatController : ControllerBase
                 "If a user is in crisis, gently remind them to contact professional help."
             ));
 
-            // הוספת היסטוריית השיחה מה-Frontend
             foreach (var msg in request.Messages)
             {
                 if (msg.Role == "user")
@@ -46,10 +43,7 @@ public class ChatController : ControllerBase
                     chatMessages.Add(new AssistantChatMessage(msg.Content));
             }
 
-            // 2. שליחה ל-OpenAI 
             var response = await _openAiService.GetChatResponseAsync(chatMessages);
-
-            // 3. החזרת התשובה בפורמט שהצ'אט ב-React יודע לקרוא
             return Ok(response);
         }
         catch (Exception ex)
@@ -71,7 +65,6 @@ public class ChatController : ControllerBase
 
         using var session = _store.OpenAsyncSession();
 
-        // כאן הקוד כבר היה מתוקן מצוין והשתמש בנתיב המלא של המודל המקומי
         var messages = await session.Query<MindSpot_server.Models.ChatMessage>()
             .Where(m => m.AppointmentId == appointmentId)
             .OrderBy(m => m.SentAt)

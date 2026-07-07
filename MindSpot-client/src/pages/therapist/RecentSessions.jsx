@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
+import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, Video } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -10,17 +11,32 @@ function formatDate(iso) {
   const d = new Date(iso);
   const today    = new Date();
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  if (d.toDateString() === today.toDateString())    return `Today, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
-  if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
-  return d.toLocaleDateString("en-IL", { day: "numeric", month: "short" }) + `, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+  if (d.toDateString() === today.toDateString())
+    return `Today, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+  if (d.toDateString() === tomorrow.toDateString())
+    return `Tomorrow, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`;
+  return (
+    d.toLocaleDateString("en-IL", { day: "numeric", month: "short" }) +
+    `, ${d.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}`
+  );
 }
 
 function StatusDot({ status }) {
-  if (status === "Confirmed") return <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600"><CheckCircle2 size={11} /> Confirmed</span>;
-  if (status === "Pending")   return <span className="flex items-center gap-1 text-[10px] font-semibold text-yellow-600"><AlertCircle size={11} /> Pending</span>;
-  if (status === "Completed") return <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-600"><CheckCircle2 size={11} /> Completed</span>;
+  if (status === "Confirmed")
+    return <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600"><CheckCircle2 size={11} /> Confirmed</span>;
+  if (status === "Pending")
+    return <span className="flex items-center gap-1 text-[10px] font-semibold text-yellow-600"><AlertCircle size={11} /> Pending</span>;
+  if (status === "Completed")
+    return <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-600"><CheckCircle2 size={11} /> Completed</span>;
   return <span className="text-[10px] text-muted-foreground">{status}</span>;
 }
+
+// Show "Join Session" for Confirmed appointments within ±2 hours of now
+const isJoinable = (apt) => {
+  if (apt.status !== "Confirmed") return false;
+  const diff = new Date(apt.appointmentAt) - new Date();
+  return diff < 2 * 60 * 60 * 1000 && diff > -2 * 60 * 60 * 1000;
+};
 
 const RecentSessions = () => {
   const { t } = useTranslation();
@@ -32,7 +48,7 @@ const RecentSessions = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const therapistId = sessionStorage.getItem("therapistId");
+        const therapistId = sessionStorage.getItem("therapistId") || sessionStorage.getItem("userId");
         const token       = sessionStorage.getItem("token");
         if (!therapistId || !token) { setLoading(false); return; }
 
@@ -52,6 +68,12 @@ const RecentSessions = () => {
   }, []);
 
   const displayed = showAll ? sessions : sessions.slice(0, 5);
+
+  const joinSession = (apt) => {
+    // appointmentId is like "Appointments/1-A" — encode for the URL
+    const rawId = apt.id.includes("/") ? apt.id.split("/")[1] : apt.id;
+    navigate(`/therapist/chat-room/${rawId}`);
+  };
 
   return (
     <motion.div
@@ -102,7 +124,7 @@ const RecentSessions = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {t("recentSessions.patient")} · {s.durationMinutes} min
+                    {s.patientName || t("recentSessions.patient")} · {s.durationMinutes} min
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -123,6 +145,20 @@ const RecentSessions = () => {
                   <MessageCircle size={14} /> {t("recentSessions.chat", "Chat")}
                 </Button>
               )}
+
+              <div className="flex items-center gap-2 shrink-0">
+                {isJoinable(s) && (
+                  <Button
+                    size="sm"
+                    className="h-7 text-[11px] px-3 rounded-lg gap-1"
+                    onClick={() => joinSession(s)}
+                  >
+                    <Video size={11} />
+                    Join
+                  </Button>
+                )}
+                <StatusDot status={s.status} />
+              </div>
             </div>
           ))}
         </div>

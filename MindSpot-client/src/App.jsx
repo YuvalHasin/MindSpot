@@ -58,6 +58,7 @@ import ConsultationQueue from "./pages/therapist/ConsultationQueue";
 import TherapistSchedule from "./pages/therapist/TherapistSchedule";
 import TherapistSettings from "./pages/therapist/TherapistSettings";
 import TherapistPatients from "./pages/therapist/TherapistPatients";
+import TherapistChatRoomPage from "./pages/therapist/TherapistChatRoomPage";
 
 // Patient extra pages
 import BookSessionPage from "./pages/patient/BookSessionPage";
@@ -112,6 +113,7 @@ const App = () => (
             <Route path="schedule" element={<TherapistSchedule />} />
             <Route path="settings" element={<TherapistSettings />} />
             <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
+            <Route path="chat-room/:appointmentId" element={<TherapistChatRoomPage />} />
           </Route>
 
           {/* --- נתיבי אדמין (מוגנים) --- */}

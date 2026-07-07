@@ -49,32 +49,56 @@ const AdminSettings = () => {
   }, []);
 
   const handleSave = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setErrorField({ field: "", message: "" });
 
-  try {
-    const response = await fetch("https://localhost:7160/api/admin/update-profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}` 
-      },
-      body: JSON.stringify({
-        Id: sessionStorage.getItem("userId"),
-        FullName: form.fullName,
-        Email: form.email,
-        CurrentPassword: form.currentPassword,
-        NewPassword: form.newPassword
-      }),
-    });
-
-    if (response.ok) {
-      setIsSuccess(true);
+    // Validate password fields if the user intends to change password
+    if (form.newPassword) {
+      if (form.newPassword !== form.confirmPassword) {
+        setErrorField({ field: "confirmPassword", message: "Passwords do not match." });
+        return;
+      }
+      if (!form.currentPassword) {
+        setErrorField({ field: "currentPassword", message: "Current password is required." });
+        return;
+      }
     }
-  } catch (err) {
-    console.error(err);
-    setIsSaving(false);
-  }
-};
+
+    setIsSaving(true);
+    try {
+      // 1. Update profile (name + email)
+      const profileRes = await fetch("https://localhost:7160/api/admin/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ Id: userId, FullName: form.fullName, Email: form.email }),
+      });
+      if (!profileRes.ok) throw new Error("Profile update failed.");
+
+      // 2. Change password only if requested
+      if (form.newPassword) {
+        const pwRes = await fetch("https://localhost:7160/api/admin/change-password", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ Id: userId, CurrentPassword: form.currentPassword, NewPassword: form.newPassword }),
+        });
+        if (!pwRes.ok) {
+          const d = await pwRes.json().catch(() => ({}));
+          setErrorField({ field: "currentPassword", message: d.message || "Password change failed." });
+          return;
+        }
+        // Clear password fields after success
+        setForm(f => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setErrorField({ field: "general", message: "Failed to save. Please try again." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
 

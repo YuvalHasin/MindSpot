@@ -373,15 +373,15 @@ const SessionHistory = () => {
               initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
               className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl"
             >
-              <h3 className="font-display text-lg font-bold text-foreground mb-1">Cancel Appointment</h3>
+              <h3 className="font-display text-lg font-bold text-foreground mb-1">{t("history.cancelTitle")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {new Date(cancelTarget.appointmentAt) - new Date() > 24 * 60 * 60 * 1000
-                  ? "You'll receive a full refund since you're cancelling more than 24 hours in advance."
-                  : "Late cancellation — no refund will be issued per our policy."}
+                  ? t("history.cancelDescEarly")
+                  : t("history.cancelDescLate")}
               </p>
               <textarea
                 rows={2}
-                placeholder="Reason for cancellation (optional)"
+                placeholder={t("history.cancelReasonPlaceholder")}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
@@ -390,14 +390,14 @@ const SessionHistory = () => {
               {cancelError && <p className="text-xs text-red-500 mb-2">{cancelError}</p>}
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCancelTarget(null)}>
-                  Keep
+                  {t("history.keepAppointment")}
                 </Button>
                 <Button
                   className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
                   disabled={cancelling}
                   onClick={handleCancel}
                 >
-                  {cancelling ? <Loader2 size={16} className="animate-spin" /> : "Cancel Appointment"}
+                  {cancelling ? <Loader2 size={16} className="animate-spin" /> : t("history.cancelAppointment")}
                 </Button>
               </div>
             </motion.div>
@@ -417,8 +417,8 @@ const SessionHistory = () => {
               initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
               className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl"
             >
-              <h3 className="font-display text-lg font-bold text-foreground mb-1">Rate Your Session</h3>
-              <p className="text-sm text-muted-foreground mb-4">with {rateTarget.therapistName}</p>
+              <h3 className="font-display text-lg font-bold text-foreground mb-1">{t("history.rateTitle")}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{t("history.rateWith")} {rateTarget.therapistName}</p>
 
               <div className="flex justify-center gap-2 mb-4">
                 {[1,2,3,4,5].map(n => (
@@ -443,7 +443,7 @@ const SessionHistory = () => {
 
               <textarea
                 rows={2}
-                placeholder="Tell us about your experience (optional)"
+                placeholder={t("history.rateCommentPlaceholder")}
                 value={ratingComment}
                 onChange={(e) => setRatingComment(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground
@@ -451,14 +451,14 @@ const SessionHistory = () => {
               />
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setRateTarget(null)}>
-                  Skip
+                  {t("history.skip")}
                 </Button>
                 <Button
                   className="flex-1 rounded-xl"
                   disabled={ratingValue === 0 || submittingRate}
                   onClick={handleRateSubmit}
                 >
-                  {submittingRate ? <Loader2 size={16} className="animate-spin" /> : "Submit Rating"}
+                  {submittingRate ? <Loader2 size={16} className="animate-spin" /> : t("history.submitRating")}
                 </Button>
               </div>
             </motion.div>
