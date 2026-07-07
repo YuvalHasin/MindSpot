@@ -47,7 +47,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-tight text-foreground mb-6"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-tight text-foreground mb-6"
           >
             {t("hero.title1")}
             <br />
@@ -88,18 +88,18 @@ const Hero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
-            className="mt-12 flex items-center gap-6 text-sm text-muted-foreground"
+            className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground"
           >
             <span className="flex items-center gap-1.5">
-              <Shield size={14} className="text-primary" />
+              <Shield size={14} className="text-primary shrink-0" />
               {t("hero.encrypted")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-primary" />
+              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
               {t("hero.avgConnect")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sand-warm" />
+              <span className="w-2 h-2 rounded-full bg-sand-warm shrink-0" />
               {t("hero.professionals")}
             </span>
           </motion.div>

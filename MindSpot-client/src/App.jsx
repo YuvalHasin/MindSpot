@@ -45,7 +45,8 @@ import ProfileSettings from "./pages/patient/ProfileSettings";
 import SecuritySettings from "./pages/patient/SecuritySettings";
 import TriagePage from "./pages/patient/TriagePage";
 import ChatPage from "./pages/patient/ChatPage";
-import ChatRoomPage from "./pages/patient/ChatRoomPage";
+// Shared, role-agnostic real-time chat room — used by both patient & therapist dashboards
+import ChatRoomPage from "./pages/ChatRoomPage";
 
 // Therapist Pages & Layout
 import TherapistAuthPage from "./pages/therapist/TherapistAuthPage";
@@ -110,6 +111,7 @@ const App = () => (
             <Route path="clients" element={<TherapistPatients />} />
             <Route path="schedule" element={<TherapistSchedule />} />
             <Route path="settings" element={<TherapistSettings />} />
+            <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
           </Route>
 
           {/* --- נתיבי אדמין (מוגנים) --- */}

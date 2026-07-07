@@ -97,7 +97,8 @@
     "paid": "שולם",
     "refund": "החזר",
     "rateSession": "דרג פגישה",
-    "cancel": "ביטול"
+    "cancel": "ביטול",
+    "chat": "צ'אט"
   },
   "auth": {
     "login": "כניסה",
@@ -271,7 +272,8 @@
     "noAppointments": "עדיין אין פגישות.",
     "showLess": "הצג פחות",
     "viewAll": "הצג הכל",
-    "patient": "מטופל"
+    "patient": "מטופל",
+    "chat": "צ'אט"
   },
   "therapistDashboard": {
     "newBookingRequests": "בקשות הזמנה חדשות",
@@ -445,6 +447,6 @@
     "rejectedDesc": "הבקשה הוסרה.",
     "actionFailed": "הפעולה נכשלה",
     "errorLoading": "שגיאה בטעינת בקשות",
-    "filteringRequests": "מסנן בקשות ממתינות..."
+    "filteringRequests": "מסנן בקשות ממתינות…"
   }
 }

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Star } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Star, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 
@@ -41,6 +41,7 @@ function formatTime(iso) {
 
 const SessionHistory = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab,    setActiveTab]    = useState("ai");
   const [aiSessions,   setAiSessions]   = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -320,6 +321,17 @@ const SessionHistory = () => {
                             : <span className="flex items-center gap-1 text-muted-foreground"><XCircle size={13} /> {a.paymentStatus}</span>
                         }
                       </span>
+
+                      {a.status === "Confirmed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl gap-1.5 h-7 text-[11px] px-2.5"
+                          onClick={() => navigate(`/patient-dashboard/chat-room/${a.id}`)}
+                        >
+                          <MessageCircle size={12} /> {t("history.chat", "Chat")}
+                        </Button>
+                      )}
 
                       {a.status === "Completed" && !a.rated && (
                         <button

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 function formatDate(iso) {
@@ -23,6 +24,7 @@ function StatusDot({ status }) {
 
 const RecentSessions = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showAll,  setShowAll]  = useState(false);
@@ -85,7 +87,7 @@ const RecentSessions = () => {
           {displayed.map((s) => (
             <div
               key={s.id}
-              className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors"
+              className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors flex-wrap sm:flex-nowrap"
             >
               {/* Date badge */}
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
@@ -110,6 +112,17 @@ const RecentSessions = () => {
               </div>
 
               <StatusDot status={s.status} />
+
+              {s.status === "Confirmed" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl gap-1.5 shrink-0 w-full sm:w-auto"
+                  onClick={() => navigate(`/therapist/chat-room/${s.id}`)}
+                >
+                  <MessageCircle size={14} /> {t("recentSessions.chat", "Chat")}
+                </Button>
+              )}
             </div>
           ))}
         </div>

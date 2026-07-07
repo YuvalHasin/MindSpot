@@ -161,15 +161,15 @@ const ChatPage = () => {
                   key={idx}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="min-w-[260px] bg-card border rounded-[2rem] p-5 shadow-sm flex flex-col justify-between border-primary/10"
+                  className="w-[260px] shrink-0 bg-card border rounded-[2rem] p-5 shadow-sm flex flex-col justify-between border-primary/10"
                 >
                   <div>
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="bg-primary/10 p-2 rounded-full">
+                      <div className="bg-primary/10 p-2 rounded-full shrink-0">
                         <User size={18} className="text-primary" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-sm">{therapist.fullName}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-sm truncate">{therapist.fullName}</h3>
                         <p className="text-[10px] text-primary/70 font-bold uppercase">
                           {therapist.specialties || "Specialist"}
                         </p>
