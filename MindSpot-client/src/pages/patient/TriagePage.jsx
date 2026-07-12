@@ -14,6 +14,7 @@ const TriagePage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [chatSessionId, setChatSessionId] = useState(null);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -58,8 +59,10 @@ const TriagePage = () => {
 
         const finalMatches = data.matches || data.Matches || [];
         const finalSummary = data.patientSummary || data.PatientSummary || "";
+        const sessionId = data.chatSessionId || data.ChatSessionId || null;
 
         setMatches(finalMatches);
+        setChatSessionId(sessionId);
         setResult({
           category: emotionalCategories.find((c) => c.id === category)?.label,
           urgency: urgency,
@@ -191,7 +194,8 @@ const TriagePage = () => {
               onClick={() => navigate("/patient-dashboard/chat", {
                 state: {
                   matches: matches,
-                  summary: result?.summary
+                  summary: result?.summary,
+                  chatSessionId: chatSessionId
                 }
               })}
               className="w-full h-14 rounded-xl text-lg shadow-lg shadow-primary/20"

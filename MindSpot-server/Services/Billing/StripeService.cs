@@ -136,6 +136,7 @@ namespace MindSpot_server.Services.Billing
             long amountToTransfer,
             string currency,
             string sourceChargeId,
+            string reason = "payout",
             CancellationToken ct = default)
         {
             var options = new TransferCreateOptions
@@ -146,7 +147,7 @@ namespace MindSpot_server.Services.Billing
                 SourceTransaction = sourceChargeId,
                 Metadata = new Dictionary<string, string>
                 {
-                    ["reason"] = "late_cancellation_fee"
+                    ["reason"] = reason
                 }
             };
 

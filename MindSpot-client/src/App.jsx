@@ -36,6 +36,8 @@ import TherapistManagement from "./pages/admin/TherapistManagement";
 import PatientManagement from "./pages/admin/PatientManagement";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminRequests from "./pages/admin/AdminRequests";
+import AdminStatistics from "./pages/admin/AdminStatistics";
+import AdminAuditLog from "./pages/admin/AdminAuditLog";
 
 // Patient Pages & Layout
 import PatientDashboardLayout from "./components/patient/PatientDashboardLayout";
@@ -58,11 +60,16 @@ import ConsultationQueue from "./pages/therapist/ConsultationQueue";
 import TherapistSchedule from "./pages/therapist/TherapistSchedule";
 import TherapistSettings from "./pages/therapist/TherapistSettings";
 import TherapistPatients from "./pages/therapist/TherapistPatients";
-import TherapistChatRoomPage from "./pages/therapist/TherapistChatRoomPage";
 
 // Patient extra pages
 import BookSessionPage from "./pages/patient/BookSessionPage";
 import TherapistProfilePage from "./pages/patient/TherapistProfilePage";
+
+// Public marketing pages
+import AboutPage from "./pages/AboutPage";
+import FAQPage from "./pages/FAQPage";
+import ContactPage from "./pages/ContactPage";
+import PoliciesPage from "./pages/PoliciesPage";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +84,10 @@ const App = () => (
           <Route path="/therapist-auth" element={<TherapistAuthPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/therapist-profile/:id" element={<TherapistProfilePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/policies" element={<PoliciesPage />} />
 
           {/* --- נתיבי מטופל (מוגנים) --- */}
           <Route 
@@ -113,7 +124,6 @@ const App = () => (
             <Route path="schedule" element={<TherapistSchedule />} />
             <Route path="settings" element={<TherapistSettings />} />
             <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
-            <Route path="chat-room/:appointmentId" element={<TherapistChatRoomPage />} />
           </Route>
 
           {/* --- נתיבי אדמין (מוגנים) --- */}
@@ -131,6 +141,8 @@ const App = () => (
             <Route path="patients" element={<PatientManagement />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="requests" element={<AdminRequests />} />
+            <Route path="statistics" element={<AdminStatistics />} />
+            <Route path="history" element={<AdminAuditLog />} />
           </Route>
 
           {/* --- דף 404 --- */}

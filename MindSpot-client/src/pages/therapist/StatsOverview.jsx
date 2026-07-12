@@ -55,10 +55,11 @@ const StatsOverview = () => {
         }
 
         if (reviewRes.ok) {
-          const reviews = await reviewRes.json();
-          if (reviews.length > 0) {
-            const avg = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length;
-            rating = avg.toFixed(1);
+          // GET /api/reviews/therapist returns { averageRating, totalReviews, reviews }
+          // — not a bare array — so this was always silently showing "—".
+          const reviewData = await reviewRes.json();
+          if (reviewData.totalReviews > 0) {
+            rating = reviewData.averageRating.toFixed(1);
           }
         }
 

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Bot, Loader2, ArrowLeft, Users, CalendarDays, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Star, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item      = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
@@ -39,9 +40,20 @@ function formatTime(iso) {
   return new Date(iso).toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" });
 }
 
+// Chat only opens in a window around the scheduled session — mirrors the
+// server-side check in ChatHub.JoinRoom (15 min before → duration + 15 min after).
+function chatWindow(apt) {
+  const start = new Date(apt.appointmentAt);
+  const windowStart = new Date(start.getTime() - 15 * 60000);
+  const windowEnd   = new Date(start.getTime() + (apt.durationMinutes + 15) * 60000);
+  const now = new Date();
+  return { isOpen: now >= windowStart && now <= windowEnd, isPast: now > windowEnd, windowStart };
+}
+
 const SessionHistory = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab,    setActiveTab]    = useState("ai");
   const [aiSessions,   setAiSessions]   = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -99,6 +111,11 @@ const SessionHistory = () => {
       setAppointments(prev =>
         prev.map(a => a.id === cancelTarget.id ? { ...a, status: "CancelledByPatient" } : a)
       );
+      toast({
+        title: data.isLate ? t("history.lateCancelTitle", "Late cancellation") : t("history.cancelledTitle", "Session cancelled"),
+        description: data.refundPolicy,
+        variant: data.isLate ? "destructive" : "default",
+      });
       setCancelTarget(null);
       setCancelReason("");
     } catch (e) {
@@ -322,15 +339,32 @@ const SessionHistory = () => {
                         }
                       </span>
 
-                      {a.status === "Confirmed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-xl gap-1.5 h-7 text-[11px] px-2.5"
-                          onClick={() => navigate(`/patient-dashboard/chat-room/${a.id}`)}
-                        >
-                          <MessageCircle size={12} /> {t("history.chat", "Chat")}
-                        </Button>
+                      {a.status === "Confirmed" && (() => {
+                        const { isOpen, isPast, windowStart } = chatWindow(a);
+                        if (isPast) return null;
+                        if (!isOpen) {
+                          return (
+                            <span className="text-[10px] text-muted-foreground text-right">
+                              {t("history.chatOpensAt", "Chat opens at")}{" "}
+                              {windowStart.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          );
+                        }
+                        return (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl gap-1.5 h-7 text-[11px] px-2.5"
+                            onClick={() => navigate(`/patient-dashboard/chat-room/${a.id.includes("/") ? a.id.split("/")[1] : a.id}`)}
+                          >
+                            <MessageCircle size={12} /> {t("history.chat", "Chat")}
+                          </Button>
+                        );
+                      })()}
+                      {a.status === "Pending" && a.paymentStatus === "Succeeded" && (
+                        <span className="text-[10px] text-muted-foreground text-right">
+                          {t("history.awaitingApproval", "Waiting for therapist approval")}
+                        </span>
                       )}
 
                       {a.status === "Completed" && !a.rated && (

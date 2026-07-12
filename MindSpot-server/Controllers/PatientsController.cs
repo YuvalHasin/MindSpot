@@ -1,4 +1,4 @@
-﻿using BCrypt.Net; 
+using BCrypt.Net; 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
@@ -91,7 +91,7 @@ public class PatientsController : ControllerBase
     }
 
     [HttpPut("change-password")]
-    public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
+    public IActionResult ChangePatientPassword([FromBody] ChangePasswordRequest request)
     {
         using (var session = _store.OpenSession())
         {
@@ -132,11 +132,24 @@ public class PatientsController : ControllerBase
 
                 foreach (var s in history)
                 {
-                    Therapist recommendedTherapist = null;
-                    if (!string.IsNullOrEmpty(s.RecommendedTherapistId))
+                    // Prefer the therapist the patient actually booked with over the
+                    // algorithm's top pick — they may not be the same one.
+                    var wasChosen   = !string.IsNullOrEmpty(s.ChosenTherapistId);
+                    var therapistId = wasChosen ? s.ChosenTherapistId : s.RecommendedTherapistId;
+
+                    Therapist therapist = null;
+                    if (!string.IsNullOrEmpty(therapistId))
                     {
-                        recommendedTherapist = await session.LoadAsync<Therapist>(s.RecommendedTherapistId);
+                        therapist = await session.LoadAsync<Therapist>(therapistId);
                     }
+
+                    string detail;
+                    if (therapist != null && wasChosen)
+                        detail = $"Booked with: {therapist.FullName} ({therapist.Specialties})";
+                    else if (therapist != null)
+                        detail = $"Recommended: {therapist.FullName} ({therapist.Specialties})";
+                    else
+                        detail = "Analysis complete - No specific match";
 
                     result.Add(new
                     {
@@ -144,10 +157,8 @@ public class PatientsController : ControllerBase
                         date = s.CreatedAt.ToString("MMM dd, yyyy"),
                         type = "AI Session",
                         summary = s.Summary,
-                        detail = recommendedTherapist != null
-                                 ? $"Recommended: {recommendedTherapist.FullName} ({recommendedTherapist.Specialties})"
-                                 : "Analysis complete - No specific match",
-                        therapistId = s.RecommendedTherapistId
+                        detail = detail,
+                        therapistId = therapistId
                     });
                 }
 

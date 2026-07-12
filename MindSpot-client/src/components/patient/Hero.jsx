@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
-import { Zap, Shield } from "lucide-react";
+import { Zap, Shield, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import heroBg from "../../assets/hero-bg.jpg";
@@ -8,6 +9,14 @@ import heroBg from "../../assets/hero-bg.jpg";
 const Hero = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetch("https://localhost:7160/api/public-stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setStats(data))
+      .catch(() => {});
+  }, []);
 
   const handleStartAction = () => {
     const userToken = sessionStorage.getItem("token");
@@ -94,14 +103,18 @@ const Hero = () => {
               <Shield size={14} className="text-primary shrink-0" />
               {t("hero.encrypted")}
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-              {t("hero.avgConnect")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sand-warm shrink-0" />
-              {t("hero.professionals")}
-            </span>
+            {stats && stats.certifiedProfessionals > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-sand-warm shrink-0" />
+                {t("hero.professionals", { count: stats.certifiedProfessionals })}
+              </span>
+            )}
+            {stats && stats.totalReviews > 0 && (
+              <span className="flex items-center gap-1.5">
+                <Star size={14} className="text-primary shrink-0 fill-primary" />
+                {t("hero.avgRating", { rating: stats.averageRating, count: stats.totalReviews })}
+              </span>
+            )}
           </motion.div>
         </div>
       </div>

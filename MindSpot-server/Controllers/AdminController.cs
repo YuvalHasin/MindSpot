@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Raven.Client.Documents;
 using MindSpot_server.Models;
 using MindSpot_server.Models.Verification;
+using MindSpot_server.Models.Billing;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -139,6 +140,56 @@ namespace server.Controllers
                 totalTherapists,
                 totalPatients,
                 pendingTherapists,
+            });
+        }
+
+        // ── GET /api/admin/statistics
+        // סטטיסטיקות מורחבות למסך הסטטיסטיקות של האדמין:
+        // גידול השבוע (מטפלים/מטופלים חדשים) + פירוט סשנים (הושלמו/קרובים/בוטלו).
+        [HttpGet("statistics")]
+        public async Task<IActionResult> GetStatistics()
+        {
+            using var session = _store.OpenAsyncSession();
+
+            var now     = DateTime.UtcNow;
+            var weekAgo = now.AddDays(-7);
+
+            var totalTherapists = await session.Query<Therapist>()
+                .CountAsync(t => t.VerificationStatus == VerificationStatus.Approved);
+            var pendingTherapists = await session.Query<Therapist>()
+                .CountAsync(t => t.VerificationStatus == VerificationStatus.Pending);
+            var newTherapistsThisWeek = await session.Query<Therapist>()
+                .CountAsync(t => t.CreatedAt >= weekAgo);
+
+            var totalPatients = await session.Query<Patient>().CountAsync();
+            var newPatientsThisWeek = await session.Query<Patient>()
+                .CountAsync(p => p.CreatedAt >= weekAgo);
+
+            var totalSessions = await session.Query<Appointment>().CountAsync();
+            var completedSessions = await session.Query<Appointment>()
+                .CountAsync(a => a.Status == AppointmentStatus.Completed);
+            var upcomingSessions = await session.Query<Appointment>()
+                .CountAsync(a => a.Status == AppointmentStatus.Confirmed && a.AppointmentAt > now);
+            var cancelledSessions = await session.Query<Appointment>()
+                .CountAsync(a =>
+                    a.Status == AppointmentStatus.CancelledByPatient ||
+                    a.Status == AppointmentStatus.CancelledByTherapist ||
+                    a.Status == AppointmentStatus.NoShow);
+            var sessionsThisWeek = await session.Query<Appointment>()
+                .CountAsync(a => a.CreatedAt >= weekAgo);
+
+            return Ok(new
+            {
+                newTherapistsThisWeek,
+                newPatientsThisWeek,
+                totalTherapists,
+                totalPatients,
+                pendingTherapists,
+                totalSessions,
+                completedSessions,
+                upcomingSessions,
+                cancelledSessions,
+                sessionsThisWeek,
             });
         }
 

@@ -16,7 +16,7 @@ const TherapistSettings = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const [profile, setProfile] = useState({
-    fullName: "", specialties: "", licenseNumber: "", bio: "", city: "",
+    fullName: "", specialties: "", licenseNumber: "", bio: "",
   });
   const [form, setForm] = useState({ ...profile });
 
@@ -38,7 +38,6 @@ const TherapistSettings = () => {
             specialties:   data.specialties   || "",
             licenseNumber: data.licenseNumber || "",
             bio:           data.bio           || "",
-            city:          data.city          || "",
           };
           setProfile(loaded);
           setForm(loaded);
@@ -70,7 +69,6 @@ const TherapistSettings = () => {
           FullName:    form.fullName,
           Bio:         form.bio,
           Specialties: form.specialties,
-          City:        form.city,
         }),
       });
       if (res.ok) {
@@ -164,7 +162,6 @@ const TherapistSettings = () => {
             { key: "fullName",    label: t("therapistSettings.fullName"),    multiline: false },
             { key: "specialties", label: t("therapistSettings.specialties"), multiline: false },
             { key: "bio",         label: t("therapistSettings.bio"),         multiline: true  },
-            { key: "city",        label: t("therapistSettings.city"),        multiline: false },
           ].map(({ key, label, multiline }) => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>

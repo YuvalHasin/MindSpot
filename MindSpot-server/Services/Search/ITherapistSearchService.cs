@@ -15,9 +15,6 @@ namespace MindSpot_server.Services.Search
         /// <summary>Optional language filter (e.g. "עברית", "English").</summary>
         public string? Language { get; set; }
 
-        /// <summary>Optional city filter.</summary>
-        public string? City { get; set; }
-
         /// <summary>Maximum number of results (default 10, max 50).</summary>
         public int Take { get; set; } = 10;
 
@@ -39,7 +36,6 @@ namespace MindSpot_server.Services.Search
         public string Bio           { get; set; } = string.Empty;
         public string Specialties   { get; set; } = string.Empty;
         public List<string> Languages { get; set; } = new();
-        public string? City         { get; set; }
         public string? AvailabilityHours { get; set; }
         public float RelevanceScore { get; set; }
     }

@@ -15,8 +15,8 @@
     "cta": "Start a Micro-Consultation",
     "learnMore": "Learn More",
     "encrypted": "End-to-end encrypted",
-    "avgConnect": "Avg. 3 min to connect",
-    "professionals": "200+ certified professionals"
+    "professionals": "{{count}} certified professionals",
+    "avgRating": "{{rating}}★ average rating ({{count}} reviews)"
   },
   "howItWorks": {
     "title": "How MindSpot Works",
@@ -98,6 +98,9 @@
     "refund": "Refund",
     "rateSession": "Rate session",
     "cancel": "Cancel",
+    "chat": "Chat",
+    "chatOpensAt": "Chat opens at",
+    "awaitingApproval": "Waiting for therapist approval",
     "cancelTitle": "Cancel Appointment",
     "cancelDescEarly": "You'll receive a full refund since you're cancelling more than 24 hours in advance.",
     "cancelDescLate": "Late cancellation — no refund will be issued per our policy.",
@@ -108,7 +111,9 @@
     "rateWith": "with",
     "rateCommentPlaceholder": "Tell us about your experience (optional)",
     "skip": "Skip",
-    "submitRating": "Submit Rating"
+    "submitRating": "Submit Rating",
+    "lateCancelTitle": "Late cancellation",
+    "cancelledTitle": "Session cancelled"
   },
   "auth": {
     "login": "Sign In",
@@ -145,7 +150,12 @@
     "sessionChat": "Session Chat",
     "connecting": "Connecting…",
     "live": "Live",
-    "typePlaceholder": "Type a message…"
+    "typePlaceholder": "Type a message…",
+    "rateTitle": "How was your session?",
+    "rateSubtitle": "Your feedback helps other patients find the right therapist.",
+    "rateCommentPlaceholder": "Optional comment…",
+    "rateSkip": "Skip",
+    "rateSubmit": "Submit"
   },
   "booking": {
     "title": "Book a Session",
@@ -275,14 +285,20 @@
     "new": "new",
     "loading": "Loading…",
     "noRequests": "No new booking requests",
-    "acceptChat": "Accept & Start Chat"
+    "acceptChat": "Accept & Start Chat",
+    "approve": "Approve",
+    "approved": "Session approved",
+    "dismiss": "Dismiss",
+    "dismissed": "Dismissed"
   },
   "recentSessions": {
     "title": "Upcoming & Recent",
     "noAppointments": "No appointments yet.",
     "showLess": "Show Less",
     "viewAll": "View All",
-    "patient": "Patient"
+    "patient": "Patient",
+    "chat": "Chat",
+    "chatOpensAt": "Chat opens at"
   },
   "therapistDashboard": {
     "newBookingRequests": "New Booking Requests",
@@ -290,12 +306,10 @@
   },
   "therapistSchedule": {
     "title": "Schedule & Availability",
-    "subtitle": "Set your available hours and practice city.",
+    "subtitle": "Set your available hours.",
     "backToDashboard": "Back to dashboard",
     "availabilityHours": "Availability Hours",
     "availabilityPlaceholder": "e.g. Sunday–Thursday 09:00–18:00\nFriday 09:00–13:00",
-    "city": "City",
-    "cityPlaceholder": "e.g. Tel Aviv",
     "saveAvailability": "Save Availability",
     "savedSuccessfully": "Saved Successfully ✓",
     "editAvailability": "Edit Availability",
@@ -333,7 +347,6 @@
     "specialties": "Specialties",
     "licenseNumber": "License Number",
     "bio": "Bio",
-    "city": "City",
     "editProfile": "Edit Profile",
     "saveChanges": "Save Changes",
     "cancel": "Cancel",
@@ -486,5 +499,43 @@
     "errorLoading": "Failed to load requests.",
     "filteringRequests": "Loading requests…",
     "reject": "Reject"
+  },
+  "adminStatistics": {
+    "title": "Platform Statistics",
+    "subtitle": "Growth and session activity across MindSpot.",
+    "loading": "Loading statistics…",
+    "thisWeek": "This Week",
+    "newTherapists": "New Therapists",
+    "newPatients": "New Patients",
+    "sessionsBooked": "Sessions Booked",
+    "platformTotals": "Platform Totals",
+    "totalTherapists": "Active Therapists",
+    "totalPatients": "Total Patients",
+    "pendingApprovals": "Pending Approvals",
+    "sessionsBreakdown": "Sessions Breakdown",
+    "totalSessions": "Total Sessions",
+    "completedSessions": "Completed",
+    "upcomingSessions": "Upcoming",
+    "cancelledSessions": "Cancelled"
+  },
+  "therapistReviews": {
+    "title": "My Reviews",
+    "noReviews": "No reviews yet."
+  },
+  "adminAuditLog": {
+    "title": "Action History",
+    "subtitle": "Immutable audit trail of sensitive actions across MindSpot.",
+    "loading": "Loading audit log…",
+    "totalEntries": "{{count}} entries",
+    "failedOperations": "Failed Operations (30d)",
+    "medicalRecordViews": "Medical Record Views (30d)",
+    "refundsIssued": "Refunds Issued (30d)",
+    "colTime": "Time",
+    "colAction": "Action",
+    "colActor": "Actor",
+    "colTarget": "Target",
+    "colStatus": "Status",
+    "empty": "No audited actions recorded yet.",
+    "loadMore": "Load more"
   }
 }

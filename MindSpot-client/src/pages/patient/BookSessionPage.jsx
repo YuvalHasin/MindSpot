@@ -26,7 +26,7 @@ import { useTranslation } from "react-i18next";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SESSION_PRICE    = 350;
+const SESSION_PRICE    = 200;
 const SESSION_CURRENCY = "ils";
 
 // ── Booking steps ─────────────────────────────────────────────────────────────
@@ -212,6 +212,7 @@ export default function BookSessionPage() {
   const navigate  = useNavigate();
 
   const therapist = location.state?.therapist ?? null;
+  const chatSessionId = location.state?.chatSessionId ?? null;
 
   const [step, setStep] = useState(STEP.SELECT);
 
@@ -251,6 +252,7 @@ export default function BookSessionPage() {
           amount:   SESSION_PRICE,
           currency: SESSION_CURRENCY,
           notes,
+          chatSessionId,
         }),
       });
 
@@ -285,10 +287,22 @@ export default function BookSessionPage() {
   }, [therapistId, selectedSlot, notes]);
 
   // ── Step 2 → 3: Payment confirmed ──────────────────────────────────────────
-  const handlePaymentSuccess = useCallback(({ paymentIntentId }) => {
+  // Stripe webhooks can't reach localhost during development, so we tell the
+  // server directly that payment succeeded. The appointment stays Pending —
+  // the therapist still has to approve the request before it's Confirmed.
+  const handlePaymentSuccess = useCallback(async ({ paymentIntentId }) => {
     console.log("Payment succeeded:", paymentIntentId);
+    try {
+      await fetch("https://localhost:7160/api/billing/confirm-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify({ appointmentId, paymentIntentId }),
+      });
+    } catch (err) {
+      console.error("Failed to confirm payment with server:", err);
+    }
     setStep(STEP.SUCCESS);
-  }, []);
+  }, [appointmentId]);
 
   const handlePaymentError = useCallback(({ message }) => {
     setError(message);

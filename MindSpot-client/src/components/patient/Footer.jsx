@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -69,9 +69,10 @@ const Footer = () => {
         <div className="mt-6 flex justify-center">
           <Link
             to="/admin-login"
-            className="text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors duration-300 select-none"
+            aria-label="Admin"
+            className="text-muted-foreground/25 hover:text-muted-foreground/60 transition-colors duration-300 select-none"
           >
-            ·
+            <Lock size={12} strokeWidth={2} />
           </Link>
         </div>
       </div>

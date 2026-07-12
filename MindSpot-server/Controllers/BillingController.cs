@@ -78,6 +78,21 @@ namespace MindSpot_server.Controllers
 
             using var session = _store.OpenAsyncSession();
             await session.StoreAsync(appointment, ct);
+
+            // If this booking came from the AI triage/matching flow, record which
+            // therapist the patient actually chose out of the candidates shown —
+            // this may differ from the algorithm's top pick (ChatSession.RecommendedTherapistId).
+            if (!string.IsNullOrWhiteSpace(request.ChatSessionId))
+            {
+                var chatSessionFullId = request.ChatSessionId.Contains("/")
+                    ? request.ChatSessionId
+                    : $"ChatSessions/{request.ChatSessionId}";
+
+                var chatSession = await session.LoadAsync<ChatSession>(chatSessionFullId, ct);
+                if (chatSession is not null)
+                    chatSession.ChosenTherapistId = request.TherapistId;
+            }
+
             await session.SaveChangesAsync(ct);
 
             return Ok(new { appointmentId = appointment.Id });
@@ -116,6 +131,93 @@ namespace MindSpot_server.Controllers
             await session.SaveChangesAsync(ct);
 
             return Ok(intentResponse);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/billing/confirm-payment
+        // Called directly by the React client right after Stripe.js confirms the
+        // payment. In local/dev environments Stripe webhooks can't reach
+        // localhost, so we can't rely solely on HandlePaymentSucceededAsync.
+        //
+        // NOTE: this intentionally leaves Appointment.Status = Pending — payment
+        // succeeding does not auto-confirm the session. It notifies the
+        // therapist, who must approve the request (see /appointments/{id}/approve)
+        // before the appointment becomes Confirmed and the chat room opens up.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Authorize]
+        [HttpPost("confirm-payment")]
+        public async Task<IActionResult> ConfirmPayment(
+            [FromBody] ConfirmPaymentRequest request,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(request.AppointmentId))
+                return BadRequest(new { error = "appointmentId is required." });
+
+            using var session = _store.OpenAsyncSession();
+            var appointment   = await session.LoadAsync<Appointment>(request.AppointmentId, ct);
+
+            if (appointment is null)
+                return NotFound(new { error = "Appointment not found." });
+
+            // Idempotent: if we already processed this (e.g. webhook got there first), just return OK
+            if (appointment.Payment.Status != PaymentStatus.Succeeded)
+            {
+                appointment.Payment.Status              = PaymentStatus.Succeeded;
+                appointment.Payment.PaidAt               = DateTime.UtcNow;
+                appointment.Payment.StripePaymentIntentId = request.PaymentIntentId;
+                appointment.UpdatedAt                    = DateTime.UtcNow;
+
+                var patient = await session.LoadAsync<Patient>(appointment.PatientId, ct);
+
+                var notification = new Notification
+                {
+                    TherapistId   = appointment.TherapistId,
+                    PatientId     = appointment.PatientId,
+                    AppointmentId = appointment.Id,
+                    PatientName   = patient?.FullName ?? "Patient",
+                    Message       = $"{patient?.FullName ?? "A patient"} paid for a session and is waiting for your approval.",
+                    CreatedAt     = DateTime.UtcNow,
+                    IsRead        = false
+                };
+                await session.StoreAsync(notification, ct);
+
+                await session.SaveChangesAsync(ct);
+            }
+
+            return Ok(new { message = "Payment confirmed. Waiting for therapist approval." });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PUT /api/billing/appointments/{id}/approve
+        // Therapist approves a paid booking request — flips Pending → Confirmed.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Authorize]
+        [HttpPut("appointments/{id}/approve")]
+        public async Task<IActionResult> ApproveAppointment(
+            string id,
+            CancellationToken ct)
+        {
+            using var session = _store.OpenAsyncSession();
+
+            var fullId = id.Contains("/") ? id : $"Appointments/{id}";
+            var appointment = await session.LoadAsync<Appointment>(fullId, ct);
+
+            if (appointment is null)
+                return NotFound(new { error = "Appointment not found." });
+
+            if (appointment.Payment.Status != PaymentStatus.Succeeded)
+                return Conflict(new { error = "Cannot approve an appointment that hasn't been paid yet." });
+
+            if (appointment.Status != AppointmentStatus.Pending)
+                return Ok(new { message = $"Appointment already '{appointment.Status}'." });
+
+            appointment.Status    = AppointmentStatus.Confirmed;
+            appointment.UpdatedAt = DateTime.UtcNow;
+            await session.SaveChangesAsync(ct);
+
+            return Ok(new { message = "Appointment approved and confirmed." });
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -191,6 +293,10 @@ namespace MindSpot_server.Controllers
                 return Conflict(new { error = $"Cannot cancel an appointment with status '{appointment.Status}'." });
             }
 
+            // Calculate the refund policy BEFORE mutating the appointment
+            var timeUntilAppt = appointment.AppointmentAt - DateTime.UtcNow;
+            bool isEarly      = timeUntilAppt.TotalHours > 24;
+
             var callerRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
             appointment.Status             = callerRole == "Therapist"
                 ? AppointmentStatus.CancelledByTherapist
@@ -203,15 +309,32 @@ namespace MindSpot_server.Controllers
             if (appointment.Payment.Status == PaymentStatus.Succeeded)
                 appointment.Payment.Status = PaymentStatus.RefundPending;
 
-            await session.SaveChangesAsync(ct);
+            // Late cancellation (<24h) by the patient — alert the therapist so
+            // they see the freed-up slot / lost session right away.
+            if (!isEarly && callerRole != "Therapist")
+            {
+                var patient = await session.LoadAsync<Patient>(appointment.PatientId, ct);
+                var notification = new Notification
+                {
+                    TherapistId   = appointment.TherapistId,
+                    PatientId     = appointment.PatientId,
+                    AppointmentId = appointment.Id,
+                    PatientName   = patient?.FullName ?? "A patient",
+                    Message       = $"{patient?.FullName ?? "A patient"} cancelled their session on " +
+                                     $"{appointment.AppointmentAt:MMM d, HH:mm} with less than 24 hours' notice.",
+                    CreatedAt     = DateTime.UtcNow,
+                    IsRead        = false,
+                    Type          = "LateCancellation"
+                };
+                await session.StoreAsync(notification, ct);
+            }
 
-            // Calculate and communicate the expected refund policy to the client
-            var timeUntilAppt = appointment.AppointmentAt - DateTime.UtcNow;
-            bool isEarly      = timeUntilAppt.TotalHours > 24;
+            await session.SaveChangesAsync(ct);
 
             return Ok(new
             {
                 message = "Appointment cancelled successfully. Refund will be processed shortly.",
+                isLate = !isEarly,
                 refundPolicy = isEarly
                     ? "Full refund will be issued within 5–10 business days."
                     : "Late cancellation: no refund. Cancellation fee will be charged."
@@ -240,9 +363,22 @@ namespace MindSpot_server.Controllers
                 .Take(50)
                 .ToListAsync(ct);
 
+            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
+            // the therapist their share — doing it here too would let the status flip
+            // without ever triggering the payout.
+
             // Load therapist names in one batch
             var therapistIds = appointments.Select(a => a.TherapistId).Distinct().ToList();
             var therapists   = await session.LoadAsync<MindSpot_server.Models.Therapist>(therapistIds, ct);
+
+            // Which of this patient's appointments already have a review?
+            var ratedAppointmentIds = new HashSet<string>(
+                await session.Query<MindSpot_server.Models.Review>()
+                    .Where(r => r.PatientId == patientId)
+                    .Select(r => r.AppointmentId)
+                    .ToListAsync(ct));
+
+            await session.SaveChangesAsync(ct);
 
             var result = appointments.Select(a =>
             {
@@ -259,7 +395,8 @@ namespace MindSpot_server.Controllers
                     currency        = a.Currency,
                     paymentStatus   = a.Payment.Status.ToString(),
                     notes           = a.Notes,
-                    cancelledAt     = a.CancelledAt
+                    cancelledAt     = a.CancelledAt,
+                    rated           = ratedAppointmentIds.Contains(a.Id)
                 };
             });
 
@@ -290,9 +427,15 @@ namespace MindSpot_server.Controllers
                 .Take(50)
                 .ToListAsync(ct);
 
+            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
+            // the therapist their share — doing it here too would let the status flip
+            // without ever triggering the payout.
+
             // Load patient names in one batch
             var patientIds = appointments.Select(a => a.PatientId).Distinct().ToList();
             var patients   = await session.LoadAsync<Patient>(patientIds, ct);
+
+            await session.SaveChangesAsync(ct);
 
             var result = appointments.Select(a =>
             {
@@ -317,41 +460,9 @@ namespace MindSpot_server.Controllers
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // PUT /api/billing/appointments/{id}/complete
-        // Therapist marks a session as completed — enables patient review flow.
-        // ─────────────────────────────────────────────────────────────────────
-
-        [Authorize]
-        [HttpPut("appointments/{id}/complete")]
-        public async Task<IActionResult> CompleteAppointment(
-            string id,
-            CancellationToken ct)
-        {
-            using var session = _store.OpenAsyncSession();
-
-            // URL routing strips slashes — id arrives as "1-A", rebuild full RavenDB ID
-            var fullId = id.Contains("/") ? id : $"Appointments/{id}";
-            var appointment = await session.LoadAsync<Appointment>(fullId, ct);
-
-            if (appointment is null)
-                return NotFound(new { error = "Appointment not found." });
-
-            if (appointment.Status == AppointmentStatus.Completed)
-                return Ok(new { message = "Already completed." });
-
-            if (appointment.Status is AppointmentStatus.CancelledByPatient or
-                AppointmentStatus.CancelledByTherapist)
-                return Conflict(new { error = "Cannot complete a cancelled appointment." });
-
-            appointment.Status    = AppointmentStatus.Completed;
-            appointment.UpdatedAt = DateTime.UtcNow;
-            await session.SaveChangesAsync(ct);
-
-            return Ok(new { message = "Session marked as completed." });
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
         // GET /api/billing/appointment?appointmentId=Appointments/1-A
+        // Ratings live in the separate Reviews collection (see ReviewsController /
+        // api/reviews) — this endpoint just tells the client whether one exists yet.
         // ─────────────────────────────────────────────────────────────────────
 
         [Authorize]
@@ -360,9 +471,17 @@ namespace MindSpot_server.Controllers
             [FromQuery] string appointmentId,
             CancellationToken ct)
         {
+            var fullId = appointmentId.Contains("/") ? appointmentId : $"Appointments/{appointmentId}";
             using var session = _store.OpenAsyncSession();
-            var a             = await session.LoadAsync<Appointment>(appointmentId, ct);
+            var a             = await session.LoadAsync<Appointment>(fullId, ct);
             if (a is null) return NotFound();
+
+            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
+            // the therapist their share — doing it here too would let the status flip
+            // without ever triggering the payout.
+
+            var alreadyRated = await session.Query<MindSpot_server.Models.Review>()
+                .AnyAsync(r => r.AppointmentId == a.Id && r.PatientId == a.PatientId, ct);
 
             return Ok(new AppointmentDto
             {
@@ -374,6 +493,7 @@ namespace MindSpot_server.Controllers
                 Amount          = a.Amount,
                 Currency        = a.Currency,
                 PaymentStatus   = a.Payment.Status,
+                Rated           = alreadyRated,
                 RefundAmount    = a.Payment.RefundAmount,
                 CancelledAt     = a.CancelledAt
             });

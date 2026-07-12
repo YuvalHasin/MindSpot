@@ -9,7 +9,10 @@ namespace MindSpot_server.Services.Verification
     ///   1. Store verification images as RavenDB Attachments.
     ///   2. AI face comparison + OCR (Claude 3.5 Sonnet).
     ///   3. Government registry scraping (Python + Selenium).
-    ///   4. Update the therapist document status to Approved or Verification_Failed.
+    ///   4. Update the therapist document status:
+    ///        - All checks passed  -> Approved (immediate, automatic).
+    ///        - Any check failed   -> Pending (deferred to an admin's manual decision;
+    ///          see AdminController.ApproveTherapist / RejectTherapist).
     /// </summary>
     public class TherapistVerificationManager : ITherapistVerificationManager
     {
@@ -204,18 +207,26 @@ namespace MindSpot_server.Services.Verification
             }
         }
 
-        /// <summary>Sets the result to Verification_Failed, persists the status, and returns.</summary>
+        /// <summary>
+        /// Marks one of the automated checks as failed. This does NOT auto-reject the
+        /// therapist — it hands the decision to an admin by leaving the status at Pending
+        /// (with the failure reason attached), so the therapist shows up in the admin's
+        /// pending-approval queue instead of being silently blocked. Verification_Failed
+        /// is reserved for an admin's explicit manual rejection (see AdminController.RejectTherapist).
+        /// </summary>
         private async Task<TherapistVerificationResult> FailAsync(
             string therapistId,
             TherapistVerificationResult result,
             string reason,
             CancellationToken cancellationToken)
         {
-            _logger.LogWarning("Verification failed for therapist {Id}: {Reason}", therapistId, reason);
-            result.Status        = VerificationStatus.Verification_Failed;
+            _logger.LogWarning(
+                "Automated verification failed for therapist {Id}, deferring to admin review: {Reason}",
+                therapistId, reason);
+            result.Status        = VerificationStatus.Pending;
             result.IsVerified    = false;
             result.FailureReason = reason;
-            await UpdateTherapistStatusAsync(therapistId, VerificationStatus.Verification_Failed, reason, cancellationToken);
+            await UpdateTherapistStatusAsync(therapistId, VerificationStatus.Pending, reason, cancellationToken);
             return result;
         }
 

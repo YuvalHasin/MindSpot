@@ -4,18 +4,23 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
+  UserPlus,
   BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
   LogOut,
+  History,
 } from "lucide-react";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, path: "/admin" },
+  { label: "Requests", icon: UserPlus, path: "/admin/requests" },
+  { label: "Statistics", icon: BarChart3, path: "/admin/statistics" },
   { label: "Therapists", icon: Users, path: "/admin/therapists" },
   { label: "Patients", icon: UserCheck, path: "/admin/patients" },
+  { label: "History", icon: History, path: "/admin/history" },
   { label: "Settings", icon: Settings, path: "/admin/settings" },
 ];
 

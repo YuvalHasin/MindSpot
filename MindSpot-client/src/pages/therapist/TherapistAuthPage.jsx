@@ -181,12 +181,15 @@ const TherapistAuthPage = () => {
 
       const data = await resp.json().catch(() => ({}));
 
-      if (resp.ok && data.isVerified) {
-        // הרישיון אומת בהצלחה — ממשיכים לשלב ההמתנה
+      if (resp.ok) {
+        // Both outcomes land on the waiting screen:
+        //   isVerified === true  -> every automated check passed, therapist is already Approved.
+        //   isVerified === false -> one check failed, the application now waits for an
+        //                           admin's manual decision instead of being auto-rejected.
         setRegStep(STEP.PENDING);
       } else {
-        // הרישיון לא אומת — מציגים שגיאה ונשארים בשלב 2
-        const reason = data.failureReason || "License verification failed. Please check your details.";
+        // Genuine failure (bad upload, server error) — stay on step 2 so the therapist can retry.
+        const reason = data.failureReason || "Upload failed. Please check your files and try again.";
         setError(reason);
       }
     } catch {

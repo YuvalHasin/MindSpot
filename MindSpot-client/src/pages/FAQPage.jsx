@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/patient/Navbar";
+import Footer from "@/components/patient/Footer";
 
 const faqs = [
   {
@@ -32,7 +32,7 @@ const faqs = [
 ];
 
 const FAQPage = () => {
-  const [open, setOpen] = useState<number | null>(0);
+  const [open, setOpen] = useState(0);
 
   return (
     <div className="min-h-screen bg-background">

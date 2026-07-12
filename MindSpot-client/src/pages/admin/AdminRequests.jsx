@@ -116,6 +116,12 @@ const AdminRequests = () => {
                       <td className="px-6 py-4">
                         <div className="font-bold text-foreground">{req.fullName}</div>
                         <div className="text-xs text-primary font-medium">{req.specialties}</div>
+                        {req.verificationFailureReason && (
+                          <div className="flex items-start gap-1 mt-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-1 max-w-[220px]">
+                            <ShieldAlert size={11} className="shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{req.verificationFailureReason}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* עמודה 2: רשיון (בנפרד) */}

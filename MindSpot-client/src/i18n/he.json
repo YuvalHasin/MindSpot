@@ -15,8 +15,8 @@
     "cta": "התחל ייעוץ מיקרו",
     "learnMore": "למד עוד",
     "encrypted": "מוצפן מקצה לקצה",
-    "avgConnect": "ממוצע 3 דקות להתחברות",
-    "professionals": "200+ מטפלים מוסמכים"
+    "professionals": "{{count}} מטפלים מוסמכים",
+    "avgRating": "{{rating}}★ דירוג ממוצע ({{count}} ביקורות)"
   },
   "howItWorks": {
     "title": "איך MindSpot עובד",
@@ -99,6 +99,8 @@
     "rateSession": "דרג פגישה",
     "cancel": "ביטול",
     "chat": "צ'אט",
+    "chatOpensAt": "הצ׳אט ייפתח בשעה",
+    "awaitingApproval": "ממתין לאישור המטפל",
     "cancelTitle": "ביטול פגישה",
     "cancelDescEarly": "תקבל החזר מלא כיוון שאתה מבטל יותר מ-24 שעות מראש.",
     "cancelDescLate": "ביטול מאוחר — לא יינתן החזר בהתאם למדיניות.",
@@ -109,7 +111,9 @@
     "rateWith": "עם",
     "rateCommentPlaceholder": "ספר לנו על החוויה שלך (אופציונלי)",
     "skip": "דלג",
-    "submitRating": "שלח דירוג"
+    "submitRating": "שלח דירוג",
+    "lateCancelTitle": "ביטול מאוחר",
+    "cancelledTitle": "הפגישה בוטלה"
   },
   "auth": {
     "login": "כניסה",
@@ -146,7 +150,12 @@
     "sessionChat": "צ'אט פגישה",
     "connecting": "מתחבר…",
     "live": "חי",
-    "typePlaceholder": "כתוב הודעה…"
+    "typePlaceholder": "כתוב הודעה…",
+    "rateTitle": "איך הייתה הפגישה שלך?",
+    "rateSubtitle": "המשוב שלך עוזר למטופלים אחרים למצוא את המטפל המתאים.",
+    "rateCommentPlaceholder": "הערה (לא חובה)…",
+    "rateSkip": "דלג",
+    "rateSubmit": "שלח"
   },
   "booking": {
     "title": "קביעת פגישה",
@@ -276,7 +285,11 @@
     "new": "חדש",
     "loading": "טוען…",
     "noRequests": "אין בקשות הזמנה חדשות",
-    "acceptChat": "קבל והתחל צ'אט"
+    "acceptChat": "קבל והתחל צ'אט",
+    "approve": "אשר",
+    "approved": "הסשן אושר",
+    "dismiss": "בטל התראה",
+    "dismissed": "ההתראה סומנה כנקראה"
   },
   "recentSessions": {
     "title": "קרובות ואחרונות",
@@ -284,7 +297,8 @@
     "showLess": "הצג פחות",
     "viewAll": "הצג הכל",
     "patient": "מטופל",
-    "chat": "צ'אט"
+    "chat": "צ'אט",
+    "chatOpensAt": "הצ׳אט ייפתח בשעה"
   },
   "therapistDashboard": {
     "newBookingRequests": "בקשות הזמנה חדשות",
@@ -292,12 +306,10 @@
   },
   "therapistSchedule": {
     "title": "לוח זמנים וזמינות",
-    "subtitle": "הגדר את שעות הזמינות שלך ועיר הפעילות.",
+    "subtitle": "הגדר את שעות הזמינות שלך.",
     "backToDashboard": "חזרה ללוח הבקרה",
     "availabilityHours": "שעות זמינות",
     "availabilityPlaceholder": "לדוגמה: ראשון–חמישי 09:00–18:00\nשישי 09:00–13:00",
-    "city": "עיר",
-    "cityPlaceholder": "לדוגמה: תל אביב",
     "saveAvailability": "שמור זמינות",
     "savedSuccessfully": "נשמר בהצלחה ✓",
     "editAvailability": "עריכת זמינות",
@@ -335,7 +347,6 @@
     "specialties": "התמחויות",
     "licenseNumber": "מספר רישיון",
     "bio": "ביוגרפיה",
-    "city": "עיר",
     "editProfile": "ערוך פרופיל",
     "saveChanges": "שמור שינויים",
     "cancel": "ביטול",
@@ -483,14 +494,48 @@
     "approvedTitle": "אושר!",
     "approvedDesc": "המטפל פעיל כעת.",
     "rejectedTitle": "נדחה",
-    "rejectedDesc": "הבקשה הוסרה.",
-    "actionFailed": "הפעולה נכשלה",
-    "errorLoading": "שגיאה בטעינת בקשות",
-    "filteringRequests": "מסנן בקשות ממתינות…"
     "rejectedDesc": "הבקשה נדחתה.",
     "actionFailed": "הפעולה נכשלה. נסה שוב.",
     "errorLoading": "טעינת הבקשות נכשלה.",
     "filteringRequests": "טוען בקשות…",
     "reject": "דחה"
+  },
+  "adminStatistics": {
+    "title": "סטטיסטיקות פלטפורמה",
+    "subtitle": "צמיחה ופעילות סשנים ב-MindSpot.",
+    "loading": "טוען סטטיסטיקות…",
+    "thisWeek": "השבוע",
+    "newTherapists": "מטפלים חדשים",
+    "newPatients": "מטופלים חדשים",
+    "sessionsBooked": "סשנים שנקבעו",
+    "platformTotals": "סה\"כ בפלטפורמה",
+    "totalTherapists": "מטפלים פעילים",
+    "totalPatients": "סה\"כ מטופלים",
+    "pendingApprovals": "ממתינים לאישור",
+    "sessionsBreakdown": "פירוט סשנים",
+    "totalSessions": "סה\"כ סשנים",
+    "completedSessions": "הושלמו",
+    "upcomingSessions": "קרובים",
+    "cancelledSessions": "בוטלו"
+  },
+  "therapistReviews": {
+    "title": "הביקורות שלי",
+    "noReviews": "עדיין אין ביקורות."
+  },
+  "adminAuditLog": {
+    "title": "היסטוריית פעולות",
+    "subtitle": "יומן ביקורת בלתי-ניתן-לשינוי של פעולות רגישות במערכת MindSpot.",
+    "loading": "טוען יומן פעולות…",
+    "totalEntries": "{{count}} רשומות",
+    "failedOperations": "פעולות שנכשלו (30 ימים)",
+    "medicalRecordViews": "צפיות ברשומות רפואיות (30 ימים)",
+    "refundsIssued": "החזרים שבוצעו (30 ימים)",
+    "colTime": "זמן",
+    "colAction": "פעולה",
+    "colActor": "מבצע",
+    "colTarget": "יעד",
+    "colStatus": "סטטוס",
+    "empty": "טרם נרשמו פעולות מבוקרות.",
+    "loadMore": "טען עוד"
   }
 }

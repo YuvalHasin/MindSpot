@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
-import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, Video } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -31,11 +30,14 @@ function StatusDot({ status }) {
   return <span className="text-[10px] text-muted-foreground">{status}</span>;
 }
 
-// Show "Join Session" for Confirmed appointments within ±2 hours of now
-const isJoinable = (apt) => {
-  if (apt.status !== "Confirmed") return false;
-  const diff = new Date(apt.appointmentAt) - new Date();
-  return diff < 2 * 60 * 60 * 1000 && diff > -2 * 60 * 60 * 1000;
+// Chat only opens in a window around the scheduled session — mirrors the
+// server-side check in ChatHub.JoinRoom (15 min before → duration + 15 min after).
+const chatWindow = (apt) => {
+  const start = new Date(apt.appointmentAt);
+  const windowStart = new Date(start.getTime() - 15 * 60000);
+  const windowEnd   = new Date(start.getTime() + (apt.durationMinutes + 15) * 60000);
+  const now = new Date();
+  return { isOpen: now >= windowStart && now <= windowEnd, isPast: now > windowEnd, windowStart };
 };
 
 const RecentSessions = () => {
@@ -68,12 +70,6 @@ const RecentSessions = () => {
   }, []);
 
   const displayed = showAll ? sessions : sessions.slice(0, 5);
-
-  const joinSession = (apt) => {
-    // appointmentId is like "Appointments/1-A" — encode for the URL
-    const rawId = apt.id.includes("/") ? apt.id.split("/")[1] : apt.id;
-    navigate(`/therapist/chat-room/${rawId}`);
-  };
 
   return (
     <motion.div
@@ -133,30 +129,30 @@ const RecentSessions = () => {
                 </div>
               </div>
 
-              <StatusDot status={s.status} />
-
-              {s.status === "Confirmed" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-xl gap-1.5 shrink-0 w-full sm:w-auto"
-                  onClick={() => navigate(`/therapist/chat-room/${s.id}`)}
-                >
-                  <MessageCircle size={14} /> {t("recentSessions.chat", "Chat")}
-                </Button>
-              )}
-
-              <div className="flex items-center gap-2 shrink-0">
-                {isJoinable(s) && (
+              {s.status === "Confirmed" && (() => {
+                const { isOpen, isPast, windowStart } = chatWindow(s);
+                if (isPast) return null;
+                if (!isOpen) {
+                  return (
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {t("recentSessions.chatOpensAt", "Chat opens at")}{" "}
+                      {windowStart.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  );
+                }
+                return (
                   <Button
                     size="sm"
-                    className="h-7 text-[11px] px-3 rounded-lg gap-1"
-                    onClick={() => joinSession(s)}
+                    variant="outline"
+                    className="rounded-xl gap-1.5 shrink-0 w-full sm:w-auto"
+                    onClick={() => navigate(`/therapist/chat-room/${s.id.includes("/") ? s.id.split("/")[1] : s.id}`)}
                   >
-                    <Video size={11} />
-                    Join
+                    <MessageCircle size={14} /> {t("recentSessions.chat", "Chat")}
                   </Button>
-                )}
+                );
+              })()}
+
+              <div className="flex items-center gap-2 shrink-0">
                 <StatusDot status={s.status} />
               </div>
             </div>

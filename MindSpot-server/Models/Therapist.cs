@@ -1,4 +1,4 @@
-﻿using MindSpot_server.Models.Verification;
+using MindSpot_server.Models.Verification;
 
 namespace MindSpot_server.Models
 {
@@ -14,6 +14,9 @@ namespace MindSpot_server.Models
         public string PasswordHash { get; set; }
         public string? Password { get; set; }
 
+        /// <summary>מספר טלפון — נאסף בשלב 1 של ההרשמה.</summary>
+        public string? PhoneNumber { get; set; }
+
         // --- שדות חיפוש (Module 4) ---
 
         /// <summary>שפות טיפול (למשל ["עברית", "אנגלית", "ערבית"]).</summary>
@@ -21,9 +24,6 @@ namespace MindSpot_server.Models
 
         /// <summary>שעות פעילות חופשיות (למשל "ראשון-חמישי 09:00–18:00, שישי 09:00–13:00").</summary>
         public string? AvailabilityHours { get; set; }
-
-        /// <summary>מיקום / עיר (לחיפוש גיאוגרפי עתידי).</summary>
-        public string? City { get; set; }
 
         // --- שדות אימות מטפל (Module 1) ---
 
@@ -35,6 +35,9 @@ namespace MindSpot_server.Models
 
         /// <summary>חותמת זמן של עדכון הסטטוס האחרון.</summary>
         public DateTime? VerificationUpdatedAt { get; set; }
+
+        /// <summary>תאריך הרשמה — משמש למסך הסטטיסטיקות של האדמין (מטפלים חדשים השבוע).</summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // --- שדות חיוב (Module 3) ---
 

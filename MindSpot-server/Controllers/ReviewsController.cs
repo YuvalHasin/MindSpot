@@ -31,10 +31,19 @@ namespace MindSpot_server.Controllers
 
             using var session = _store.OpenAsyncSession();
 
-            if (!string.IsNullOrWhiteSpace(request.AppointmentId))
+            // Different entry points (chat-room exit modal vs. session-history
+            // dialog) may send the appointment id with or without the RavenDB
+            // "Appointments/" collection prefix. Normalize to the full form so
+            // the dedup check and stored value always match what BillingController
+            // compares against (which uses the canonical Appointment.Id).
+            string? normalizedAppointmentId = string.IsNullOrWhiteSpace(request.AppointmentId)
+                ? request.AppointmentId
+                : (request.AppointmentId.Contains("/") ? request.AppointmentId : $"Appointments/{request.AppointmentId}");
+
+            if (!string.IsNullOrWhiteSpace(normalizedAppointmentId))
             {
                 var existing = await session.Query<Review>()
-                    .Where(r => r.AppointmentId == request.AppointmentId && r.PatientId == request.PatientId)
+                    .Where(r => r.AppointmentId == normalizedAppointmentId && r.PatientId == request.PatientId)
                     .FirstOrDefaultAsync();
 
                 if (existing != null)
@@ -44,7 +53,7 @@ namespace MindSpot_server.Controllers
             var review = new Review
             {
                 Id            = "Reviews/",
-                AppointmentId = request.AppointmentId,
+                AppointmentId = normalizedAppointmentId,
                 TherapistId   = request.TherapistId,
                 PatientId     = request.PatientId,
                 Rating        = request.Rating,

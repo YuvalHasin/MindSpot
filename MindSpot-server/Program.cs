@@ -11,6 +11,7 @@ using MindSpot_server.Services.Verification;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 using DotNetEnv;
 
 DotNetEnv.Env.Load();
@@ -63,6 +64,8 @@ builder.Services.AddScoped<IPatientPrivacyService, PatientPrivacyService>();
 // --- Module 3: Billing, Stripe & Cancellation Policy ---
 builder.Services.AddSingleton<IStripeService, StripeService>();
 builder.Services.AddHostedService<AppointmentCancellationJob>();
+builder.Services.AddHostedService<SessionReminderJob>();
+builder.Services.AddHostedService<SessionPayoutJob>();
 // -------------------------------------------------------
 
 // --- Email Notifications (SendGrid) ---
@@ -81,7 +84,12 @@ builder.Services.AddScoped<AuditActionFilter>();
 // Presentation Layer
 // AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
 builder.Services.AddControllers(opts =>
-  opts.Filters.AddService<AuditActionFilter>()); // Module 4: global audit filter (DI-aware)
+  opts.Filters.AddService<AuditActionFilter>()) // Module 4: global audit filter (DI-aware)
+  .AddJsonOptions(opts =>
+      // Without this, enums (VerificationStatus, AppointmentStatus, PaymentStatus...)
+      // serialize as raw numbers (0,1,2...) instead of names, silently breaking
+      // every client-side string comparison like `status === "Confirmed"`.
+      opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSignalR();                   // Real-time chat
 builder.Services.AddEndpointsApiExplorer();
 

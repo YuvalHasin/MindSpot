@@ -2,16 +2,17 @@ import { motion } from "framer-motion";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import Navbar from "@/components/patient/Navbar";
+import Footer from "@/components/patient/Footer";
 
 const ContactPage = () => {
+  const { toast } = useToast();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    toast.success("Message sent! We'll get back to you within 24 hours.");
+    toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
     setForm({ name: "", email: "", message: "" });
   };
 

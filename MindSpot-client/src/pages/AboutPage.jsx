@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Heart, Sparkles, Users, ShieldCheck } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/patient/Navbar";
+import Footer from "@/components/patient/Footer";
 
 const values = [
   {

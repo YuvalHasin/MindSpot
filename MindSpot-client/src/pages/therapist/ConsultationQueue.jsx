@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Clock, AlertTriangle, User, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { CheckCircle2, Clock, AlertTriangle, User, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
 
 const API = "https://localhost:7160";
 
@@ -16,13 +16,16 @@ const urgencyStyles = {
 
 // ממיר notification מהשרת לפורמט תצוגה
 function notifToItem(n) {
+  const type = n.type || "BookingRequest";
   return {
-    id:       n.id,
-    name:     n.patientName || "Anonymous Patient",
-    preview:  n.message     || "",
-    urgency:  "moderate",          // ניתן להרחיב כשיתווסף urgency לנוטיפיקציה
-    waitTime: formatAge(n.createdAt),
-    patientId: n.patientId || null,
+    id:            n.id,
+    name:          n.patientName || "Anonymous Patient",
+    preview:       n.message     || "",
+    urgency:       type === "LateCancellation" ? "high" : "moderate",
+    type,
+    waitTime:      formatAge(n.createdAt),
+    patientId:     n.patientId || null,
+    appointmentId: n.appointmentId || null,
   };
 }
 
@@ -36,7 +39,7 @@ function formatAge(iso) {
 
 const ConsultationQueue = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const { toast } = useToast();
   const [queue,      setQueue]      = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading,    setLoading]    = useState(true);
@@ -69,8 +72,7 @@ const ConsultationQueue = () => {
   }, []);
 
   const handleAccept = async (item) => {
-    const token       = sessionStorage.getItem("token");
-    const therapistId = sessionStorage.getItem("therapistId");
+    const token = sessionStorage.getItem("token");
 
     // Mark notification as read
     try {
@@ -80,31 +82,32 @@ const ConsultationQueue = () => {
       });
     } catch (_) {}
 
-    // Try to find a confirmed or pending appointment with this patient so we can open the chat directly
-    if (item.patientId && therapistId) {
+    setQueue((prev) => prev.filter((q) => q.id !== item.id));
+
+    // Informational alerts (e.g. a late cancellation) have nothing to approve —
+    // marking them read above is the whole action.
+    if (item.type === "LateCancellation") {
+      toast({ title: t("consultationQueue.dismissed", "Dismissed") });
+      return;
+    }
+
+    // Paid booking request — approve it (Pending → Confirmed). The patient will
+    // now see the session as confirmed; the chat itself only opens once the
+    // scheduled time arrives (see chatWindow in RecentSessions.jsx / ChatHub.JoinRoom).
+    if (item.appointmentId) {
+      const rawId = item.appointmentId.includes("/")
+        ? item.appointmentId.split("/")[1]
+        : item.appointmentId;
       try {
-        const cleanId = therapistId.includes("/") ? therapistId.split("/")[1] : therapistId;
-        const res = await fetch(`${API}/api/billing/appointments/therapist?therapistId=${cleanId}`, {
+        const res = await fetch(`${API}/api/billing/appointments/${rawId}/approve`, {
+          method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
-          const apts = await res.json();
-          const match = apts.find(
-            (a) =>
-              a.patientId === item.patientId &&
-              (a.status === "Confirmed" || a.status === "Pending")
-          );
-          if (match) {
-            const rawId = match.id.includes("/") ? match.id.split("/")[1] : match.id;
-            navigate(`/therapist/chat-room/${rawId}`);
-            return;
-          }
+          toast({ title: t("consultationQueue.approved", "Session approved") });
         }
       } catch (_) {}
     }
-
-    // Fall back to consultations list if no specific appointment found
-    navigate("/therapist/consultations");
   };
 
   return (
@@ -172,10 +175,19 @@ const ConsultationQueue = () => {
                 >
                   <Button
                     size="sm"
+                    variant={item.type === "LateCancellation" ? "outline" : "default"}
                     className="w-full rounded-xl gap-2"
                     onClick={(e) => { e.stopPropagation(); handleAccept(item); }}
                   >
-                    <MessageCircle size={14} /> {t("consultationQueue.acceptChat")}
+                    {item.type === "LateCancellation" ? (
+                      <>
+                        <AlertTriangle size={14} /> {t("consultationQueue.dismiss", "Dismiss")}
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={14} /> {t("consultationQueue.approve", "Approve")}
+                      </>
+                    )}
                   </Button>
                 </motion.div>
               )}

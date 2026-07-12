@@ -43,9 +43,6 @@ namespace MindSpot_server.Indexes
             /// <summary>Boosted separately for language preference queries.</summary>
             public string Languages     { get; set; } = string.Empty;
 
-            /// <summary>City field for future geo/location filtering.</summary>
-            public string City          { get; set; } = string.Empty;
-
             /// <summary>Availability text for "evening therapist" type queries.</summary>
             public string Availability  { get; set; } = string.Empty;
         }
@@ -56,7 +53,6 @@ namespace MindSpot_server.Indexes
                 from t in therapists
                 let languages    = t.Languages != null ? string.Join(" ", t.Languages) : ""
                 let availability = t.AvailabilityHours ?? ""
-                let city         = t.City ?? ""
                 select new IndexEntry
                 {
                     // Master search field — everything in one place
@@ -64,14 +60,12 @@ namespace MindSpot_server.Indexes
                                   + t.Bio + " "
                                   + t.Specialties + " "
                                   + languages + " "
-                                  + availability + " "
-                                  + city,
+                                  + availability,
 
                     // Individual boosted fields
                     FullName     = t.FullName,
                     Specialties  = t.Specialties,
                     Languages    = languages,
-                    City         = city,
                     Availability = availability
                 };
 
@@ -93,12 +87,9 @@ namespace MindSpot_server.Indexes
             Index(x => x.Languages,    FieldIndexing.Search);
             Analyze(x => x.Languages,  "StandardAnalyzer");
 
-            // Availability and City: basic search, no extra boost
+            // Availability: basic search, no extra boost
             Index(x => x.Availability, FieldIndexing.Search);
             Analyze(x => x.Availability, "StandardAnalyzer");
-
-            Index(x => x.City,         FieldIndexing.Search);
-            Analyze(x => x.City,       "StandardAnalyzer");
 
             // ── Use Lucene engine (required for fuzzy ~ queries) ───────────────
             Configuration.Add("Indexing.Static.SearchEngineType", "Lucene");
@@ -107,7 +98,6 @@ namespace MindSpot_server.Indexes
             Store(x => x.FullName,    FieldStorage.Yes);
             Store(x => x.Specialties, FieldStorage.Yes);
             Store(x => x.Languages,   FieldStorage.Yes);
-            Store(x => x.City,        FieldStorage.Yes);
         }
     }
 }

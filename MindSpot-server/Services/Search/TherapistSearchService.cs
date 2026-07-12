@@ -19,7 +19,7 @@ namespace MindSpot_server.Services.Search
     ///   1. Split the query into tokens.
     ///   2. Each token becomes a fuzzy Lucene term (token~N).
     ///   3. Tokens are OR-combined — at least one must match for a result to appear.
-    ///   4. Optional structured filters (Language, City) are ANDed on top.
+    ///   4. Optional structured filters (Language) are ANDed on top.
     ///   5. RavenDB applies the boost weights defined in the index (FullName × 5, etc.)
     ///      and returns results ordered by Lucene score descending.
     /// </summary>
@@ -80,7 +80,6 @@ namespace MindSpot_server.Services.Search
                     Bio              = t.Bio,
                     Specialties      = t.Specialties,
                     Languages        = t.Languages ?? new List<string>(),
-                    City             = t.City,
                     AvailabilityHours = t.AvailabilityHours,
                     // RavenDB doesn't expose Lucene scores in the standard client API;
                     // placeholder 1.0 can be replaced if you use custom scoring extensions
@@ -122,9 +121,6 @@ namespace MindSpot_server.Services.Search
 
             if (!string.IsNullOrWhiteSpace(request.Language))
                 q = q.AndAlso().Search("Languages", request.Language);
-
-            if (!string.IsNullOrWhiteSpace(request.City))
-                q = q.AndAlso().Search("City", request.City);
 
             return q;
         }

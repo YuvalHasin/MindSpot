@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, CalendarDays, MapPin, Check, Pencil, X, AlertTriangle } from "lucide-react";
+import { Loader2, CalendarDays, Check, Pencil, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 
@@ -42,6 +42,44 @@ const parseGrid = (raw) => {
 
 const hasSlots = (grid) => DAYS.some((d) => grid[d.key]?.size > 0);
 
+// Group each day's selected hourly slots into contiguous [StartTime, EndTime) ranges
+// so the server can compute real bookable appointment slots from them.
+const buildWeeklySlots = (grid) => {
+  const result = [];
+  DAYS.forEach((d) => {
+    const selected = grid[d.key];
+    if (!selected || selected.size === 0) return;
+    const hours = SLOTS
+      .filter((s) => selected.has(s))
+      .map((s) => parseInt(s.split(":")[0], 10))
+      .sort((a, b) => a - b);
+
+    let rangeStart = null;
+    let prev = null;
+    hours.forEach((h) => {
+      if (rangeStart === null) {
+        rangeStart = h;
+      } else if (h !== prev + 1) {
+        result.push({
+          DayOfWeek: DAY_INDEX[d.key],
+          StartTime: `${String(rangeStart).padStart(2, "0")}:00`,
+          EndTime: `${String(prev + 1).padStart(2, "0")}:00`,
+        });
+        rangeStart = h;
+      }
+      prev = h;
+    });
+    if (rangeStart !== null) {
+      result.push({
+        DayOfWeek: DAY_INDEX[d.key],
+        StartTime: `${String(rangeStart).padStart(2, "0")}:00`,
+        EndTime: `${String(prev + 1).padStart(2, "0")}:00`,
+      });
+    }
+  });
+  return result;
+};
+
 // Derive booked (day, hour) pairs from future appointments
 const buildBookedSet = (appointments) => {
   const now = new Date();
@@ -60,7 +98,7 @@ const buildBookedSet = (appointments) => {
 };
 
 // ── View mode: read-only pretty grid ────────────────────────────────────────
-const ScheduleView = ({ grid, city, onEdit }) => {
+const ScheduleView = ({ grid, onEdit }) => {
   const { t } = useTranslation();
   const activeDays = DAYS.filter((d) => grid[d.key]?.size > 0);
 
@@ -78,11 +116,6 @@ const ScheduleView = ({ grid, city, onEdit }) => {
             <CalendarDays className="text-primary" size={22} />
             {t("therapistSchedule.title")}
           </h1>
-          {city && (
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-              <MapPin size={13} className="text-primary" /> {city}
-            </p>
-          )}
         </div>
         <Button
           variant="outline"
@@ -128,14 +161,13 @@ const ScheduleView = ({ grid, city, onEdit }) => {
 };
 
 // ── Edit mode: interactive grid ──────────────────────────────────────────────
-const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel }) => {
+const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
   const { t } = useTranslation();
   const [grid, setGrid]         = useState(() => {
     const g = emptyGrid();
     DAYS.forEach((d) => { g[d.key] = new Set(initialGrid[d.key]); });
     return g;
   });
-  const [city, setCity]         = useState(initialCity);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError]       = useState("");
   const [warn, setWarn]         = useState("");   // inline conflict warning
@@ -186,26 +218,42 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
     setError("");
     setIsSaving(true);
     try {
-      const userId = sessionStorage.getItem("userId");
+      const userId = sessionStorage.getItem("therapistId") || sessionStorage.getItem("userId");
       const token  = sessionStorage.getItem("token");
       const serialized = {};
       DAYS.forEach((d) => { serialized[d.key] = [...grid[d.key]].sort(); });
 
-      const res = await fetch("https://localhost:7160/api/Therapists/availability", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          TherapistId: userId,
-          AvailabilityHours: JSON.stringify(serialized),
-          City: city,
-        }),
-      });
+      const weeklySlots = buildWeeklySlots(grid);
 
-      if (res.ok) {
-        onSave(grid, city);
+      const [profileRes, availRes] = await Promise.all([
+        // Human-readable availability string (used by search/profile display)
+        fetch("https://localhost:7160/api/Therapists/update-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            Id: userId,
+            AvailabilityHours: JSON.stringify(serialized),
+          }),
+        }),
+        // Actual bookable weekly slots — this is what patients' booking screen reads
+        fetch("https://localhost:7160/api/Therapists/availability", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            TherapistId: userId,
+            WeeklySlots: weeklySlots,
+            SessionDurationMinutes: 50,
+            BreakBetweenMinutes: 10,
+          }),
+        }),
+      ]);
+
+      if (profileRes.ok && availRes.ok) {
+        onSave(grid);
       } else {
-        const d = await res.json().catch(() => ({}));
-        setError(d.message || "Failed to save.");
+        const failed = !profileRes.ok ? profileRes : availRes;
+        const d = await failed.json().catch(() => ({}));
+        setError(d.message || d.error || "Failed to save.");
       }
     } catch (err) {
       console.error(err);
@@ -301,22 +349,6 @@ const ScheduleEdit = ({ initialGrid, initialCity, bookedSet, onSave, onCancel })
           </table>
         </div>
 
-        <div className="mt-6 space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <MapPin size={13} className="text-primary" />
-            {t("therapistSchedule.city")}
-          </label>
-          <input
-            type="text"
-            placeholder={t("therapistSchedule.cityPlaceholder")}
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="w-full max-w-xs rounded-xl border border-border/60 bg-background px-3 py-2.5
-                       text-sm text-foreground placeholder:text-muted-foreground
-                       focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-          />
-        </div>
-
         {error && (
           <p className="mt-4 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
         )}
@@ -341,11 +373,10 @@ const TherapistSchedule = () => {
   const [loading, setLoading]     = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [grid, setGrid]           = useState(emptyGrid);
-  const [city, setCity]           = useState("");
   const [bookedSet, setBookedSet] = useState(new Set());
 
   const fetchAll = useCallback(async () => {
-    const userId = sessionStorage.getItem("userId");
+    const userId = sessionStorage.getItem("therapistId") || sessionStorage.getItem("userId");
     const token  = sessionStorage.getItem("token");
     if (!userId) { setLoading(false); return; }
 
@@ -363,7 +394,6 @@ const TherapistSchedule = () => {
 
       if (profileRes.ok) {
         const data = await profileRes.json();
-        setCity(data.city || "");
         const g = parseGrid(data.availabilityHours);
         setGrid(g);
         setIsEditing(!hasSlots(g));
@@ -382,9 +412,8 @@ const TherapistSchedule = () => {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const handleSaved = (newGrid, newCity) => {
+  const handleSaved = (newGrid) => {
     setGrid(newGrid);
-    setCity(newCity);
     setIsEditing(false);
   };
 
@@ -402,7 +431,6 @@ const TherapistSchedule = () => {
           <ScheduleEdit
             key="edit"
             initialGrid={grid}
-            initialCity={city}
             bookedSet={bookedSet}
             onSave={handleSaved}
             onCancel={() => setIsEditing(false)}
@@ -411,7 +439,6 @@ const TherapistSchedule = () => {
           <ScheduleView
             key="view"
             grid={grid}
-            city={city}
             onEdit={() => setIsEditing(true)}
           />
         )}

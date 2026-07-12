@@ -1,4 +1,4 @@
-﻿namespace MindSpot_server.Models
+namespace MindSpot_server.Models
 {
     public class RegisterTherapistRequest
     {
@@ -7,5 +7,6 @@
         public string Bio { get; set; }
         public string LicenseNumber { get; set; }
         public string Password { get; set; }
+        public string? PhoneNumber { get; set; }
     }
 }

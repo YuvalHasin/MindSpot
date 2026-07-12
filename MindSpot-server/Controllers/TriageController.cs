@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
 using MindSpot_server.Services;
@@ -72,6 +72,7 @@ namespace server.Controllers
                 return Ok(new
                 {
                     message = "Triage processed and saved to history",
+                    chatSessionId = historyRecord.Id,
                     patientSummary = summary,
                     matches = matchedTherapists,
                     riskLevel = request.AnswersText.Contains("crisis") ? "High" : "Standard"
@@ -81,24 +82,6 @@ namespace server.Controllers
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-        }
-
-        [HttpPost("book-session")]
-        public async Task<IActionResult> BookSession([FromBody] BookingRequest request)
-        {
-            using var session = _store.OpenAsyncSession();
-            var notification = new Notification
-            {
-                TherapistId = request.TherapistId,
-                PatientName = request.PatientName,
-                Message = $"New booking request from {request.PatientName}. They are interested in starting therapy with you.",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await session.StoreAsync(notification);
-            await session.SaveChangesAsync();
-
-            return Ok(new { message = "Notification sent to therapist successfully" });
         }
     }
 }

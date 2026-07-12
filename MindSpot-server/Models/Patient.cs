@@ -19,6 +19,9 @@
         public float[]? TriageEmbedding { get; set; } // הוקטור לשידוך
         public DateTime? LastTriageDate { get; set; }    // תאריך האבחון
 
+        // תאריך הרשמה — משמש למסך הסטטיסטיקות של האדמין (מטופלים חדשים השבוע)
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
         public Patient() { }
 
         public Patient(string id, string fullName, string email, string passwordHash)

@@ -5,6 +5,7 @@ import ConsultationQueue from "./ConsultationQueue";
 import ActiveSession from "./ActiveSession";
 import { useTranslation } from "react-i18next";
 import RecentSessions from "./RecentSessions";
+import TherapistReviews from "./TherapistReviews";
 
 /**
  * TherapistDashboard — default content for the /therapist index route.
@@ -65,6 +66,7 @@ const TherapistDashboard = () => {
         </div>
         <div className="lg:col-span-2 space-y-8">
           <RecentSessions />
+          <TherapistReviews />
         </div>
       </div>
     </div>

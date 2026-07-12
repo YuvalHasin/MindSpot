@@ -34,13 +34,16 @@ namespace MindSpot_server.Services.Billing
 
         /// <summary>
         /// Transfers <paramref name="amountToTransfer"/> to the therapist's Stripe Connect account.
-        /// Used for late-cancellation fees.
+        /// Used both for late-cancellation fees and for the therapist's share of a
+        /// completed session's fee — <paramref name="reason"/> tags which one, for
+        /// traceability in the Stripe dashboard.
         /// </summary>
         Task<string> TransferToTherapistAsync(
             string therapistStripeAccountId,
             long amountToTransfer,
             string currency,
             string sourceChargeId,
+            string reason = "payout",
             CancellationToken ct = default);
 
         /// <summary>

@@ -32,6 +32,18 @@ namespace MindSpot_server.Hubs
             if (appointment.PatientId != userId && appointment.TherapistId != userId)
                 return;
 
+            // Chat only opens once the therapist has approved the paid booking...
+            if (appointment.Status != AppointmentStatus.Confirmed)
+                return;
+
+            // ...and only within a window around the scheduled session time,
+            // not any time after approval.
+            var now = DateTime.UtcNow;
+            var windowStart = appointment.AppointmentAt.AddMinutes(-15);
+            var windowEnd   = appointment.AppointmentAt.AddMinutes(appointment.DurationMinutes + 15);
+            if (now < windowStart || now > windowEnd)
+                return;
+
             // Group key is always the full ID so both sides join the same room
             await Groups.AddToGroupAsync(Context.ConnectionId, fullId);
         }

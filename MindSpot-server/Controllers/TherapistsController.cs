@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
@@ -82,11 +82,13 @@ public class TherapistsController : ControllerBase
                 LicenseNumber = request.LicenseNumber,
                 Bio = request.Bio ?? "",
                 Specialties = request.Specialties ?? "",
+                PhoneNumber = request.PhoneNumber,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                EmbeddingVector = vector,
+                EmbeddingVector = vector
 
-                // DEV BYPASS: auto-approve on registration so no admin step needed for testing
-                VerificationStatus = MindSpot_server.Models.Verification.VerificationStatus.Approved
+                // VerificationStatus defaults to Pending (see Therapist model).
+                // It only becomes Approved once the therapist completes step 2
+                // (license/selfie verification) and passes every automated check.
             };
 
             using (var session = _store.OpenAsyncSession())
@@ -122,33 +124,13 @@ public class TherapistsController : ControllerBase
 
         return Ok(new
         {
-            fullName      = therapist.FullName,
-            licenseNumber = therapist.LicenseNumber,
-            specialties   = therapist.Specialties,
-            bio           = therapist.Bio,
-            city          = therapist.City
+            fullName          = therapist.FullName,
+            licenseNumber     = therapist.LicenseNumber,
+            specialties       = therapist.Specialties,
+            bio               = therapist.Bio,
+            phoneNumber       = therapist.PhoneNumber,
+            availabilityHours = therapist.AvailabilityHours
         });
-    }
-
-    [HttpPost("book-session")]
-    public async Task<IActionResult> BookSession([FromBody] BookingRequest request)
-    {
-        if (string.IsNullOrEmpty(request.TherapistId)) return BadRequest("Therapist ID is missing");
-
-        var notification = new Notification
-        {
-            TherapistId = request.TherapistId,
-            PatientName = request.PatientName,
-            Message = $"New booking request from {request.PatientName}. They've selected you as a match!",
-            CreatedAt = DateTime.UtcNow,
-            IsRead = false
-        };
-
-        using var session = _store.OpenAsyncSession();
-        await session.StoreAsync(notification);
-        await session.SaveChangesAsync();
-
-        return Ok(new { message = "Notification sent to therapist!" });
     }
 
     [HttpGet("notifications")]
@@ -181,17 +163,6 @@ public class TherapistsController : ControllerBase
         return Ok();
     }
 
-    [HttpGet("notifications/unread-count")]
-    public async Task<IActionResult> GetUnreadCount([FromQuery] string therapistId)
-    {
-        if (string.IsNullOrWhiteSpace(therapistId)) return BadRequest(new { error = "therapistId is required." });
-        string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
-        using var session = _store.OpenAsyncSession();
-        int count = await session.Query<Notification>()
-            .CountAsync(x => x.TherapistId == fullId && !x.IsRead);
-        return Ok(new { count });
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Module 4: Fuzzy full-text search (Lucene)
     // GET /api/therapists/search?query=חרדה+ערב&language=עברית&fuzzyDistance=1
@@ -202,7 +173,6 @@ public class TherapistsController : ControllerBase
     public async Task<IActionResult> Search(
         [FromQuery] string query,
         [FromQuery] string? language    = null,
-        [FromQuery] string? city        = null,
         [FromQuery] int take            = 10,
         [FromQuery] int skip            = 0,
         [FromQuery] int fuzzyDistance   = 1,
@@ -215,7 +185,6 @@ public class TherapistsController : ControllerBase
         {
             Query         = query,
             Language      = language,
-            City          = city,
             Take          = take,
             Skip          = skip,
             FuzzyDistance = fuzzyDistance
@@ -292,24 +261,30 @@ public class TherapistsController : ControllerBase
 
         var result = await _verificationManager.VerifyAndUpdateTherapistAsync(request, cancellationToken);
 
-        // ── Return appropriate HTTP status ────────────────────────────────────
+        // ── Both outcomes are valid, successful responses (HTTP 200) ───────────
+        // Passed every automated check -> Approved immediately.
+        // Failed one of the automated checks -> handed off to an admin to decide
+        // (VerificationStatus.Pending), not auto-rejected. Either way the upload
+        // itself succeeded, so this is never an error response.
         if (result.IsVerified)
         {
             return Ok(new
             {
-                status        = result.Status.ToString(),
-                isVerified    = true,
-                extractedName = result.AiResult.ExtractedFullName,
-                licenseNumber = result.AiResult.ExtractedLicenseNumber,
-                registeredName = result.LicenseResult.RegisteredName
+                status            = result.Status.ToString(),
+                isVerified        = true,
+                needsManualReview = false,
+                extractedName     = result.AiResult.ExtractedFullName,
+                licenseNumber     = result.AiResult.ExtractedLicenseNumber,
+                registeredName    = result.LicenseResult.RegisteredName
             });
         }
 
-        return UnprocessableEntity(new
+        return Ok(new
         {
-            status        = result.Status.ToString(),
-            isVerified    = false,
-            failureReason = result.FailureReason
+            status            = result.Status.ToString(),
+            isVerified        = false,
+            needsManualReview = true,
+            failureReason     = result.FailureReason
         });
     }
 
@@ -476,8 +451,8 @@ public class TherapistsController : ControllerBase
             therapist.Bio = request.Bio;
         if (request.Specialties != null)
             therapist.Specialties = request.Specialties;
-        if (request.City != null)
-            therapist.City = request.City;
+        if (request.AvailabilityHours != null)
+            therapist.AvailabilityHours = request.AvailabilityHours;
 
         await session.SaveChangesAsync();
         return Ok(new { message = "Profile updated." });

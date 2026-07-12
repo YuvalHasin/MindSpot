@@ -43,7 +43,7 @@ const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { matches, summary } = location.state || { matches: [], summary: "" };
+  const { matches, summary, chatSessionId } = location.state || { matches: [], summary: "", chatSessionId: null };
 
   const [messages, setMessages] = useState([
     {
@@ -131,7 +131,7 @@ const ChatPage = () => {
 
   const handleConnectClick = (therapist) => {
     navigate("/patient-dashboard/book-session", {
-      state: { therapist },
+      state: { therapist, chatSessionId },
     });
   };
 

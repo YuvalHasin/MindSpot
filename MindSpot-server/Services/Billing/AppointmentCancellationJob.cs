@@ -171,7 +171,8 @@ namespace MindSpot_server.Services.Billing
                             feeInSmallest,
                             appointment.Currency,
                             chargeId,
-                            ct);
+                            reason: "late_cancellation_fee",
+                            ct: ct);
 
                         appointment.Payment.StripeTransferId = transferId;
                         appointment.Payment.TransferAmount   = feeForTherapist;
