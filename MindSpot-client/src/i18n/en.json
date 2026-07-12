@@ -470,72 +470,17 @@
     "recentReviews": "Recent Reviews",
     "basedOnReviews": "Based on {{count}} review",
     "basedOnReviews_plural": "Based on {{count}} reviews",
-    "noReviewsYet": "No reviews yet"
+    "noReviewsYet":
+    "No reviews yet."
   },
-  "therapistPage": {
-    "loadingDashboard": "Loading dashboard…",
-    "errorLoading": "Error loading therapist data. Please log in again.",
-    "welcomeBack": "Welcome back,",
-    "license": "License:"
+  "stats": {
+    "inQueue":        "In Queue",
+    "activeSessions": "Active Sessions",
+    "completed":      "Completed",
+    "avgRating":      "Avg. Rating"
   },
-  "adminRequests": {
-    "title": "Join Requests",
-    "subtitle": "Review incoming practitioner applications.",
-    "pending": "Pending",
-    "pendingPlural": "s",
-    "colTherapist": "Therapist",
-    "colLicense": "License",
-    "colBio": "Bio",
-    "colContact": "Contact",
-    "colVerification": "Verification",
-    "noPending": "All caught up! No pending therapists.",
-    "noBio": "No bio provided.",
-    "approve": "Approve",
-    "approvedTitle": "Approved!",
-    "approvedDesc": "Therapist is now active.",
-    "rejectedTitle": "Rejected",
-    "rejectedDesc": "Request has been declined.",
-    "actionFailed": "Action failed. Please try again.",
-    "errorLoading": "Failed to load requests.",
-    "filteringRequests": "Loading requests…",
-    "reject": "Reject"
-  },
-  "adminStatistics": {
-    "title": "Platform Statistics",
-    "subtitle": "Growth and session activity across MindSpot.",
-    "loading": "Loading statistics…",
-    "thisWeek": "This Week",
-    "newTherapists": "New Therapists",
-    "newPatients": "New Patients",
-    "sessionsBooked": "Sessions Booked",
-    "platformTotals": "Platform Totals",
-    "totalTherapists": "Active Therapists",
-    "totalPatients": "Total Patients",
-    "pendingApprovals": "Pending Approvals",
-    "sessionsBreakdown": "Sessions Breakdown",
-    "totalSessions": "Total Sessions",
-    "completedSessions": "Completed",
-    "upcomingSessions": "Upcoming",
-    "cancelledSessions": "Cancelled"
-  },
-  "therapistReviews": {
-    "title": "My Reviews",
-    "noReviews": "No reviews yet."
-  },
-  "adminAuditLog": {
-    "title": "Action History",
-    "subtitle": "Immutable audit trail of sensitive actions across MindSpot.",
-    "loading": "Loading audit log…",
-    "totalEntries": "{{count}} entries",
-    "failedOperations": "Failed Operations (30d)",
-    "medicalRecordViews": "Medical Record Views (30d)",
-    "refundsIssued": "Refunds Issued (30d)",
-    "colTime": "Time",
-    "colAction": "Action",
-    "colActor": "Actor",
-    "colTarget": "Target",
-    "colStatus": "Status",
-    "empty": "No audited actions recorded yet.",
-    "loadMore": "Load more"
+  "therapistSidebar": {
+    "available": "Available",
+    "away":      "Away"
   }
 }

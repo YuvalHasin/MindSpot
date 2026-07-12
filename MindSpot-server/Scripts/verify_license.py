@@ -20,6 +20,7 @@ Dependencies (install once):
     pip install selenium webdriver-manager
 """
 
+import os
 import sys
 import json
 import argparse
@@ -102,7 +103,13 @@ class VerificationResult:
 
 def create_driver() -> webdriver.Chrome:
     opts = Options()
-    #opts.add_argument("--headless=new")   # הסר # כשמפעילים על שרת ללא מסך
+
+    # Run headless when CHROME_HEADLESS=1 (set automatically by Docker / the
+    # production deployment).  In local dev the env var is absent so a real
+    # browser window opens, which makes debugging easier.
+    if os.environ.get("CHROME_HEADLESS", "0") == "1":
+        opts.add_argument("--headless=new")
+
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
@@ -112,7 +119,14 @@ def create_driver() -> webdriver.Chrome:
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
     opts.add_experimental_option("useAutomationExtension", False)
 
-    if USE_DRIVER_MANAGER:
+    # CHROMEDRIVER_PATH lets Docker (or CI) point at a pre-installed system
+    # chromedriver so webdriver-manager doesn't try to download it at runtime.
+    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "")
+    if chromedriver_path:
+        logger.info("Using system ChromeDriver at %s", chromedriver_path)
+        service = Service(chromedriver_path)
+        driver  = webdriver.Chrome(service=service, options=opts)
+    elif USE_DRIVER_MANAGER:
         logger.info("Using webdriver-manager to resolve ChromeDriver")
         service = Service(ChromeDriverManager().install())
         driver  = webdriver.Chrome(service=service, options=opts)

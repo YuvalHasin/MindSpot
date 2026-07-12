@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, Loader2, ArrowLeft, ShieldCheck, Lock, KeyRound } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -10,12 +9,12 @@ const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false); // למניעת לחיצות כפולות
   const [isSuccess, setIsSuccess] = useState(false);
-  const [form, setForm] = useState({ 
-    fullName: "", 
-    email: "", 
-    currentPassword: "", 
-    newPassword: "", 
-    confirmPassword: "" 
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
   });
   const [errorField, setErrorField] = useState({ field: "", message: "" });
 
@@ -103,7 +102,7 @@ const AdminSettings = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
 
   const inputClass = (field) => `
-    w-full pl-10 pr-4 py-2.5 rounded-xl border bg-background text-sm transition-all focus:outline-none focus:ring-2 
+    w-full pl-10 pr-4 py-2.5 rounded-xl border bg-background text-sm transition-all focus:outline-none focus:ring-2
     ${errorField.field === field ? "border-destructive focus:ring-destructive/20" : "border-border/60 focus:ring-primary/30"}
   `;
 
@@ -121,7 +120,7 @@ const AdminSettings = () => {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border/60 rounded-2xl p-6 space-y-6 shadow-sm">
-        
+
         {/* Header Section */}
         <div className="flex items-center gap-4 border-b border-border/40 pb-6">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary uppercase">
@@ -163,12 +162,12 @@ const AdminSettings = () => {
               <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.currentPasswordLabel")}</label>
               <div className="relative">
                 <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input 
-                    type="password" 
+                <input
+                    type="password"
                     placeholder={t("adminSettings.currentPasswordPlaceholder")}
-                    value={form.currentPassword} 
-                    onChange={(e) => setForm({...form, currentPassword: e.target.value})} 
-                    className={inputClass("currentPassword")} 
+                    value={form.currentPassword}
+                    onChange={(e) => setForm({...form, currentPassword: e.target.value})}
+                    className={inputClass("currentPassword")}
                 />
               </div>
               {errorField.field === "currentPassword" && <p className="text-[11px] text-destructive font-medium ml-1 mt-1">{errorField.message}</p>}
@@ -183,39 +182,4 @@ const AdminSettings = () => {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.confirmPasswordLabel")}</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input type="password" placeholder={t("adminSettings.confirmPasswordPlaceholder")} value={form.confirmPassword} onChange={(e) => setForm({...form, confirmPassword: e.target.value})} className={inputClass("confirmPassword")} />
-                </div>
-                {errorField.field === "confirmPassword" && <p className="text-[11px] text-destructive font-medium ml-1 mt-1">{errorField.message}</p>}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="pt-4">
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className={`w-full rounded-xl h-11 transition-all duration-300 font-bold shadow-md ${
-              isSuccess ? "bg-green-600 hover:bg-green-700 text-white" : "hover:scale-[1.01]"
-            }`}
-          >
-            {isSaving ? (
-                <Loader2 className="animate-spin w-5 h-5 mx-auto" />
-            ) : isSuccess ? (
-                t("adminSettings.savedSuccessfully")
-            ) : (
-                t("adminSettings.saveAllChanges")
-            )}
-          </Button>
-          {errorField.field === "general" && <p className="text-center text-xs text-destructive mt-3 font-medium bg-destructive/10 py-2 rounded-lg">{errorField.message}</p>}
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-export default AdminSettings;
+                <label classNa

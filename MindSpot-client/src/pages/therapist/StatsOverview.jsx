@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock, MessageCircle, CheckCircle, TrendingUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const StatCard = ({ label, value, icon: Icon, trend, delay = 0 }) => (
   <motion.div
@@ -25,6 +26,7 @@ const StatCard = ({ label, value, icon: Icon, trend, delay = 0 }) => (
 );
 
 const StatsOverview = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ inQueue: 0, active: 0, completed: 0, rating: "—" });
 
   useEffect(() => {
@@ -73,10 +75,10 @@ const StatsOverview = () => {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard label="In Queue" value={stats.inQueue} icon={Clock} delay={0} />
-      <StatCard label="Active Sessions" value={stats.active} icon={MessageCircle} delay={0.05} />
-      <StatCard label="Completed" value={stats.completed} icon={CheckCircle} delay={0.1} />
-      <StatCard label="Avg. Rating" value={stats.rating} icon={TrendingUp} delay={0.15} />
+      <StatCard label={t("stats.inQueue",       "In Queue")}       value={stats.inQueue}    icon={Clock}        delay={0} />
+      <StatCard label={t("stats.activeSessions", "Active Sessions")} value={stats.active}     icon={MessageCircle} delay={0.05} />
+      <StatCard label={t("stats.completed",      "Completed")}      value={stats.completed}  icon={CheckCircle}  delay={0.1} />
+      <StatCard label={t("stats.avgRating",      "Avg. Rating")}    value={stats.rating}     icon={TrendingUp}   delay={0.15} />
     </div>
   );
 };

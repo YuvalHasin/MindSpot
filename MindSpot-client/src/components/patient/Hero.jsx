@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Button } from "../ui/button";
-import { Zap, Shield, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import {useEffect, useState} from "react";
+import {motion} from "framer-motion";
+import {Button} from "../ui/button";
+import {Zap, Shield} from "lucide-react";
+import {useNavigate} from "react-router-dom";
+import {useTranslation} from "react-i18next";
 import heroBg from "../../assets/hero-bg.jpg";
 
 const Hero = () => {
@@ -103,23 +103,4 @@ const Hero = () => {
               <Shield size={14} className="text-primary shrink-0" />
               {t("hero.encrypted")}
             </span>
-            {stats && stats.certifiedProfessionals > 0 && (
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sand-warm shrink-0" />
-                {t("hero.professionals", { count: stats.certifiedProfessionals })}
-              </span>
-            )}
-            {stats && stats.totalReviews > 0 && (
-              <span className="flex items-center gap-1.5">
-                <Star size={14} className="text-primary shrink-0 fill-primary" />
-                {t("hero.avgRating", { rating: stats.averageRating, count: stats.totalReviews })}
-              </span>
-            )}
-          </motion.div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-export default Hero;
+            {stats && st

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/patient/Navbar";
-import Footer from "@/components/patient/Footer";
 
 const ContactPage = () => {
   const { toast } = useToast();

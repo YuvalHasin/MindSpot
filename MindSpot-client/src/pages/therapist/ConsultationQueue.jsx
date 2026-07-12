@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, AlertTriangle, User, Loader2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useToast } from "@/hooks/use-toast";
+import {useState, useEffect} from "react";
+import {motion} from "framer-motion";
+import {User, Loader2} from "lucide-react";
+import {useTranslation} from "react-i18next";
+import {useToast} from "@/hooks/use-toast";
 
 const API = "https://localhost:7160";
 
@@ -152,51 +151,4 @@ const ConsultationQueue = () => {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                    <User size={13} className="text-muted-foreground" />
-                  </div>
-                  <span className="text-sm font-medium text-foreground">{item.name}</span>
-                </div>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock size={12} /> {item.waitTime}
-                </span>
-              </div>
-
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
-                {item.urgency}
-              </span>
-
-              <p className="text-xs text-muted-foreground truncate mt-1">{item.preview}</p>
-
-              {isSelected && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="mt-3 pt-3 border-t border-border/50"
-                >
-                  <Button
-                    size="sm"
-                    variant={item.type === "LateCancellation" ? "outline" : "default"}
-                    className="w-full rounded-xl gap-2"
-                    onClick={(e) => { e.stopPropagation(); handleAccept(item); }}
-                  >
-                    {item.type === "LateCancellation" ? (
-                      <>
-                        <AlertTriangle size={14} /> {t("consultationQueue.dismiss", "Dismiss")}
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 size={14} /> {t("consultationQueue.approve", "Approve")}
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
-};
-
-export default ConsultationQueue;
+                    <User size={1

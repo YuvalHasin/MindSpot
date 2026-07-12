@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, ArrowLeft, Loader2, User, Star } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useToast } from "../../hooks/use-toast";
-import { useTranslation } from "react-i18next";
+import {useState, useRef, useEffect} from "react";
+import {ArrowLeft, User, Star} from "lucide-react";
+import {Button} from "../../components/ui/button";
+import {Link, useLocation, useNavigate} from "react-router-dom";
+import {motion} from "framer-motion";
+import {useToast} from "../../hooks/use-toast";
+import {useTranslation} from "react-i18next";
 
 const CHAT_URL = "https://localhost:7160/api/chat/send";
 
@@ -233,16 +233,3 @@ const ChatPage = () => {
           />
           <Button
             onClick={() => send()}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-            className="rounded-2xl h-11 w-11 shrink-0"
-          >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ChatPage;

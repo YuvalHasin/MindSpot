@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import {useEffect, useState} from "react";
+import {motion} from "framer-motion";
+import {Button} from "@/components/ui/button";
+import {Loader2, CheckCircle2, AlertCircle} from "lucide-react";
+import {useNavigate} from "react-router-dom";
+import {useTranslation} from "react-i18next";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -110,57 +110,4 @@ const RecentSessions = () => {
               {/* Date badge */}
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
                 <span className="text-[13px] font-bold text-primary leading-none">
-                  {new Date(s.appointmentAt).getDate()}
-                </span>
-                <span className="text-[8px] font-semibold text-primary/70 uppercase">
-                  {new Date(s.appointmentAt).toLocaleString("en", { month: "short" })}
-                </span>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {s.patientName || t("recentSessions.patient")} · {s.durationMinutes} min
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                  <Clock size={10} />
-                  <span>{formatDate(s.appointmentAt)}</span>
-                </div>
-              </div>
-
-              {s.status === "Confirmed" && (() => {
-                const { isOpen, isPast, windowStart } = chatWindow(s);
-                if (isPast) return null;
-                if (!isOpen) {
-                  return (
-                    <span className="text-[10px] text-muted-foreground shrink-0">
-                      {t("recentSessions.chatOpensAt", "Chat opens at")}{" "}
-                      {windowStart.toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  );
-                }
-                return (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-xl gap-1.5 shrink-0 w-full sm:w-auto"
-                    onClick={() => navigate(`/therapist/chat-room/${s.id.includes("/") ? s.id.split("/")[1] : s.id}`)}
-                  >
-                    <MessageCircle size={14} /> {t("recentSessions.chat", "Chat")}
-                  </Button>
-                );
-              })()}
-
-              <div className="flex items-center gap-2 shrink-0">
-                <StatusDot status={s.status} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-export default RecentSessions;
+                  {new Date(s.app

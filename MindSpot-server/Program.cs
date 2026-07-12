@@ -167,11 +167,30 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// --- Static file serving (React SPA) ---
+// In production the exe serves the React build from wwwroot/.
+// UseDefaultFiles must come before UseStaticFiles so that a bare "/" request
+// resolves to index.html instead of 404-ing.
+app.UseDefaultFiles();   // / -> wwwroot/index.html
+app.UseStaticFiles();    // /assets/*, /*.js, etc.
+
 app.UseCors("AllowAll");
 
-app.UseHttpsRedirection();
+// HTTPS redirect only in development; the distributable exe uses plain HTTP.
+// For public deployments, put a TLS-terminating reverse proxy (nginx/Caddy)
+// in front of the exe instead.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");   // Real-time chat
+
+// SPA fallback: any route not matched by the API (e.g. /patient-dashboard/*)
+// must return index.html so React Router can handle client-side navigation.
+app.MapFallbackToFile("index.html");
+
 app.Run();

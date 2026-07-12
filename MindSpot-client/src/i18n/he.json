@@ -470,72 +470,17 @@
     "recentReviews": "ביקורות אחרונות",
     "basedOnReviews": "מבוסס על {{count}} ביקורת",
     "basedOnReviews_plural": "מבוסס על {{count}} ביקורות",
-    "noReviewsYet": "אין ביקורות עדיין"
+    "noReviewsYet":
+    "עדיין אין ביקורות."
   },
-  "therapistPage": {
-    "loadingDashboard": "טוען לוח בקרה…",
-    "errorLoading": "שגיאה בטעינת נתוני המטפל. אנא התחבר מחדש.",
-    "welcomeBack": "ברוך שובך,",
-    "license": "רישיון:"
+  "stats": {
+    "inQueue":        "ממתינים",
+    "activeSessions": "פגישות פעילות",
+    "completed":      "הושלמו",
+    "avgRating":      "דירוג ממוצע"
   },
-  "adminRequests": {
-    "title": "בקשות הצטרפות",
-    "subtitle": "סקור בקשות מטפלים נכנסות.",
-    "pending": "ממתין",
-    "pendingPlural": "ים",
-    "colTherapist": "מטפל",
-    "colLicense": "רישיון",
-    "colBio": "ביוגרפיה",
-    "colContact": "פרטי קשר",
-    "colVerification": "אימות",
-    "noPending": "הכל עדכני! אין מטפלים ממתינים.",
-    "noBio": "לא סופקה ביוגרפיה.",
-    "approve": "אשר",
-    "approvedTitle": "אושר!",
-    "approvedDesc": "המטפל פעיל כעת.",
-    "rejectedTitle": "נדחה",
-    "rejectedDesc": "הבקשה נדחתה.",
-    "actionFailed": "הפעולה נכשלה. נסה שוב.",
-    "errorLoading": "טעינת הבקשות נכשלה.",
-    "filteringRequests": "טוען בקשות…",
-    "reject": "דחה"
-  },
-  "adminStatistics": {
-    "title": "סטטיסטיקות פלטפורמה",
-    "subtitle": "צמיחה ופעילות סשנים ב-MindSpot.",
-    "loading": "טוען סטטיסטיקות…",
-    "thisWeek": "השבוע",
-    "newTherapists": "מטפלים חדשים",
-    "newPatients": "מטופלים חדשים",
-    "sessionsBooked": "סשנים שנקבעו",
-    "platformTotals": "סה\"כ בפלטפורמה",
-    "totalTherapists": "מטפלים פעילים",
-    "totalPatients": "סה\"כ מטופלים",
-    "pendingApprovals": "ממתינים לאישור",
-    "sessionsBreakdown": "פירוט סשנים",
-    "totalSessions": "סה\"כ סשנים",
-    "completedSessions": "הושלמו",
-    "upcomingSessions": "קרובים",
-    "cancelledSessions": "בוטלו"
-  },
-  "therapistReviews": {
-    "title": "הביקורות שלי",
-    "noReviews": "עדיין אין ביקורות."
-  },
-  "adminAuditLog": {
-    "title": "היסטוריית פעולות",
-    "subtitle": "יומן ביקורת בלתי-ניתן-לשינוי של פעולות רגישות במערכת MindSpot.",
-    "loading": "טוען יומן פעולות…",
-    "totalEntries": "{{count}} רשומות",
-    "failedOperations": "פעולות שנכשלו (30 ימים)",
-    "medicalRecordViews": "צפיות ברשומות רפואיות (30 ימים)",
-    "refundsIssued": "החזרים שבוצעו (30 ימים)",
-    "colTime": "זמן",
-    "colAction": "פעולה",
-    "colActor": "מבצע",
-    "colTarget": "יעד",
-    "colStatus": "סטטוס",
-    "empty": "טרם נרשמו פעולות מבוקרות.",
-    "loadMore": "טען עוד"
+  "therapistSidebar": {
+    "available": "זמין",
+    "away":      "לא זמין"
   }
 }

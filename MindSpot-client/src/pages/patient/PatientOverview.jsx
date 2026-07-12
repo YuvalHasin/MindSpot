@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { CalendarDays, Clock, MessageSquare, TrendingUp, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
+import {useState, useEffect} from "react";
+import {MessageSquare, TrendingUp, Loader2} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Link} from "react-router-dom";
+import {motion} from "framer-motion";
+import {useTranslation} from "react-i18next";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };

@@ -1,0 +1,31 @@
+# Node
+MindSpot-client/node_modules
+MindSpot-client/dist
+MindSpot-client/.vite
+
+# .NET
+MindSpot-server/bin
+MindSpot-server/obj
+MindSpot-server/wwwroot
+MindSpot-server/dist
+
+# Python
+MindSpot-server/venv
+**/__pycache__
+**/*.pyc
+
+# Git & IDE
+.git
+.gitignore
+**/.vs
+**/.idea
+**/*.user
+
+# Secrets — never bake into the image
+MindSpot-server/.env
+.env
+
+# Docs & scripts that are not needed at runtime
+*.md
+*.ps1
+*.sln

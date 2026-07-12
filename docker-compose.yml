@@ -1,0 +1,76 @@
+services:
+
+  # ── MindSpot Application ────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      args:
+        # Leave empty → same-origin relative URLs (recommended).
+        # Set to your public URL only if the app and API are on different domains.
+        API_URL: ${API_URL:-}
+    image: mindspot:latest
+    container_name: mindspot-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-7160}:7160"
+    environment:
+      # ── Database ────────────────────────────────────────────────────────────
+      # Points at the RavenDB sidecar below. Override with a RavenDB Cloud URL
+      # if you prefer a managed database: RavenDb__Urls__0=https://a.ravendb.net
+      - RavenDb__Urls__0=http://ravendb:8080
+      - RavenDb__Database=MindSpot
+
+      # ── JWT (REQUIRED) ──────────────────────────────────────────────────────
+      - Jwt__Key=${JWT_KEY:?Set JWT_KEY in your .env file}
+      - Jwt__Issuer=MindSpot
+      - Jwt__Audience=MindSpot
+
+      # ── External APIs (features degrade gracefully if unset) ────────────────
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+    depends_on:
+      ravendb:
+        condition: service_healthy
+    networks:
+      - mindspot-net
+
+  # ── RavenDB ─────────────────────────────────────────────────────────────────
+  # Runs alongside the app — end users never interact with it directly.
+  # Data is persisted in a named Docker volume so it survives container restarts.
+  ravendb:
+    image: ravendb/ravendb:latest
+    container_name: mindspot-ravendb
+    restart: unless-stopped
+    # Port 8080 is exposed so you can open the RavenDB admin UI for diagnostics:
+    #   http://localhost:8080
+    # In production on a public server, remove or firewall this port — the app
+    # talks to RavenDB over the internal Docker network, not the public internet.
+    ports:
+      - "8080:8080"
+    environment:
+      # Unsecured mode: fine for a private Docker network.  If you expose RavenDB
+      # publicly, enable authentication in the RavenDB Studio instead.
+      - RAVEN_ARGS=--Setup.Mode=None --Security.UnsecuredAccessAllowed=PublicNetwork
+    volumes:
+      - ravendb_data:/var/lib/ravendb/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/alive || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - mindspot-net
+
+volumes:
+  ravendb_data:
+    name: mindspot-ravendb-data    # explicit name so it survives compose down
+
+networks:
+  mindspot-net:
+    driver: bridge

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -21,6 +22,7 @@ const navItems = [
 ];
 
 const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
+  const { t } = useTranslation();
   const [collapsed,  setCollapsed]  = useState(false);
   const [available,  setAvailable]  = useState(
     () => sessionStorage.getItem("therapistAvailable") !== "false"
@@ -125,7 +127,7 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
               className="w-full flex items-center justify-between bg-primary/5 rounded-xl px-3 py-2 mb-2 hover:bg-primary/10 transition-colors"
             >
               <span className={`text-xs font-medium ${available ? "text-foreground" : "text-muted-foreground"}`}>
-                {available ? "Available" : "Away"}
+                {available ? t("therapistSidebar.available", "Available") : t("therapistSidebar.away", "Away")}
               </span>
               <div className={`w-8 h-4 rounded-full relative transition-colors ${available ? "bg-primary" : "bg-muted-foreground/40"}`}>
                 <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${available ? "right-0.5" : "left-0.5"}`} />
