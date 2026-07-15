@@ -12,7 +12,9 @@ services:
     container_name: mindspot-app
     restart: unless-stopped
     ports:
-      - "${PORT:-7160}:7160"
+      # Bind to localhost only — nginx on the host forwards port 80 → here.
+      # This means port 7160 is NOT reachable from the internet directly.
+      - "127.0.0.1:${PORT:-7160}:7160"
     environment:
       # ── Database ────────────────────────────────────────────────────────────
       # Points at the RavenDB sidecar below. Override with a RavenDB Cloud URL
@@ -46,12 +48,11 @@ services:
     image: ravendb/ravendb:latest
     container_name: mindspot-ravendb
     restart: unless-stopped
-    # Port 8080 is exposed so you can open the RavenDB admin UI for diagnostics:
-    #   http://localhost:8080
-    # In production on a public server, remove or firewall this port — the app
-    # talks to RavenDB over the internal Docker network, not the public internet.
+    # RavenDB admin UI is localhost-only for security.
+    # To access it remotely: ssh -L 8080:localhost:8080 user@server
+    # Then open: http://localhost:8080 in your browser.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       # Unsecured mode: fine for a private Docker network.  If you expose RavenDB
       # publicly, enable authentication in the RavenDB Studio instead.

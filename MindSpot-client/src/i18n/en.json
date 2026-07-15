@@ -16,7 +16,8 @@
     "learnMore": "Learn More",
     "encrypted": "End-to-end encrypted",
     "professionals": "{{count}} certified professionals",
-    "avgRating": "{{rating}}★ average rating ({{count}} reviews)"
+    "avgRating": "{{rating}}★ average rating ({{count}} reviews)",
+    "intro": "Meet MindSpot"
   },
   "howItWorks": {
     "title": "How MindSpot Works",
@@ -470,17 +471,57 @@
     "recentReviews": "Recent Reviews",
     "basedOnReviews": "Based on {{count}} review",
     "basedOnReviews_plural": "Based on {{count}} reviews",
-    "noReviewsYet":
-    "No reviews yet."
+    "noReviewsYet": "No reviews yet."
   },
   "stats": {
-    "inQueue":        "In Queue",
+    "inQueue": "In Queue",
     "activeSessions": "Active Sessions",
-    "completed":      "Completed",
-    "avgRating":      "Avg. Rating"
+    "completed": "Completed",
+    "avgRating": "Avg. Rating"
   },
   "therapistSidebar": {
     "available": "Available",
-    "away":      "Away"
+    "away": "Away"
+  },
+  "intro": {
+    "step": "Step {{current}} of {{total}}",
+    "prev": "Back",
+    "next": "Next",
+    "done": "Got it!",
+    "problem": {
+      "title": "The Problem",
+      "desc": "Millions of people face daily mental health challenges but can't access traditional therapy due to cost, wait times, or stigma.",
+      "f1": "Average wait time for a therapist appointment: 3–6 weeks",
+      "f2": "Over 60% of people who need help never seek it",
+      "f3": "High costs and rigid schedules create real barriers"
+    },
+    "solution": {
+      "title": "What is MindSpot?",
+      "desc": "MindSpot is an on-demand micro-therapy platform that connects people with licensed therapists for focused, single-session consultations — instantly.",
+      "f1": "No long-term commitment required",
+      "f2": "Connect with a therapist in minutes, not weeks",
+      "f3": "Certified professionals, verified before they join"
+    },
+    "patient": {
+      "title": "For Patients",
+      "desc": "As a patient, you describe what you're going through and our AI matches you to the right therapist — then you book, pay, and chat.",
+      "f1": "Triage: describe your situation and get matched by AI",
+      "f2": "Book a session and pay securely via Stripe",
+      "f3": "Real-time encrypted chat with your therapist"
+    },
+    "therapist": {
+      "title": "For Therapists",
+      "desc": "Therapists join after an AI + license verification process. They set their own schedule, accept consultations, and get paid automatically.",
+      "f1": "License verified automatically by the system",
+      "f2": "Manage availability and accept sessions from a dashboard",
+      "f3": "Automatic payouts after each completed consultation"
+    },
+    "tech": {
+      "title": "How It Works — Under the Hood",
+      "desc": "MindSpot is built on a .NET 8 backend with RavenDB, real-time SignalR chat, AI-powered matching, and end-to-end encryption.",
+      "f1": "AES-256-GCM encryption for all clinical records",
+      "f2": "AI matching via OpenAI embeddings + vector search",
+      "f3": "SignalR WebSocket chat with full audit logging"
+    }
   }
 }

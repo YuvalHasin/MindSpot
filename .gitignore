@@ -3,9 +3,10 @@
 __pycache__/
 *.py[cod]
 
-# .NET secrets
-appsettings.json
-appsettings.Development.json
+# .NET
+# appsettings.json is intentionally tracked — it contains only placeholder values.
+# Real secrets (JWT_KEY, API keys) come from the .env file (excluded below).
+# appsettings.Development.json is also tracked so dev machines get sensible defaults.
 bin/
 obj/
 
