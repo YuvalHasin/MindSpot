@@ -42,6 +42,7 @@ const TherapistAuthPage = () => {
   const [error,           setError]           = useState("");
   const [errors,          setErrors]          = useState({});
   const [registeredId,    setRegisteredId]    = useState(null);
+  const [preCheckMessage, setPreCheckMessage] = useState(""); // מוצג במסך ההמתנה כשהבדיקה המקדימה נכשלה
 
   // ── Validation ────────────────────────────────────────────────────────────
   const validateStep1 = () => {
@@ -103,32 +104,36 @@ const TherapistAuthPage = () => {
   const handleStep1Submit = async (e) => {
     e.preventDefault();
     setError("");
+    setPreCheckMessage("");
     if (!validateStep1()) return;
 
-    // ── Phase A: verify license against Ministry of Health registry ────────
+    // ── Phase A: check against the Ministry of Health registry ────────────
+    // Real Selenium lookup. If it fails (license not found / not active /
+    // registry unreachable), the applicant does NOT continue to step 2 —
+    // they're told the application will be reviewed by an admin instead.
     setCheckingLicense(true);
+    let preCheckFailureReason = null;
     try {
       const params = new URLSearchParams({ licenseNumber, fullName });
       const chkRes  = await fetch(
         `https://localhost:7160/api/Therapists/check-license?${params}`
       );
-      const chkData = await chkRes.json().catch(() => ({}));
-
       if (!chkRes.ok) {
-        setError(
+        const chkData = await chkRes.json().catch(() => ({}));
+        preCheckFailureReason =
           chkData.failureReason ||
-          "Your license was not found or is not active in the Ministry of Health registry. Please check your details."
-        );
-        return;
+          "License not found or not active in the Ministry of Health registry.";
       }
     } catch {
-      setError("Could not reach the verification server. Please try again.");
-      return;
+      preCheckFailureReason = "Could not reach the Ministry of Health registry to verify the license.";
     } finally {
       setCheckingLicense(false);
     }
 
-    // ── Phase B: license is valid — create the account ─────────────────────
+    // ── Phase B: create the account either way ─────────────────────────────
+    // A failed pre-check is attached to the application (PreCheckFailureReason)
+    // so it shows up in the admin's pending queue with a reason, but the
+    // applicant is routed straight to the waiting screen instead of step 2.
     setLoading(true);
     try {
       const res  = await fetch("https://localhost:7160/api/Therapists/register", {
@@ -137,12 +142,20 @@ const TherapistAuthPage = () => {
         body: JSON.stringify({
           fullName, phoneNumber, licenseNumber, password,
           specialties: "", bio: "", role: "Therapist",
+          preCheckFailureReason,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setRegisteredId(data.id);
-        setRegStep(STEP.PROFESSIONAL);
+        if (preCheckFailureReason) {
+          // Registry check failed — skip step 2 entirely, go straight to
+          // the waiting screen with an explanation for the applicant.
+          setPreCheckMessage(t("therapistAuth.licenseNotFoundMessage"));
+          setRegStep(STEP.PENDING);
+        } else {
+          setRegStep(STEP.PROFESSIONAL);
+        }
       } else {
         if (data.errors) {
           const se = {};
@@ -243,7 +256,7 @@ const TherapistAuthPage = () => {
               <button
                 key={label}
                 type="button"
-                onClick={() => { setIsLogin(i === 0); setError(""); setErrors({}); setRegStep(STEP.DETAILS); }}
+                onClick={() => { setIsLogin(i === 0); setError(""); setErrors({}); setRegStep(STEP.DETAILS); setPreCheckMessage(""); }}
                 className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
                   (i === 0 ? isLogin : !isLogin)
                     ? "bg-card text-foreground shadow-sm"
@@ -285,7 +298,7 @@ const TherapistAuthPage = () => {
                   <FieldRow icon={Award} placeholder={t("therapistAuth.licenseNumPlaceholder")}  value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
                   <FieldRow icon={Lock}  placeholder={t("therapistAuth.passwordPlaceholder")}    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
                   {error && <ErrBox msg={error} />}
-                  {/* License-check loading banner */}
+                  {/* License-check loading banner (informational only — never blocks) */}
                   {checkingLicense && (
                     <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
                       <Loader2 size={16} className="animate-spin shrink-0" />
@@ -412,10 +425,16 @@ const TherapistAuthPage = () => {
                   {t("therapistAuth.pendingDesc")}
                 </p>
 
+                {preCheckMessage && (
+                  <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3 text-right max-w-xs mx-auto leading-relaxed">
+                    {preCheckMessage}
+                  </div>
+                )}
+
                 <div className="mt-5 space-y-2 text-left">
                   {[
-                    { label: t("therapistAuth.personalDetails"),    done: true  },
-                    { label: t("therapistAuth.professionalProfile"), done: true  },
+                    { label: t("therapistAuth.personalDetails"),     done: true },
+                    { label: t("therapistAuth.professionalProfile"), done: !preCheckMessage },
                     { label: t("therapistAuth.licenseVerification"), done: false },
                     { label: t("therapistAuth.adminApproval"),       done: false },
                   ].map(({ label, done }) => (
@@ -435,7 +454,7 @@ const TherapistAuthPage = () => {
 
                 <Button
                   variant="outline" className="mt-5 rounded-xl"
-                  onClick={() => { setIsLogin(true); setRegStep(STEP.DETAILS); setError(""); setErrors({}); }}
+                  onClick={() => { setIsLogin(true); setRegStep(STEP.DETAILS); setError(""); setErrors({}); setPreCheckMessage(""); }}
                 >
                   {t("therapistAuth.backToLogin")}
                 </Button>

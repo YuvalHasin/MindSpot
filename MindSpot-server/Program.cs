@@ -141,6 +141,27 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
+
+    // SignalR over native WebSocket can't set an Authorization header (browser
+    // limitation), so the client sends the JWT as an "access_token" query string
+    // param instead (see accessTokenFactory in ChatRoomPage.jsx). Without this
+    // handler the default JwtBearerHandler only reads the header, the WebSocket
+    // handshake fails auth, and SignalR silently falls back to long-polling —
+    // still working, but not the "true WebSocket" behavior the hub relies on.
+    // Scoped to /hubs only so the rest of the API still requires a normal header.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddCors(options =>

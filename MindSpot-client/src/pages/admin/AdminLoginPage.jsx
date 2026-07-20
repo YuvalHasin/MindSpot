@@ -48,10 +48,19 @@ const AdminLoginPage = () => {
           sessionStorage.setItem("role", "admin");
 
           // --- עדכון טוקן ההתראות ---
+          // FCM's getToken() can hang indefinitely (no built-in timeout) if the
+          // service worker, network, or VAPID config isn't set up — race it
+          // against a short timeout so a broken push-notification setup can
+          // never block login itself.
           try {
-            const currentToken = await getToken(messaging, { 
-              vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY 
-            });
+            const currentToken = await Promise.race([
+              getToken(messaging, {
+                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+              }),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("FCM getToken timed out")), 4000)
+              ),
+            ]);
 
             if (currentToken) {
               await fetch("https://localhost:7160/api/Auth/update-token", {

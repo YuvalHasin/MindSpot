@@ -14,7 +14,7 @@ const Navbar = () => {
   const navLinks = [
     { label: t("nav.howItWorks"), href: "#how-it-works" },
     { label: t("nav.services"),   href: "#services" },
-    { label: t("nav.professionals"), href: "#therapists" },
+    { label: t("nav.professionals"), href: "#specializations" },
     { label: t("nav.contact"),    href: "#contact" },
   ];
 

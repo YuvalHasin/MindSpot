@@ -38,9 +38,19 @@ namespace MindSpot_server.Hubs
 
             // ...and only within a window around the scheduled session time,
             // not any time after approval.
+            //
+            // AppointmentAt is stored as a naive datetime representing Israel
+            // local wall-clock time (no offset/'Z' — see booking flow), but
+            // DateTime.UtcNow is real UTC. Comparing them directly treats the
+            // naive value as if it were already UTC, which is off by Israel's
+            // UTC+2/+3 offset and silently blocks JoinRoom near the correct
+            // time. Convert explicitly before comparing.
+            var israelTz = TimeZoneInfo.FindSystemTimeZoneById("Israel Standard Time");
+            var appointmentAtUtc = TimeZoneInfo.ConvertTimeToUtc(
+                DateTime.SpecifyKind(appointment.AppointmentAt, DateTimeKind.Unspecified), israelTz);
             var now = DateTime.UtcNow;
-            var windowStart = appointment.AppointmentAt.AddMinutes(-15);
-            var windowEnd   = appointment.AppointmentAt.AddMinutes(appointment.DurationMinutes + 15);
+            var windowStart = appointmentAtUtc.AddMinutes(-15);
+            var windowEnd   = appointmentAtUtc.AddMinutes(appointment.DurationMinutes + 15);
             if (now < windowStart || now > windowEnd)
                 return;
 

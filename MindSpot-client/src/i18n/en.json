@@ -260,7 +260,7 @@
     "fullNamePlaceholder": "Full name",
     "phonePlaceholder": "Phone (e.g. 050-1234567)",
     "licenseNumPlaceholder": "License number (27-XXXXX)",
-    "verifyingLicense": "Verifying your license with the Ministry of Health registry… This may take up to 30 seconds.",
+    "verifyingLicense": "Verifying your license with the Ministry of Health registry… This may take up to a minute.",
     "continue": "Continue",
     "verifyingLicenseBtn": "Verifying license…",
     "specialtiesPlaceholder": "Specialties (comma separated)",
@@ -279,7 +279,79 @@
     "adminApproval": "Admin approval",
     "notifiedOnApproval": "You'll be notified once your account is approved.",
     "backToLogin": "Back to Login",
-    "notATherapist": "Not a therapist? Patient portal →"
+    "notATherapist": "Not a therapist? Patient portal →",
+    "licenseNotFoundMessage": "No active license was found under your name in the Ministry of Health registry. Your application has been saved and will be sent to an admin for manual review."
+  },
+  "adminRequests": {
+    "title": "Therapist Requests",
+    "subtitle": "Review and approve pending therapist applications.",
+    "errorLoading": "Failed to load pending requests.",
+    "approvedTitle": "Therapist Approved",
+    "approvedDesc": "The therapist has been approved and can now accept sessions.",
+    "rejectedTitle": "Therapist Rejected",
+    "rejectedDesc": "The application has been rejected.",
+    "actionFailed": "Action failed. Please try again.",
+    "filteringRequests": "Loading requests…",
+    "pendingCount": "{{count}} pending request",
+    "pendingCount_plural": "{{count}} pending requests",
+    "colTherapist": "Therapist",
+    "colLicense": "License",
+    "colBio": "Bio",
+    "colContact": "Contact",
+    "colVerification": "Verification",
+    "noPending": "No pending requests",
+    "noBio": "No bio provided",
+    "approve": "Approve"
+  },
+  "adminAuditLog": {
+    "loading": "Loading audit log…",
+    "title": "Audit Log",
+    "subtitle": "Complete history of system actions and security events.",
+    "totalEntries": "{{count}} entry",
+    "totalEntries_plural": "{{count}} entries",
+    "failedOperations": "Failed Operations",
+    "medicalRecordViews": "Medical Record Views",
+    "refundsIssued": "Refunds Issued",
+    "colTime": "Time",
+    "colAction": "Action",
+    "colActor": "Actor",
+    "colTarget": "Target",
+    "colStatus": "Status",
+    "empty": "No audit log entries found",
+    "loadMore": "Load More"
+  },
+  "adminStatistics": {
+    "loading": "Loading statistics…",
+    "title": "Platform Statistics",
+    "subtitle": "System-wide metrics and performance overview.",
+    "thisWeek": "This Week",
+    "platformTotals": "Platform Totals",
+    "sessionsBreakdown": "Sessions Breakdown",
+    "newTherapists": "New Therapists",
+    "newPatients": "New Patients",
+    "sessionsBooked": "Sessions Booked",
+    "totalTherapists": "Total Therapists",
+    "totalPatients": "Total Patients",
+    "pendingApprovals": "Pending Approvals",
+    "totalSessions": "Total Sessions",
+    "completedSessions": "Completed",
+    "upcomingSessions": "Upcoming",
+    "cancelledSessions": "Cancelled"
+  },
+  "adminSidebar": {
+    "overview": "Overview",
+    "requests": "Requests",
+    "statistics": "Statistics",
+    "therapists": "Therapists",
+    "patients": "Patients",
+    "history": "History",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "adminNotifications": {
+    "newRequestTitle": "New Therapist Application",
+    "newRequestDesc": "{{count}} new therapist application is waiting for review.",
+    "newRequestDesc_plural": "{{count}} new therapist applications are waiting for review."
   },
   "consultationQueue": {
     "title": "Booking Requests",
@@ -304,6 +376,12 @@
   "therapistDashboard": {
     "newBookingRequests": "New Booking Requests",
     "acceptRequest": "Accept Request"
+  },
+  "therapistPage": {
+    "loadingDashboard": "Loading your dashboard…",
+    "errorLoading": "Something went wrong loading your dashboard.",
+    "welcomeBack": "Welcome back,",
+    "license": "License"
   },
   "therapistSchedule": {
     "title": "Schedule & Availability",
@@ -523,5 +601,23 @@
       "f2": "AI matching via OpenAI embeddings + vector search",
       "f3": "SignalR WebSocket chat with full audit logging"
     }
+  },
+  "specializations": {
+    "title": "Licensed Professional Care",
+    "subtitle": "Every therapist on our platform is a licensed clinical professional who has undergone a rigorous vetting process. We match you with specialists based on your unique needs.",
+    "clinicalTitle": "Clinical Psychology",
+    "clinicalDesc": "Evidence-based therapy for depression, anxiety, and complex emotional challenges.",
+    "cbtTitle": "CBT & DBT",
+    "cbtDesc": "Structured techniques to transform thought patterns and manage intense emotions.",
+    "relationshipTitle": "Relationship Counseling",
+    "relationshipDesc": "Specialized support for couples and family dynamics to build healthier connections.",
+    "traumaTitle": "Trauma & PTSD",
+    "traumaDesc": "Compassionate care and specialized protocols for healing from past experiences.",
+    "adolescentTitle": "Adolescent Support",
+    "adolescentDesc": "Tailored approaches for teenagers navigating modern social and academic stress.",
+    "growthTitle": "Personal Growth",
+    "growthDesc": "Executive coaching and mindfulness strategies for self-actualization.",
+    "verificationStandard": "Verification Standard",
+    "verificationQuote": "Every therapist on the platform holds an active professional license, verified against the Ministry of Health registry before they're approved to practice."
   }
 }

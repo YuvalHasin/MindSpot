@@ -1,8 +1,9 @@
-import {useState, useEffect} from "react";
-import {motion} from "framer-motion";
-import {ArrowLeft, Loader2, ShieldCheck} from "lucide-react";
-import {Link} from "react-router-dom";
-import {useTranslation} from "react-i18next";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Loader2, ShieldCheck, Pencil, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 
 const API = "https://localhost:7160";
 
@@ -125,4 +126,94 @@ const TherapistSettings = () => {
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1,
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card border border-border/60 rounded-2xl p-6 space-y-5 shadow-sm"
+      >
+        {/* Avatar + name + edit button */}
+        <div className="flex items-center justify-between border-b border-border/40 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary font-display">
+              {(isEditing ? form.fullName : profile.fullName)?.[0] || "T"}
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-lg">
+                {isEditing ? form.fullName || "Therapist" : profile.fullName || "Therapist"}
+              </p>
+              <p className="text-xs text-primary font-bold tracking-widest uppercase bg-primary/5 px-2 py-1 rounded inline-block mt-1">
+                {t("therapistSettings.licensedTherapist")}
+              </p>
+            </div>
+          </div>
+
+          {!isEditing ? (
+            <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => setIsEditing(true)}>
+              <Pencil size={14} /> {t("therapistSettings.editProfile")}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={handleCancel}>
+              <X size={14} /> {t("therapistSettings.cancel")}
+            </Button>
+          )}
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-4">
+          {[
+            { key: "fullName",    label: t("therapistSettings.fullName"),    multiline: false },
+            { key: "specialties", label: t("therapistSettings.specialties"), multiline: false },
+            { key: "bio",         label: t("therapistSettings.bio"),         multiline: true  },
+          ].map(({ key, label, multiline }) => (
+            <div key={key} className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>
+              {multiline ? (
+                <textarea
+                  rows={3}
+                  value={isEditing ? form[key] : profile[key]}
+                  readOnly={!isEditing}
+                  onChange={isEditing ? handleChange(key) : undefined}
+                  className={inputClass(isEditing) + " resize-none"}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={isEditing ? form[key] : profile[key]}
+                  readOnly={!isEditing}
+                  onChange={isEditing ? handleChange(key) : undefined}
+                  className={inputClass(isEditing)}
+                />
+              )}
+            </div>
+          ))}
+
+          {/* License — always readonly */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("therapistSettings.licenseNumber")}</label>
+            <input
+              type="text"
+              value={profile.licenseNumber}
+              readOnly
+              className={inputClass(false)}
+            />
+          </div>
+        </div>
+
+        {/* Feedback */}
+        {error  && <p className="text-xs text-destructive bg-destructive/10 rounded-xl px-3 py-2">{error}</p>}
+        {saved  && <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2">{t("therapistSettings.savedSuccessfully")}</p>}
+
+        {/* Save button */}
+        {isEditing && (
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full rounded-xl h-11 font-bold shadow-md"
+          >
+            {saving ? <Loader2 className="animate-spin w-5 h-5" /> : t("therapistSettings.saveChanges")}
+          </Button>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+export default TherapistSettings;

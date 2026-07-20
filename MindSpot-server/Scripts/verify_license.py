@@ -27,6 +27,7 @@ import argparse
 import time
 import logging
 import urllib.parse
+import concurrent.futures
 from dataclasses import dataclass, asdict
 
 from selenium import webdriver
@@ -53,6 +54,13 @@ REGISTRY_BASE     = "https://practitioners.health.gov.il/Practitioners/search"
 PAGE_LOAD_TIMEOUT = 30
 ANGULAR_BOOT_WAIT = 4    # seconds for initial Angular render before scrolling
 ELEMENT_TIMEOUT   = 15
+DRIVER_INIT_TIMEOUT = 25  # seconds — hard cap on Chrome/ChromeDriver startup.
+                          # Without this, a stuck driver-resolution network call
+                          # (see create_driver()) hangs forever and Chrome never opens.
+NAVIGATION_TIMEOUT  = 25  # seconds — hard cap on loading + scanning the registry
+                          # page itself. set_page_load_timeout() alone isn't a
+                          # reliable enough guarantee (site/network stalls can slip
+                          # past it), so the whole navigate+scan step is wrapped too.
 
 # ── Hebrew character range (Unicode block) ────────────────────────────────────
 _HEB_START = 'א'
@@ -101,13 +109,15 @@ class VerificationResult:
 
 # ── Driver factory ────────────────────────────────────────────────────────────
 
-def create_driver() -> webdriver.Chrome:
+def _build_driver() -> webdriver.Chrome:
+    """Resolve a ChromeDriver and launch Chrome. May block indefinitely if a
+    network call inside driver resolution hangs — callers MUST run this
+    through create_driver()'s timeout wrapper, never call it directly."""
     opts = Options()
 
-    # Run headless when CHROME_HEADLESS=1 (set automatically by Docker / the
-    # production deployment).  In local dev the env var is absent so a real
-    # browser window opens, which makes debugging easier.
-    if os.environ.get("CHROME_HEADLESS", "0") == "1":
+    # Headless by default so no visible Chrome window ever pops up (local dev
+    # included). Set CHROME_HEADLESS=0 explicitly if you want to watch it run.
+    if os.environ.get("CHROME_HEADLESS", "1") == "1":
         opts.add_argument("--headless=new")
 
     opts.add_argument("--no-sandbox")
@@ -119,20 +129,31 @@ def create_driver() -> webdriver.Chrome:
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
     opts.add_experimental_option("useAutomationExtension", False)
 
+    driver = None
+
     # CHROMEDRIVER_PATH lets Docker (or CI) point at a pre-installed system
-    # chromedriver so webdriver-manager doesn't try to download it at runtime.
+    # chromedriver — a pinned binary, no version-resolution network call needed.
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "")
     if chromedriver_path:
         logger.info("Using system ChromeDriver at %s", chromedriver_path)
-        service = Service(chromedriver_path)
-        driver  = webdriver.Chrome(service=service, options=opts)
-    elif USE_DRIVER_MANAGER:
-        logger.info("Using webdriver-manager to resolve ChromeDriver")
-        service = Service(ChromeDriverManager().install())
-        driver  = webdriver.Chrome(service=service, options=opts)
+        driver = webdriver.Chrome(service=Service(chromedriver_path), options=opts)
     else:
-        logger.warning("webdriver-manager not installed — using system ChromeDriver")
-        driver = webdriver.Chrome(options=opts)
+        # Local dev: try Selenium's own built-in driver resolution first
+        # (Selenium Manager, bundled since Selenium 4.6). It's faster and more
+        # robust than webdriver-manager's ChromeDriverManager().install(),
+        # whose download/version-check call has NO timeout and can hang
+        # indefinitely on a slow/blocked connection — that hang is exactly
+        # what makes it look like "Chrome never opens."
+        try:
+            logger.info("Using Selenium Manager (built-in) to resolve ChromeDriver")
+            driver = webdriver.Chrome(options=opts)
+        except Exception as exc:
+            logger.warning("Selenium Manager failed (%s) — falling back to webdriver-manager", exc)
+            if USE_DRIVER_MANAGER:
+                logger.info("Using webdriver-manager to resolve ChromeDriver")
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+            else:
+                raise
 
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
     driver.execute_cdp_cmd(
@@ -142,138 +163,183 @@ def create_driver() -> webdriver.Chrome:
     return driver
 
 
+def _run_with_timeout(fn, timeout, *args, **kwargs):
+    """Run fn(*args, **kwargs) on a worker thread and enforce a hard wall-clock
+    timeout. Raises concurrent.futures.TimeoutError if fn doesn't finish in time.
+    The worker thread is abandoned (not joined) on timeout — the C# host process
+    kills the whole python process tree on its own outer timeout regardless, so
+    nothing is leaked beyond that point."""
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(fn, *args, **kwargs)
+    try:
+        return future.result(timeout=timeout)
+    finally:
+        pool.shutdown(wait=False)
+
+
+def create_driver() -> webdriver.Chrome:
+    """Launch Chrome with a hard timeout. If driver resolution or the Chrome
+    launch itself hangs (e.g. a network call stuck resolving a chromedriver
+    version), fail fast after DRIVER_INIT_TIMEOUT seconds instead of hanging
+    the whole request forever."""
+    try:
+        return _run_with_timeout(_build_driver, DRIVER_INIT_TIMEOUT)
+    except concurrent.futures.TimeoutError:
+        raise WebDriverException(
+            f"Chrome/ChromeDriver did not start within {DRIVER_INIT_TIMEOUT}s "
+            "(likely a network/firewall issue resolving the driver)."
+        )
+
+
 # ── Core verification ─────────────────────────────────────────────────────────
+
+def _navigate_and_scan(driver, license_number: str, full_name: str) -> VerificationResult:
+    """Load the registry search page and scan the rendered result. May block
+    indefinitely if the site/network stalls — callers MUST run this through
+    verify_license()'s timeout wrapper, never call it directly."""
+
+    # ── המרת שם מלטינית לעברית אם נדרש ─────────────────────────────────
+    hebrew_name = ensure_hebrew(full_name)
+
+    # ── ניווט ישיר ל-URL עם query params ────────────────────────────────
+    # האתר תומך ב: /Practitioners/search?name=...&license=...
+    # (lowercase 'search' — uppercase 'Search' מפנה לדף ריק)
+    params = urllib.parse.urlencode({"name": hebrew_name, "license": license_number})
+    search_url = f"{REGISTRY_BASE}?{params}"
+    logger.info("Navigating directly to: %s", search_url)
+    driver.get(search_url)
+
+    # ── המתנה קצרה ל-Angular לטעון את ה-component ──────────────────────
+    logger.info("Waiting for Angular initial render...")
+    time.sleep(4)
+
+    logger.info("Page title: %s | URL: %s", driver.title, driver.current_url)
+
+    # ── גלילה למטה לחשיפת אזור התוצאות לפני שמחפשים שורות ──────────────
+    logger.info("Scrolling down to reveal results area...")
+    driver.execute_script("window.scrollBy(0, 400);")
+    time.sleep(1)
+    driver.execute_script("window.scrollBy(0, 400);")
+    time.sleep(1)
+
+    # ── 6. המתנה נוספת ואז JS scan ישיר על ה-DOM ────────────────────────
+    # CSS selectors לא אמינים ב-Angular — נשתמש ב-JS שסורק את כל הדף
+    time.sleep(2)
+
+    logger.info("Scanning page via JavaScript...")
+    js_result = driver.execute_script("""
+        var licenseTarget = arguments[0];
+
+        // --- ניסיון 1: חיפוש ב-mat-row / tr ב-DOM ---
+        var rowSelectors = ['mat-row', 'tr', '[role="row"]', '.mat-row'];
+        for (var s = 0; s < rowSelectors.length; s++) {
+            var rows = document.querySelectorAll(rowSelectors[s]);
+            for (var i = 0; i < rows.length; i++) {
+                var txt = (rows[i].textContent || '').trim();
+                if (!txt || !txt.includes(licenseTarget)) continue;
+
+                var cells = rows[i].querySelectorAll('mat-cell, td, [role="gridcell"], [role="cell"]');
+                var cellTexts = Array.from(cells).map(function(c){ return c.textContent.trim(); });
+
+                // חיפוש שם (תא ראשון עם תוכן)
+                var firstName = cellTexts.find(function(t){ return t.length > 1; }) || '';
+                // חיפוש סטטוס (תא עם מילת מפתח)
+                var statusKeywords = ['בתוקף','מורשה','פעיל','מוקפא','לא פעיל','active','inactive','valid'];
+                var statusCell = '';
+                for (var k = 0; k < statusKeywords.length; k++) {
+                    var found = cellTexts.find(function(t){ return t.includes(statusKeywords[k]); });
+                    if (found) { statusCell = found; break; }
+                }
+                // fallback: התא האחרון עם תוכן
+                if (!statusCell) {
+                    for (var j = cellTexts.length-1; j >= 0; j--) {
+                        if (cellTexts[j].length > 1) { statusCell = cellTexts[j]; break; }
+                    }
+                }
+
+                return { rowText: txt.substring(0,300), firstName: firstName,
+                         statusCell: statusCell, cellTexts: cellTexts };
+            }
+        }
+
+        // --- ניסיון 2: חיפוש ב-innerText של כל body ---
+        var bodyText = document.body.innerText || '';
+        if (bodyText.includes(licenseTarget)) {
+            // מציאת הקטע שמכיל את מספר הרישיון
+            var idx = bodyText.indexOf(licenseTarget);
+            var snippet = bodyText.substring(Math.max(0, idx-100), idx+200);
+            return { rowText: snippet, firstName: '', statusCell: '', bodyFallback: true };
+        }
+
+        return null;
+    """, license_number)
+
+    if not js_result:
+        # בדיקה מפורשת אם יש "0 תוצאות"
+        page_text = driver.page_source
+        no_result_phrases = ["נמצאו 0 תוצאות", "לא נמצאו תוצאות", "0 results"]
+        if any(p in page_text for p in no_result_phrases):
+            return VerificationResult(
+                isValid=False, isActive=False,
+                registeredName="", licenseNumber=license_number,
+                failureReason=f"License {license_number!r} was not found in the Ministry of Health registry."
+            )
+        logger.debug("Page source:\n%s", page_text[:5000])
+        return _fail(license_number, "License not found in page after scroll and JS scan.")
+
+    logger.info("JS scan result: %s", json.dumps(js_result, ensure_ascii=False))
+
+    if js_result.get("bodyFallback"):
+        # מצאנו את הרישיון בטקסט הדף אבל לא בתוך שורת טבלה מוגדרת
+        snippet = js_result.get("rowText", "")
+        status_raw = ""
+        for kw in ("בתוקף", "מורשה", "פעיל", "active", "valid"):
+            if kw in snippet:
+                # חלץ את המשפט שמכיל את מילת המפתח
+                for part in snippet.split("\n"):
+                    if kw in part:
+                        status_raw = part.strip()
+                        break
+                break
+        is_active = bool(status_raw)
+        return VerificationResult(
+            isValid=True, isActive=is_active,
+            registeredName=full_name, licenseNumber=license_number,
+            failureReason="" if is_active else "License found but status unclear."
+        )
+
+    status_raw   = js_result.get("statusCell", "")
+    status_lower = status_raw.lower()
+    is_active    = any(kw in status_lower for kw in
+                       ("בתוקף", "מורשה", "פעיל", "active", "valid"))
+
+    registered_name = js_result.get("firstName", full_name) or full_name
+
+    logger.info("Match: name=%r status=%r active=%s", registered_name, status_raw, is_active)
+    return VerificationResult(
+        isValid=True,
+        isActive=is_active,
+        registeredName=registered_name,
+        licenseNumber=license_number,
+        failureReason="" if is_active else f"License found but status is: {status_raw!r}"
+    )
+
 
 def verify_license(license_number: str, full_name: str) -> VerificationResult:
     driver = None
     try:
         driver = create_driver()
 
-        # ── המרת שם מלטינית לעברית אם נדרש ─────────────────────────────────
-        hebrew_name = ensure_hebrew(full_name)
-
-        # ── ניווט ישיר ל-URL עם query params ────────────────────────────────
-        # האתר תומך ב: /Practitioners/search?name=...&license=...
-        # (lowercase 'search' — uppercase 'Search' מפנה לדף ריק)
-        params = urllib.parse.urlencode({"name": hebrew_name, "license": license_number})
-        search_url = f"{REGISTRY_BASE}?{params}"
-        logger.info("Navigating directly to: %s", search_url)
-        driver.get(search_url)
-
-        # ── המתנה קצרה ל-Angular לטעון את ה-component ──────────────────────
-        logger.info("Waiting for Angular initial render...")
-        time.sleep(4)
-
-        logger.info("Page title: %s | URL: %s", driver.title, driver.current_url)
-
-        # ── גלילה למטה לחשיפת אזור התוצאות לפני שמחפשים שורות ──────────────
-        logger.info("Scrolling down to reveal results area...")
-        driver.execute_script("window.scrollBy(0, 400);")
-        time.sleep(1)
-        driver.execute_script("window.scrollBy(0, 400);")
-        time.sleep(1)
-
-        # ── 6. המתנה נוספת ואז JS scan ישיר על ה-DOM ────────────────────────
-        # CSS selectors לא אמינים ב-Angular — נשתמש ב-JS שסורק את כל הדף
-        time.sleep(2)
-
-        logger.info("Scanning page via JavaScript...")
-        js_result = driver.execute_script("""
-            var licenseTarget = arguments[0];
-
-            // --- ניסיון 1: חיפוש ב-mat-row / tr ב-DOM ---
-            var rowSelectors = ['mat-row', 'tr', '[role="row"]', '.mat-row'];
-            for (var s = 0; s < rowSelectors.length; s++) {
-                var rows = document.querySelectorAll(rowSelectors[s]);
-                for (var i = 0; i < rows.length; i++) {
-                    var txt = (rows[i].textContent || '').trim();
-                    if (!txt || !txt.includes(licenseTarget)) continue;
-
-                    var cells = rows[i].querySelectorAll('mat-cell, td, [role="gridcell"], [role="cell"]');
-                    var cellTexts = Array.from(cells).map(function(c){ return c.textContent.trim(); });
-
-                    // חיפוש שם (תא ראשון עם תוכן)
-                    var firstName = cellTexts.find(function(t){ return t.length > 1; }) || '';
-                    // חיפוש סטטוס (תא עם מילת מפתח)
-                    var statusKeywords = ['בתוקף','מורשה','פעיל','מוקפא','לא פעיל','active','inactive','valid'];
-                    var statusCell = '';
-                    for (var k = 0; k < statusKeywords.length; k++) {
-                        var found = cellTexts.find(function(t){ return t.includes(statusKeywords[k]); });
-                        if (found) { statusCell = found; break; }
-                    }
-                    // fallback: התא האחרון עם תוכן
-                    if (!statusCell) {
-                        for (var j = cellTexts.length-1; j >= 0; j--) {
-                            if (cellTexts[j].length > 1) { statusCell = cellTexts[j]; break; }
-                        }
-                    }
-
-                    return { rowText: txt.substring(0,300), firstName: firstName,
-                             statusCell: statusCell, cellTexts: cellTexts };
-                }
-            }
-
-            // --- ניסיון 2: חיפוש ב-innerText של כל body ---
-            var bodyText = document.body.innerText || '';
-            if (bodyText.includes(licenseTarget)) {
-                // מציאת הקטע שמכיל את מספר הרישיון
-                var idx = bodyText.indexOf(licenseTarget);
-                var snippet = bodyText.substring(Math.max(0, idx-100), idx+200);
-                return { rowText: snippet, firstName: '', statusCell: '', bodyFallback: true };
-            }
-
-            return null;
-        """, license_number)
-
-        if not js_result:
-            # בדיקה מפורשת אם יש "0 תוצאות"
-            page_text = driver.page_source
-            no_result_phrases = ["נמצאו 0 תוצאות", "לא נמצאו תוצאות", "0 results"]
-            if any(p in page_text for p in no_result_phrases):
-                return VerificationResult(
-                    isValid=False, isActive=False,
-                    registeredName="", licenseNumber=license_number,
-                    failureReason=f"License {license_number!r} was not found in the Ministry of Health registry."
-                )
-            logger.debug("Page source:\n%s", page_text[:5000])
-            return _fail(license_number, "License not found in page after scroll and JS scan.")
-
-        logger.info("JS scan result: %s", json.dumps(js_result, ensure_ascii=False))
-
-        if js_result.get("bodyFallback"):
-            # מצאנו את הרישיון בטקסט הדף אבל לא בתוך שורת טבלה מוגדרת
-            snippet = js_result.get("rowText", "")
-            status_raw = ""
-            for kw in ("בתוקף", "מורשה", "פעיל", "active", "valid"):
-                if kw in snippet:
-                    # חלץ את המשפט שמכיל את מילת המפתח
-                    for part in snippet.split("\n"):
-                        if kw in part:
-                            status_raw = part.strip()
-                            break
-                    break
-            is_active = bool(status_raw)
-            return VerificationResult(
-                isValid=True, isActive=is_active,
-                registeredName=full_name, licenseNumber=license_number,
-                failureReason="" if is_active else "License found but status unclear."
+        try:
+            return _run_with_timeout(
+                _navigate_and_scan, NAVIGATION_TIMEOUT, driver, license_number, full_name
             )
-
-        status_raw   = js_result.get("statusCell", "")
-        status_lower = status_raw.lower()
-        is_active    = any(kw in status_lower for kw in
-                           ("בתוקף", "מורשה", "פעיל", "active", "valid"))
-
-        registered_name = js_result.get("firstName", full_name) or full_name
-
-        logger.info("Match: name=%r status=%r active=%s", registered_name, status_raw, is_active)
-        return VerificationResult(
-            isValid=True,
-            isActive=is_active,
-            registeredName=registered_name,
-            licenseNumber=license_number,
-            failureReason="" if is_active else f"License found but status is: {status_raw!r}"
-        )
+        except concurrent.futures.TimeoutError:
+            logger.error("Registry page did not respond within %ss — aborting.", NAVIGATION_TIMEOUT)
+            return _fail(
+                license_number,
+                f"Ministry of Health registry site did not respond within {NAVIGATION_TIMEOUT} seconds."
+            )
 
     except WebDriverException as exc:
         logger.error("WebDriver error: %s", exc)
@@ -284,6 +350,9 @@ def verify_license(license_number: str, full_name: str) -> VerificationResult:
     finally:
         if driver:
             try:
+                # Also interrupts _navigate_and_scan if it's still stuck on a
+                # background thread after a timeout above — quitting the
+                # driver kills the browser out from under that stuck call.
                 driver.quit()
             except Exception:
                 pass

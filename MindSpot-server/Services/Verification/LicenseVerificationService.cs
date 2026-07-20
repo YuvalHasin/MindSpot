@@ -14,8 +14,11 @@ namespace MindSpot_server.Services.Verification
         private readonly string _scriptPath;
         private readonly string _pythonExecutable;
 
-        // Give the browser automation a generous but finite timeout
-        private static readonly TimeSpan ScriptTimeout = TimeSpan.FromSeconds(90);
+        // The Python script now enforces its own internal caps (25s Chrome/driver
+        // startup + 25s page navigation+scan, see verify_license.py), so the total
+        // realistic worst case is well under a minute. This outer timeout is just a
+        // safety net in case the internal caps themselves ever fail to fire.
+        private static readonly TimeSpan ScriptTimeout = TimeSpan.FromSeconds(65);
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -102,32 +105,47 @@ namespace MindSpot_server.Services.Verification
                 using var process = new Process { StartInfo = psi };
                 process.Start();
 
-                var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
-                var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
-
-                await process.WaitForExitAsync(cts.Token);
-                var stdout = await stdoutTask;
-                var stderr = await stderrTask;
-
-                // Exit code 9009 (Windows) or 127 (Unix) = interpreter not found → try next
-                if (process.ExitCode is 9009 or 127)
+                try
                 {
-                    _logger.LogDebug("Executable '{Exe}' not found (exit {Code}), trying next.", exe, process.ExitCode);
-                    return null;
+                    var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+                    var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
+
+                    await process.WaitForExitAsync(cts.Token);
+                    var stdout = await stdoutTask;
+                    var stderr = await stderrTask;
+
+                    // Exit code 9009 (Windows) or 127 (Unix) = interpreter not found → try next
+                    if (process.ExitCode is 9009 or 127)
+                    {
+                        _logger.LogDebug("Executable '{Exe}' not found (exit {Code}), trying next.", exe, process.ExitCode);
+                        return null;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(stderr))
+                        _logger.LogDebug("[{Exe}] stderr: {Stderr}", exe, stderr);
+
+                    if (process.ExitCode != 0)
+                    {
+                        _logger.LogError(
+                            "License verification script exited with code {Code} (exe={Exe}). Stderr: {Stderr}",
+                            process.ExitCode, exe, stderr);
+                        return Failed($"Verification script failed (exit code {process.ExitCode}).");
+                    }
+
+                    return ParseOutput(stdout, safeLicense);
                 }
-
-                if (!string.IsNullOrWhiteSpace(stderr))
-                    _logger.LogDebug("[{Exe}] stderr: {Stderr}", exe, stderr);
-
-                if (process.ExitCode != 0)
+                catch (OperationCanceledException)
                 {
-                    _logger.LogError(
-                        "License verification script exited with code {Code} (exe={Exe}). Stderr: {Stderr}",
-                        process.ExitCode, exe, stderr);
-                    return Failed($"Verification script failed (exit code {process.ExitCode}).");
+                    // The Python script (and any Chrome/chromedriver it spawned) is still
+                    // running in the background at this point — kill the whole tree so it
+                    // doesn't sit there consuming resources or popping up a browser window
+                    // after we've already given up and answered the HTTP request.
+                    _logger.LogWarning(
+                        "License verification script timed out for license {License} — killing process tree.",
+                        safeLicense);
+                    TryKillProcessTree(process);
+                    return Failed("License verification timed out.");
                 }
-
-                return ParseOutput(stdout, safeLicense);
             }
             catch (OperationCanceledException)
             {
@@ -179,6 +197,26 @@ namespace MindSpot_server.Services.Verification
         /// <summary>Remove characters that could escape argument boundaries.</summary>
         private static string SanitiseArg(string value) =>
             value.Replace("\"", "").Replace("'", "").Replace(";", "").Trim();
+
+        /// <summary>
+        /// Kills a timed-out verification process along with any children it spawned
+        /// (e.g. Chrome/chromedriver launched by the Python script). Without this, a
+        /// timed-out request leaves the browser automation running in the background
+        /// indefinitely, which can make Chrome appear to pop up "late" or pile up
+        /// orphaned processes across repeated attempts.
+        /// </summary>
+        private void TryKillProcessTree(Process process)
+        {
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to kill timed-out verification process tree.");
+            }
+        }
 
         private static LicenseVerificationResult Failed(string reason) => new()
         {

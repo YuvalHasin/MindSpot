@@ -84,11 +84,16 @@ public class TherapistsController : ControllerBase
                 Specialties = request.Specialties ?? "",
                 PhoneNumber = request.PhoneNumber,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                EmbeddingVector = vector
+                EmbeddingVector = vector,
 
                 // VerificationStatus defaults to Pending (see Therapist model).
                 // It only becomes Approved once the therapist completes step 2
                 // (license/selfie verification) and passes every automated check.
+                //
+                // If the quick pre-registration registry check already came back
+                // invalid, record the reason now so this application is visible
+                // to an admin (with an explanation) even if step 2 never happens.
+                VerificationFailureReason = request.PreCheckFailureReason
             };
 
             using (var session = _store.OpenAsyncSession())

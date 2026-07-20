@@ -1,9 +1,9 @@
-import {useEffect, useState} from "react";
-import {Check, UserPlus, Phone, Loader2, ShieldAlert, BadgeCheck} from "lucide-react";
-import {Button} from "@/components/ui/button";
-import {motion, AnimatePresence} from "framer-motion";
-import {useToast} from "@/hooks/use-toast";
-import {useTranslation} from "react-i18next";
+import { useEffect, useState } from "react";
+import { Check, X, UserPlus, Phone, Loader2, ShieldAlert, BadgeCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const AdminRequests = () => {
   const { t } = useTranslation();
@@ -18,12 +18,12 @@ const AdminRequests = () => {
     const response = await fetch("https://localhost:7160/api/admin/therapists/pending", {
       headers: { "Authorization": `Bearer ${token}` }
     });
-
+    
     if (!response.ok) throw new Error("Failed to fetch pending requests");
 
     const data = await response.json();
-
-    setRequests(data);
+    
+    setRequests(data); 
   } catch (error) {
     console.error("Error fetching requests:", error);
     toast({ title: t("adminRequests.errorLoading"), variant: "destructive" });
@@ -42,7 +42,7 @@ const AdminRequests = () => {
     // RavenDB IDs look like "Therapists/1-A" — extract only the numeric part for the URL
     const safeId = id.includes("/") ? id.split("/")[1] : id;
     const url = `https://localhost:7160/api/admin/therapists/${safeId}/${action}`;
-
+    
     try {
       const response = await fetch(url, {
         method: action === 'approve' ? "PUT" : "DELETE",
@@ -80,7 +80,7 @@ const AdminRequests = () => {
           <p className="text-muted-foreground text-sm">{t("adminRequests.subtitle")}</p>
         </div>
         <div className="bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">
-          <ShieldAlert size={14} /> {requests.length} {t("adminRequests.pending")} {requests.length !== 1 ? t("adminRequests.pendingPlural") : ''}
+          <ShieldAlert size={14} /> {t("adminRequests.pendingCount", { count: requests.length })}
         </div>
       </div>
 
@@ -106,9 +106,9 @@ const AdminRequests = () => {
                   </motion.tr>
                 ) : (
                   requests.map((req) => (
-                    <motion.tr
+                    <motion.tr 
                       layout
-                      key={req.id}
+                      key={req.id} 
                       exit={{ opacity: 0, scale: 0.98 }}
                       className="hover:bg-muted/10 transition-colors"
                     >
@@ -149,14 +149,36 @@ const AdminRequests = () => {
                       {/* עמודה 5: כפתורי פעולה */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
+                          <Button 
+                            size="sm" 
                             onClick={() => handleAction(req.id, 'approve')}
                             disabled={actionLoading === req.id}
                             className="bg-green-600 hover:bg-green-700 h-8 rounded-lg shadow-sm"
                           >
-                            {actionLoading === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check size={16} className="mr-1" />}
+                            {actionLoading === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check size={16} className="mr-1" />} 
                             {t("adminRequests.approve")}
                           </Button>
-                          <Button
-                            size="sm"
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => handleAction(req.id, 'reject')}
+                            disabled={actionLoading === req.id}
+                            className="text-destructive hover:bg-destructive/10 h-8"
+                          >
+                            <X size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </AnimatePresence>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminRequests;

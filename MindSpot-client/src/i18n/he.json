@@ -260,7 +260,7 @@
     "fullNamePlaceholder": "שם מלא",
     "phonePlaceholder": "טלפון (לדוגמה 050-1234567)",
     "licenseNumPlaceholder": "מספר רישיון (27-XXXXX)",
-    "verifyingLicense": "מאמת את הרישיון שלך מול רשם משרד הבריאות… זה עשוי לקחת עד 30 שניות.",
+    "verifyingLicense": "מאמת את הרישיון שלך מול רשם משרד הבריאות… זה עשוי לקחת עד דקה.",
     "continue": "המשך",
     "verifyingLicenseBtn": "מאמת רישיון…",
     "specialtiesPlaceholder": "התמחויות (מופרדות בפסיק)",
@@ -279,7 +279,79 @@
     "adminApproval": "אישור מנהל",
     "notifiedOnApproval": "תקבל התראה ברגע שהחשבון שלך יאושר.",
     "backToLogin": "חזרה לכניסה",
-    "notATherapist": "לא מטפל? לפורטל המטופלים ←"
+    "notATherapist": "לא מטפל? לפורטל המטופלים ←",
+    "licenseNotFoundMessage": "לא נמצא רישיון בתוקף על שמך במאגר משרד הבריאות. הבקשה שלך נשמרה ותועבר לבדיקה ידנית של מנהל המערכת."
+  },
+  "adminRequests": {
+    "title": "בקשות מטפלים",
+    "subtitle": "סקור ואשר בקשות הצטרפות ממתינות של מטפלים.",
+    "errorLoading": "טעינת הבקשות הממתינות נכשלה.",
+    "approvedTitle": "המטפל אושר",
+    "approvedDesc": "המטפל אושר ויכול כעת לקבל פגישות.",
+    "rejectedTitle": "הבקשה נדחתה",
+    "rejectedDesc": "בקשת ההצטרפות נדחתה.",
+    "actionFailed": "הפעולה נכשלה. נסה שוב.",
+    "filteringRequests": "טוען בקשות…",
+    "pendingCount": "{{count}} בקשה ממתינה",
+    "pendingCount_plural": "{{count}} בקשות ממתינות",
+    "colTherapist": "מטפל",
+    "colLicense": "רישיון",
+    "colBio": "ביוגרפיה",
+    "colContact": "יצירת קשר",
+    "colVerification": "אימות",
+    "noPending": "אין בקשות ממתינות",
+    "noBio": "לא סופקה ביוגרפיה",
+    "approve": "אשר"
+  },
+  "adminAuditLog": {
+    "loading": "טוען יומן ביקורת…",
+    "title": "יומן ביקורת",
+    "subtitle": "היסטוריה מלאה של פעולות המערכת ואירועי אבטחה.",
+    "totalEntries": "{{count}} רשומה",
+    "totalEntries_plural": "{{count}} רשומות",
+    "failedOperations": "פעולות שנכשלו",
+    "medicalRecordViews": "צפיות ברשומות רפואיות",
+    "refundsIssued": "החזרים שבוצעו",
+    "colTime": "זמן",
+    "colAction": "פעולה",
+    "colActor": "מבצע",
+    "colTarget": "יעד",
+    "colStatus": "סטטוס",
+    "empty": "לא נמצאו רשומות ביומן הביקורת",
+    "loadMore": "טען עוד"
+  },
+  "adminStatistics": {
+    "loading": "טוען נתונים סטטיסטיים…",
+    "title": "סטטיסטיקות מערכת",
+    "subtitle": "מדדים ותמונת מצב כלל-מערכתית.",
+    "thisWeek": "השבוע",
+    "platformTotals": "סה\"כ במערכת",
+    "sessionsBreakdown": "פירוט מפגשים",
+    "newTherapists": "מטפלים חדשים",
+    "newPatients": "מטופלים חדשים",
+    "sessionsBooked": "מפגשים שנקבעו",
+    "totalTherapists": "סה\"כ מטפלים",
+    "totalPatients": "סה\"כ מטופלים",
+    "pendingApprovals": "ממתינים לאישור",
+    "totalSessions": "סה\"כ מפגשים",
+    "completedSessions": "הושלמו",
+    "upcomingSessions": "קרובים",
+    "cancelledSessions": "בוטלו"
+  },
+  "adminSidebar": {
+    "overview": "סקירה כללית",
+    "requests": "בקשות",
+    "statistics": "סטטיסטיקות",
+    "therapists": "מטפלים",
+    "patients": "מטופלים",
+    "history": "היסטוריה",
+    "settings": "הגדרות",
+    "logout": "התנתקות"
+  },
+  "adminNotifications": {
+    "newRequestTitle": "בקשת הצטרפות חדשה",
+    "newRequestDesc": "בקשת מטפל חדשה ממתינה לבדיקה.",
+    "newRequestDesc_plural": "{{count}} בקשות מטפלים חדשות ממתינות לבדיקה."
   },
   "consultationQueue": {
     "title": "בקשות הזמנה",
@@ -304,6 +376,12 @@
   "therapistDashboard": {
     "newBookingRequests": "בקשות הזמנה חדשות",
     "acceptRequest": "קבל בקשה"
+  },
+  "therapistPage": {
+    "loadingDashboard": "טוען את לוח הבקרה שלך…",
+    "errorLoading": "אירעה שגיאה בטעינת לוח הבקרה.",
+    "welcomeBack": "ברוך שובך,",
+    "license": "רישיון"
   },
   "therapistSchedule": {
     "title": "לוח זמנים וזמינות",
@@ -523,5 +601,23 @@
       "f2": "התאמה מבוססת AI עם OpenAI embeddings וחיפוש וקטורי",
       "f3": "צ׳אט WebSocket עם SignalR ורישום ביקורת מלא"
     }
+  },
+  "specializations": {
+    "title": "טיפול מקצועי מוסמך",
+    "subtitle": "כל מטפל בפלטפורמה שלנו הוא איש מקצוע קליני מוסמך שעבר תהליך סינון קפדני. אנחנו מתאימים לך מומחים בהתאם לצרכים הייחודיים שלך.",
+    "clinicalTitle": "פסיכולוגיה קלינית",
+    "clinicalDesc": "טיפול מבוסס-ראיות לדיכאון, חרדה ואתגרים רגשיים מורכבים.",
+    "cbtTitle": "CBT ו-DBT",
+    "cbtDesc": "טכניקות מובנות לשינוי דפוסי חשיבה וניהול רגשות עזים.",
+    "relationshipTitle": "ייעוץ זוגי ומשפחתי",
+    "relationshipDesc": "תמיכה ייעודית לזוגות ולדינמיקה משפחתית לבניית קשרים בריאים יותר.",
+    "traumaTitle": "טראומה ו-PTSD",
+    "traumaDesc": "טיפול חומל ופרוטוקולים ייעודיים להחלמה מחוויות עבר.",
+    "adolescentTitle": "תמיכה למתבגרים",
+    "adolescentDesc": "גישות מותאמות למתבגרים המתמודדים עם לחץ חברתי ולימודי בעידן המודרני.",
+    "growthTitle": "צמיחה אישית",
+    "growthDesc": "אימון אישי ואסטרטגיות מיינדפולנס למימוש עצמי.",
+    "verificationStandard": "תקן אימות",
+    "verificationQuote": "כל מטפל בפלטפורמה מחזיק ברישיון עיסוק בתוקף, שאומת מול רישום משרד הבריאות לפני שהתקבל לעבודה."
   }
 }

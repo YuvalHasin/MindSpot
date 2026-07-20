@@ -1,9 +1,9 @@
-import {useState} from "react";
-import {motion, AnimatePresence} from "framer-motion";
-import {Button} from "../../components/ui/button.jsx";
-import {ArrowRight, Brain, AlertTriangle, Shield, Loader2, CheckCircle2} from "lucide-react";
-import {useNavigate} from "react-router-dom";
-import {useTranslation} from "react-i18next";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "../../components/ui/button.jsx";
+import { ArrowLeft, ArrowRight, Brain, AlertTriangle, Shield, Loader2, CheckCircle2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const TriagePage = () => {
   const { t } = useTranslation();
@@ -213,3 +213,13 @@ const TriagePage = () => {
 
       {!result && !isProcessing && step > 0 && (
         <div className="px-6 pb-8 flex justify-center">
+          <Button variant="ghost" onClick={() => setStep(step - 1)} className="text-muted-foreground">
+            <ArrowLeft size={16} className="mr-2" /> {t("triage.backToPrevious")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TriagePage;

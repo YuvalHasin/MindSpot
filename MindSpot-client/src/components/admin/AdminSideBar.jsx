@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Users,
@@ -14,20 +15,21 @@ import {
   History,
 } from "lucide-react";
 
-const navItems = [
-  { label: "Overview", icon: LayoutDashboard, path: "/admin" },
-  { label: "Requests", icon: UserPlus, path: "/admin/requests" },
-  { label: "Statistics", icon: BarChart3, path: "/admin/statistics" },
-  { label: "Therapists", icon: Users, path: "/admin/therapists" },
-  { label: "Patients", icon: UserCheck, path: "/admin/patients" },
-  { label: "History", icon: History, path: "/admin/history" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
-];
-
-const AdminSidebar = () => {
+const AdminSidebar = ({ pendingCount = 0 }) => {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const navItems = [
+    { label: t("adminSidebar.overview"), icon: LayoutDashboard, path: "/admin" },
+    { label: t("adminSidebar.requests"), icon: UserPlus, path: "/admin/requests", badge: pendingCount },
+    { label: t("adminSidebar.statistics"), icon: BarChart3, path: "/admin/statistics" },
+    { label: t("adminSidebar.therapists"), icon: Users, path: "/admin/therapists" },
+    { label: t("adminSidebar.patients"), icon: UserCheck, path: "/admin/patients" },
+    { label: t("adminSidebar.history"), icon: History, path: "/admin/history" },
+    { label: t("adminSidebar.settings"), icon: Settings, path: "/admin/settings" },
+  ];
 
   const isActive = (path) => location.pathname === path;
 
@@ -50,7 +52,14 @@ const AdminSidebar = () => {
                 active ? "text-primary font-semibold" : "text-muted-foreground"
               }`}
             >
-              <item.icon size={20} />
+              <span className="relative">
+                <item.icon size={20} />
+                {item.badge > 0 && (
+                  <span className="absolute -top-1.5 -end-2 min-w-[15px] h-[15px] px-[3px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center leading-none">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                )}
+              </span>
               <span className="truncate max-w-[56px]">{item.label}</span>
             </Link>
           );
@@ -98,8 +107,20 @@ const AdminSidebar = () => {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <item.icon size={18} className="shrink-0" />
+                <span className="relative shrink-0">
+                  <item.icon size={18} />
+                  {collapsed && item.badge > 0 && (
+                    <span className="absolute -top-1.5 -end-2 min-w-[15px] h-[15px] px-[3px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center leading-none">
+                      {item.badge > 9 ? "9+" : item.badge}
+                    </span>
+                  )}
+                </span>
                 {!collapsed && <span>{item.label}</span>}
+                {!collapsed && item.badge > 0 && (
+                  <span className="ms-auto min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -112,7 +133,7 @@ const AdminSidebar = () => {
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full`}
           >
             <LogOut size={18} className="shrink-0" />
-            {!collapsed && <span>Logout</span>}
+            {!collapsed && <span>{t("adminSidebar.logout")}</span>}
           </button>
         </div>
       </aside>
