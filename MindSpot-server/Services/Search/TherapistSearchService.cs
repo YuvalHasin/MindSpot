@@ -86,11 +86,14 @@ namespace MindSpot_server.Services.Search
                 string luceneQuery,
                 TherapistSearchRequest request)
         {
-            // luceneQuery already has explicit field prefixes, so @all_fields lets Lucene parse them
+            // luceneQuery already has explicit field prefixes (FullName:x, Specialties:x, ...);
+            // "@all_fields" isn't a real field on this index in this RavenDB version and
+            // throws "not indexed" — any real indexed field works as the outer target since
+            // the field-qualified clauses inside luceneQuery are what actually get parsed.
             var q = session
                 .Advanced
                 .AsyncDocumentQuery<Therapist, Therapists_BySearch>()
-                .WhereLucene("@all_fields", luceneQuery);
+                .WhereLucene("SearchField", luceneQuery);
 
             if (!string.IsNullOrWhiteSpace(request.Language))
                 q = q.AndAlso().Search("Languages", request.Language);
@@ -120,8 +123,11 @@ namespace MindSpot_server.Services.Search
                 if (i > 0) sb.Append(" OR ");
 
                 var token = EscapeLuceneSpecialChars(tokens[i]);
+                // This Lucene.NET version's fuzzy syntax takes a similarity ratio in (0,1),
+                // not an integer edit distance — "~1"/"~2" throw "minimumSimilarity >= 1".
+                // Map our 0-2 "distance" knob to a ratio (lower = more permissive).
                 var fuzzy = (fuzzyDistance > 0 && token.Length >= MinLengthForFuzzy)
-                    ? $"~{fuzzyDistance}"
+                    ? fuzzyDistance == 1 ? "~0.7" : "~0.5"
                     : string.Empty;
 
                 sb.Append($"(FullName:{token}{fuzzy})^5");

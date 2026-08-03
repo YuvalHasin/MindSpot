@@ -15,6 +15,7 @@ namespace MindSpot_server.Models
         public string? Password { get; set; }
 
         public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
 
         public List<string> Languages { get; set; } = new();
 

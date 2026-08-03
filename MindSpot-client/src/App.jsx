@@ -23,6 +23,7 @@ const ProtectedRoute = ({ children, redirectTo, roleRequired }) => {
 import Index from "./pages/Index";
 import PatientAuthPage from "./pages/patient/PatientAuthPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages & Layout
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/patient-auth" element={<PatientAuthPage />} />
           <Route path="/therapist-auth" element={<TherapistAuthPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/therapist-profile/:id" element={<TherapistProfilePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/faq" element={<FAQPage />} />

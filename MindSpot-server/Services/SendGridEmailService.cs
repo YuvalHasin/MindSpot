@@ -72,6 +72,23 @@ namespace MindSpot_server.Services
             await SendEmailAsync(toEmail, patientName, subject, html);
         }
 
+        public async Task SendPasswordResetAsync(string toEmail, string toName, string resetLink)
+        {
+            string subject = "Reset your password – MindSpot";
+            string html = $@"
+<html><body style=""font-family:Arial,sans-serif;color:#333;"">
+  <h2 style=""color:#6C63FF;"">Reset your password</h2>
+  <p>Hi <strong>{toName}</strong>,</p>
+  <p>We received a request to reset your MindSpot password. Click the link below to choose a new one — it expires in 1 hour.</p>
+  <p><a href=""{resetLink}"" style=""color:#6C63FF;"">Reset my password</a></p>
+  <p>If you didn't request this, you can safely ignore this email.</p>
+  <br/>
+  <p style=""color:#888;font-size:12px;"">– The MindSpot Team</p>
+</body></html>";
+
+            await SendEmailAsync(toEmail, toName, subject, html);
+        }
+
         private async Task SendEmailAsync(string toEmail, string toName, string subject, string htmlContent)
         {
             try

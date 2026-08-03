@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
 using Raven.Client.Documents;
+using System.Security.Claims;
 
 namespace MindSpot_server.Controllers
 {
@@ -28,6 +29,13 @@ namespace MindSpot_server.Controllers
 
             if (string.IsNullOrWhiteSpace(request.PatientId))
                 return BadRequest(new { error = "PatientId is required." });
+
+            // Without this, any logged-in patient could submit a review attributed to
+            // a different patient by just passing their id in the body.
+            var callerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var normalisedRequestPatientId = request.PatientId.Contains("/") ? request.PatientId : $"Patients/{request.PatientId}";
+            if (callerId != normalisedRequestPatientId)
+                return Forbid();
 
             using var session = _store.OpenAsyncSession();
 

@@ -35,6 +35,27 @@ namespace MindSpot_server.Services.Verification
 
             var result = new TherapistVerificationResult { Status = VerificationStatus.InProgress };
 
+            // This endpoint is unauthenticated by design (a therapist has no JWT yet at
+            // this point in registration), so anyone can POST any therapistId. Without
+            // this guard, that would let an outsider re-run "verification" against an
+            // ALREADY-APPROVED therapist and flip a live, practicing account back to
+            // Pending just by uploading garbage images — a targeted sabotage vector,
+            // not just noise on a fresh, undecided registration.
+            using (var guardSession = _store.OpenAsyncSession())
+            {
+                var existingStatus = (await guardSession.LoadAsync<Therapist>(fullId, cancellationToken))?.VerificationStatus;
+                if (existingStatus == VerificationStatus.Approved)
+                {
+                    // Deliberately does NOT call FailAsync/UpdateTherapistStatusAsync —
+                    // that would itself flip the already-approved therapist to Pending,
+                    // which is the exact attack this guard exists to prevent.
+                    result.Status        = VerificationStatus.Approved;
+                    result.IsVerified     = false;
+                    result.FailureReason = "This therapist is already verified. Re-verification is not permitted here.";
+                    return result;
+                }
+            }
+
             await StoreImagesAsAttachmentsAsync(fullId, request, cancellationToken);
 
             result.AiResult = await _aiService.VerifyTherapistImagesAsync(

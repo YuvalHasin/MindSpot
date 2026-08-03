@@ -27,6 +27,12 @@ services:
       - Jwt__Issuer=MindSpot
       - Jwt__Audience=MindSpot
 
+      # ── Public URL (REQUIRED for password-reset emails) ─────────────────────
+      # Used to build links (e.g. password reset) instead of trusting the
+      # incoming Host header, which a client can forge. Set to the exact
+      # public URL users open in their browser, e.g. https://mindspot.duckdns.org
+      - PUBLIC_APP_URL=${PUBLIC_APP_URL:-}
+
       # ── External APIs (features degrade gracefully if unset) ────────────────
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}

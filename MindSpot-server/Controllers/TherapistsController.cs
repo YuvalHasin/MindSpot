@@ -6,33 +6,40 @@ using MindSpot_server.Models.Verification;
 using MindSpot_server.Services;
 using MindSpot_server.Services.Verification;
 using MindSpot_server.Services.Search;
+using MindSpot_server.Services.Billing;
 using MindSpot_server.Models.Billing;
 using Raven.Client.Documents;
 using System.Threading;
+using System.Security.Claims;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 public class TherapistsController : ControllerBase
 {
+    private static readonly TimeSpan SubscriptionGracePeriod = TimeSpan.FromDays(5);
+
     private readonly IDocumentStore _store;
     private readonly OpenAiService _openAiService;
     private readonly ITherapistVerificationManager _verificationManager;
     private readonly ITherapistSearchService _searchService;
     private readonly ILicenseVerificationService _licenseService;
+    private readonly IStripeService _stripeService;
 
     public TherapistsController(
         IDocumentStore store,
         OpenAiService openAiService,
         ITherapistVerificationManager verificationManager,
         ITherapistSearchService searchService,
-        ILicenseVerificationService licenseService)
+        ILicenseVerificationService licenseService,
+        IStripeService stripeService)
     {
         _store = store;
         _openAiService = openAiService;
         _verificationManager = verificationManager;
         _searchService = searchService;
         _licenseService = licenseService;
+        _stripeService = stripeService;
     }
 
     // validates the license against the Ministry of Health registry without creating an account
@@ -78,6 +85,7 @@ public class TherapistsController : ControllerBase
                 Bio = request.Bio ?? "",
                 Specialties = request.Specialties ?? "",
                 PhoneNumber = request.PhoneNumber,
+                Email = request.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 EmbeddingVector = vector,
 
@@ -108,6 +116,11 @@ public class TherapistsController : ControllerBase
 
         string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
 
+        // This is the therapist's own editable profile (includes phone number) — not
+        // the public listing, which is GetPublicProfile below and omits phone/email.
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
         using var session = _store.OpenAsyncSession();
         var therapist = await session.LoadAsync<Therapist>(fullId);
 
@@ -135,6 +148,9 @@ public class TherapistsController : ControllerBase
 
         string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
 
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
         using var session = _store.OpenAsyncSession();
         var notifications = await session.Query<Notification>()
             .Where(x => x.TherapistId == fullId)
@@ -152,6 +168,9 @@ public class TherapistsController : ControllerBase
         var notification = await session.LoadAsync<Notification>(notificationId);
         if (notification != null)
         {
+            if (!CallerOwnsTherapist(notification.TherapistId))
+                return Forbid();
+
             notification.IsRead = true;
             await session.SaveChangesAsync();
         }
@@ -274,7 +293,16 @@ public class TherapistsController : ControllerBase
             ? request.TherapistId
             : $"Therapists/{request.TherapistId}";
 
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
         using var session = _store.OpenAsyncSession();
+
+        var subscription = await session.Query<TherapistSubscription>()
+            .FirstOrDefaultAsync(s => s.TherapistId == fullId);
+
+        if (!IsSubscriptionUsable(subscription, out var blockReason))
+            return StatusCode(402, new { error = blockReason });
 
         var existing = await session.Query<TherapistAvailability>()
             .Where(a => a.TherapistId == fullId)
@@ -392,6 +420,9 @@ public class TherapistsController : ControllerBase
 
         string fullId = request.Id.Contains("/") ? request.Id : $"Therapists/{request.Id}";
 
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
         using var session = _store.OpenAsyncSession();
         var therapist = await session.LoadAsync<Therapist>(fullId);
         if (therapist == null)
@@ -444,4 +475,168 @@ public class TherapistsController : ControllerBase
         });
     }
 
+    // ── Therapist subscription (required to set availability) ──────────────────
+
+    [Authorize]
+    [HttpGet("subscription/status")]
+    public async Task<IActionResult> GetSubscriptionStatus([FromQuery] string therapistId)
+    {
+        if (string.IsNullOrWhiteSpace(therapistId))
+            return BadRequest(new { error = "therapistId is required." });
+
+        string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
+
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
+        using var session = _store.OpenAsyncSession();
+        var subscription = await session.Query<TherapistSubscription>()
+            .FirstOrDefaultAsync(s => s.TherapistId == fullId);
+
+        var usable = IsSubscriptionUsable(subscription, out var blockReason);
+        var inGrace = subscription?.Status == "past_due"
+            && subscription.PastDueSince.HasValue
+            && DateTime.UtcNow - subscription.PastDueSince.Value <= SubscriptionGracePeriod;
+
+        return Ok(new
+        {
+            hasSubscription = subscription != null,
+            status          = subscription?.Status ?? "none",
+            usable,
+            inGrace,
+            graceEndsAt = inGrace
+                ? subscription!.PastDueSince!.Value.Add(SubscriptionGracePeriod)
+                : (DateTime?)null,
+            blockReason = usable ? null : blockReason
+        });
+    }
+
+    // Creates (or reuses) the Stripe customer for this therapist and returns a
+    // SetupIntent client secret so the frontend can collect a card via Stripe Elements.
+    [Authorize]
+    [HttpPost("subscription/setup")]
+    public async Task<IActionResult> SetupSubscription([FromBody] SubscriptionSetupRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TherapistId))
+            return BadRequest(new { error = "therapistId is required." });
+
+        string fullId = request.TherapistId.Contains("/")
+            ? request.TherapistId
+            : $"Therapists/{request.TherapistId}";
+
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
+        using var session = _store.OpenAsyncSession();
+
+        var therapist = await session.LoadAsync<Therapist>(fullId);
+        if (therapist == null)
+            return NotFound(new { error = "Therapist not found." });
+
+        var subscription = await session.Query<TherapistSubscription>()
+            .FirstOrDefaultAsync(s => s.TherapistId == fullId);
+
+        if (subscription == null)
+        {
+            var customerId = await _stripeService.CreateCustomerAsync(therapist.Email, therapist.FullName);
+            subscription = new TherapistSubscription
+            {
+                Id               = "TherapistSubscriptions/",
+                TherapistId      = fullId,
+                StripeCustomerId = customerId,
+                Status           = "incomplete"
+            };
+            await session.StoreAsync(subscription);
+            await session.SaveChangesAsync();
+        }
+
+        var clientSecret = await _stripeService.CreateSetupIntentAsync(subscription.StripeCustomerId!);
+        return Ok(new { clientSecret });
+    }
+
+    // Called after the frontend confirms the SetupIntent (card saved) — creates the
+    // actual recurring subscription using the price the admin currently has configured.
+    [Authorize]
+    [HttpPost("subscription/confirm")]
+    public async Task<IActionResult> ConfirmSubscription([FromBody] SubscriptionConfirmRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TherapistId) || string.IsNullOrWhiteSpace(request.PaymentMethodId))
+            return BadRequest(new { error = "therapistId and paymentMethodId are required." });
+
+        string fullId = request.TherapistId.Contains("/")
+            ? request.TherapistId
+            : $"Therapists/{request.TherapistId}";
+
+        if (!CallerOwnsTherapist(fullId))
+            return Forbid();
+
+        using var session = _store.OpenAsyncSession();
+
+        var subscription = await session.Query<TherapistSubscription>()
+            .FirstOrDefaultAsync(s => s.TherapistId == fullId);
+        if (subscription == null || string.IsNullOrEmpty(subscription.StripeCustomerId))
+            return BadRequest(new { error = "Call subscription/setup first." });
+
+        var settings = await session.LoadAsync<SystemSettings>(SystemSettings.SingletonId);
+        if (settings?.TherapistSubscriptionPriceId == null)
+            return StatusCode(500, new { error = "Subscription price is not configured yet." });
+
+        var (subscriptionId, status) = await _stripeService.CreateSubscriptionAsync(
+            subscription.StripeCustomerId,
+            request.PaymentMethodId,
+            settings.TherapistSubscriptionPriceId);
+
+        subscription.StripeSubscriptionId = subscriptionId;
+        subscription.Status               = status;
+        subscription.PastDueSince         = null;
+        await session.SaveChangesAsync();
+
+        return Ok(new { message = "Subscription activated.", status });
+    }
+
+    // Confirms the authenticated caller IS the therapist the request claims to act as —
+    // without this, any authenticated user (a patient, a different therapist) could pass
+    // an arbitrary therapistId and read/mutate someone else's profile, availability, or
+    // Stripe subscription/payment method.
+    private bool CallerOwnsTherapist(string fullTherapistId)
+    {
+        var callerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(callerId)) return false;
+
+        var callerFullId = callerId.Contains("/") ? callerId : $"Therapists/{callerId}";
+        return callerFullId == fullTherapistId;
+    }
+
+    // active → usable. past_due → usable only inside the grace period. anything
+    // else (incomplete / canceled / none) → blocked.
+    private bool IsSubscriptionUsable(TherapistSubscription? subscription, out string blockReason)
+    {
+        if (subscription == null || subscription.Status is "incomplete" or "canceled")
+        {
+            blockReason = "An active subscription is required to set your availability.";
+            return false;
+        }
+
+        if (subscription.Status == "active")
+        {
+            blockReason = "";
+            return true;
+        }
+
+        if (subscription.Status == "past_due")
+        {
+            var since = subscription.PastDueSince ?? DateTime.UtcNow;
+            if (DateTime.UtcNow - since <= SubscriptionGracePeriod)
+            {
+                blockReason = "";
+                return true;
+            }
+            blockReason = "Your subscription payment failed and the grace period has expired. " +
+                          "Please update your payment method to keep setting your availability.";
+            return false;
+        }
+
+        blockReason = "An active subscription is required to set your availability.";
+        return false;
+    }
 }

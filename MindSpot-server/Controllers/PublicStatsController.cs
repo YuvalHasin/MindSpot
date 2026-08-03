@@ -41,5 +41,21 @@ namespace MindSpot_server.Controllers
                 totalReviews
             });
         }
+
+        [HttpGet("pricing")]
+        public async Task<IActionResult> GetPricing(CancellationToken ct)
+        {
+            using var session = _store.OpenAsyncSession();
+            var settings = await session.LoadAsync<SystemSettings>(SystemSettings.SingletonId, ct)
+                           ?? new SystemSettings();
+
+            return Ok(new
+            {
+                sessionPrice               = settings.SessionPrice,
+                patientSubscriptionPrice   = settings.PatientSubscriptionPrice,
+                therapistSubscriptionPrice = settings.TherapistSubscriptionPrice,
+                currency                   = settings.Currency
+            });
+        }
     }
 }

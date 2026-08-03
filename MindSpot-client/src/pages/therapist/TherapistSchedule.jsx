@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, CalendarDays, Check, Pencil, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import TherapistSubscriptionForm from "@/components/therapist/TherapistSubscriptionForm";
 
 const DAYS = [
   { key: "sunday"    },
@@ -365,13 +366,31 @@ const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
 };
 
 const TherapistSchedule = () => {
+  const { t } = useTranslation();
   const [loading, setLoading]     = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [grid, setGrid]           = useState(emptyGrid);
   const [bookedSet, setBookedSet] = useState(new Set());
+  const [subscription, setSubscription] = useState(null);
+
+  const therapistId = sessionStorage.getItem("therapistId") || sessionStorage.getItem("userId");
+
+  const fetchSubscriptionStatus = useCallback(async () => {
+    const token = sessionStorage.getItem("token");
+    if (!therapistId) return;
+    try {
+      const res = await fetch(
+        `https://localhost:7160/api/Therapists/subscription/status?therapistId=${encodeURIComponent(therapistId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) setSubscription(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, [therapistId]);
 
   const fetchAll = useCallback(async () => {
-    const userId = sessionStorage.getItem("therapistId") || sessionStorage.getItem("userId");
+    const userId = therapistId;
     const token  = sessionStorage.getItem("token");
     if (!userId) { setLoading(false); return; }
 
@@ -403,24 +422,45 @@ const TherapistSchedule = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [therapistId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchSubscriptionStatus(); fetchAll(); }, [fetchSubscriptionStatus, fetchAll]);
 
   const handleSaved = (newGrid) => {
     setGrid(newGrid);
     setIsEditing(false);
   };
 
-  if (loading)
+  if (loading || !subscription)
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
 
+  if (!subscription.usable) {
+    return (
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-10">
+        <TherapistSubscriptionForm
+          therapistId={therapistId}
+          onSubscribed={fetchSubscriptionStatus}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      {subscription.inGrace && (
+        <div className="mb-4 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+          <AlertTriangle size={14} className="shrink-0" />
+          {t(
+            "therapistSubscription.gracePeriodWarning",
+            "Your last subscription payment failed. Please update your payment method before {{date}} to avoid losing access to your schedule.",
+            { date: subscription.graceEndsAt ? new Date(subscription.graceEndsAt).toLocaleDateString() : "" }
+          )}
+        </div>
+      )}
       <AnimatePresence mode="wait">
         {isEditing ? (
           <ScheduleEdit

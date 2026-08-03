@@ -148,5 +148,100 @@ namespace MindSpot_server.Services.Billing
         /// <summary>Converts a decimal amount (e.g. 350.00 ILS) to Stripe's smallest unit (35000 agorot).</summary>
         private static long ToSmallestUnit(decimal amount) =>
             (long)(amount * SmallestUnitMultiplier);
+
+        // ── Therapist subscription billing ──────────────────────────────────────
+
+        public async Task<(string ProductId, string PriceId)> EnsureSubscriptionPriceAsync(
+            string? existingProductId,
+            decimal amount,
+            string currency,
+            CancellationToken ct = default)
+        {
+            string productId = existingProductId ?? "";
+            if (string.IsNullOrEmpty(productId))
+            {
+                var productService = new ProductService();
+                var product = await productService.CreateAsync(new ProductCreateOptions
+                {
+                    Name = "MindSpot Therapist Subscription"
+                }, cancellationToken: ct);
+                productId = product.Id;
+            }
+
+            var priceService = new PriceService();
+            var price = await priceService.CreateAsync(new PriceCreateOptions
+            {
+                Product    = productId,
+                Currency   = currency.ToLower(),
+                UnitAmount = ToSmallestUnit(amount),
+                Recurring  = new PriceRecurringOptions { Interval = "month" }
+            }, cancellationToken: ct);
+
+            _logger.LogInformation(
+                "Therapist subscription price set to {Amount} {Currency} (Price={PriceId})",
+                amount, currency, price.Id);
+
+            return (productId, price.Id);
+        }
+
+        public async Task<string> CreateCustomerAsync(string? email, string name, CancellationToken ct = default)
+        {
+            var service = new CustomerService();
+            var customer = await service.CreateAsync(new CustomerCreateOptions
+            {
+                Email = email,
+                Name  = name
+            }, cancellationToken: ct);
+            return customer.Id;
+        }
+
+        public async Task<string> CreateSetupIntentAsync(string customerId, CancellationToken ct = default)
+        {
+            var service = new SetupIntentService();
+            var intent = await service.CreateAsync(new SetupIntentCreateOptions
+            {
+                Customer           = customerId,
+                PaymentMethodTypes = new List<string> { "card" }
+            }, cancellationToken: ct);
+            return intent.ClientSecret;
+        }
+
+        public async Task<(string SubscriptionId, string Status)> CreateSubscriptionAsync(
+            string customerId,
+            string paymentMethodId,
+            string priceId,
+            CancellationToken ct = default)
+        {
+            // Attach resolves to the real PaymentMethod id — reuse that, not the input
+            // string, since Stripe's test tokens (e.g. "pm_card_visa") resolve to a
+            // different fresh id on every call.
+            var pmService = new PaymentMethodService();
+            var attached = await pmService.AttachAsync(paymentMethodId,
+                new PaymentMethodAttachOptions { Customer = customerId }, cancellationToken: ct);
+            var resolvedPaymentMethodId = attached.Id;
+
+            var customerService = new CustomerService();
+            await customerService.UpdateAsync(customerId, new CustomerUpdateOptions
+            {
+                InvoiceSettings = new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = resolvedPaymentMethodId }
+            }, cancellationToken: ct);
+
+            var subService = new SubscriptionService();
+            var subscription = await subService.CreateAsync(new SubscriptionCreateOptions
+            {
+                Customer = customerId,
+                Items = new List<SubscriptionItemOptions>
+                {
+                    new SubscriptionItemOptions { Price = priceId }
+                },
+                DefaultPaymentMethod = resolvedPaymentMethodId
+            }, cancellationToken: ct);
+
+            _logger.LogInformation(
+                "Created subscription {SubscriptionId} for customer {CustomerId}, status={Status}",
+                subscription.Id, customerId, subscription.Status);
+
+            return (subscription.Id, subscription.Status);
+        }
     }
 }

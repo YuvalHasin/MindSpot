@@ -1,8 +1,9 @@
-using BCrypt.Net; 
+using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
 using Raven.Client.Documents;
+using System.Security.Claims;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -14,6 +15,19 @@ public class PatientsController : ControllerBase
     public PatientsController(IDocumentStore store)
     {
         _store = store;
+    }
+
+    // Confirms the authenticated caller IS the patient the request targets —
+    // without this, any logged-in patient could read/modify another patient's
+    // profile, password, or clinical/triage history just by passing a different id.
+    private bool CallerOwnsPatient(string targetId)
+    {
+        var callerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(callerId) || string.IsNullOrEmpty(targetId)) return false;
+
+        var callerFullId = callerId.Contains("/") ? callerId : $"Patients/{callerId}";
+        var targetFullId = targetId.Contains("/") ? targetId : $"Patients/{targetId}";
+        return callerFullId == targetFullId;
     }
 
     [AllowAnonymous]
@@ -48,6 +62,8 @@ public class PatientsController : ControllerBase
     [HttpGet("details")]
     public async Task<IActionResult> GetPatientById([FromQuery] string id)
     {
+        if (!CallerOwnsPatient(id)) return Forbid();
+
         using (var session = _store.OpenAsyncSession())
         {
             var patient = await session.LoadAsync<Patient>(id);
@@ -79,6 +95,8 @@ public class PatientsController : ControllerBase
     [HttpPut("update-profile")]
     public IActionResult UpdateProfile([FromBody] UpdateProfileRequest request)
     {
+        if (!CallerOwnsPatient(request.Id)) return Forbid();
+
         using (var session = _store.OpenSession())
         {
             var patient = session.Load<Patient>(request.Id);
@@ -98,6 +116,8 @@ public class PatientsController : ControllerBase
     [HttpPut("change-password")]
     public IActionResult ChangePatientPassword([FromBody] ChangePasswordRequest request)
     {
+        if (!CallerOwnsPatient(request.Id)) return Forbid();
+
         using (var session = _store.OpenSession())
         {
             var patient = session.Load<Patient>(request.Id);
@@ -121,9 +141,11 @@ public class PatientsController : ControllerBase
         }
     }
 
-    [HttpGet("activity-history")] 
+    [HttpGet("activity-history")]
     public async Task<IActionResult> GetActivityHistory([FromQuery] string id)
     {
+        if (!CallerOwnsPatient(id)) return Forbid();
+
         try
         {
             using (var session = _store.OpenAsyncSession())

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Loader2, ArrowLeft, ShieldCheck, Lock, KeyRound } from "lucide-react";
+import { User, Mail, Loader2, ArrowLeft, ShieldCheck, Lock, KeyRound, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -10,14 +10,23 @@ const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [form, setForm] = useState({ 
-    fullName: "", 
-    email: "", 
-    currentPassword: "", 
-    newPassword: "", 
-    confirmPassword: "" 
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
   });
   const [errorField, setErrorField] = useState({ field: "", message: "" });
+
+  const [pricing, setPricing] = useState({
+    sessionPrice: 0,
+    patientSubscriptionPrice: 0,
+    therapistSubscriptionPrice: 0,
+  });
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
+  const [pricingSaved, setPricingSaved] = useState(false);
+  const [pricingError, setPricingError] = useState("");
 
   const userId = sessionStorage.getItem("userId");
   const token = sessionStorage.getItem("token");
@@ -46,7 +55,46 @@ const AdminSettings = () => {
       }
     };
     fetchAdminData();
+
+    const fetchPricing = async () => {
+      try {
+        const res = await fetch("https://localhost:7160/api/admin/pricing", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setPricing(await res.json());
+      } catch (err) {
+        console.error("Failed to load pricing", err);
+      }
+    };
+    fetchPricing();
   }, []);
+
+  const handleSavePricing = async (e) => {
+    e.preventDefault();
+    setPricingError("");
+    setIsSavingPricing(true);
+    try {
+      const res = await fetch("https://localhost:7160/api/admin/pricing", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          SessionPrice: Number(pricing.sessionPrice),
+          PatientSubscriptionPrice: Number(pricing.patientSubscriptionPrice),
+          TherapistSubscriptionPrice: Number(pricing.therapistSubscriptionPrice),
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.message || "Failed to save pricing.");
+      }
+      setPricingSaved(true);
+      setTimeout(() => setPricingSaved(false), 3000);
+    } catch (err) {
+      setPricingError(err.message);
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -205,6 +253,67 @@ const AdminSettings = () => {
           </Button>
           {errorField.field === "general" && <p className="text-center text-xs text-destructive mt-3 font-medium bg-destructive/10 py-2 rounded-lg">{errorField.message}</p>}
         </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border/60 rounded-2xl p-6 space-y-5 shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border/40 pb-4">
+          <DollarSign className="text-primary" size={20} />
+          <div>
+            <p className="font-medium text-foreground">{t("adminSettings.pricingTitle", "Pricing")}</p>
+            <p className="text-xs text-muted-foreground">{t("adminSettings.pricingSubtitle", "Controls what patients pay and what therapists are charged.")}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.sessionPrice", "Session price (₪)")}</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={pricing.sessionPrice}
+              onChange={(e) => setPricing({ ...pricing, sessionPrice: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.patientSubscriptionPrice", "Patient subscription (₪/mo)")}</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={pricing.patientSubscriptionPrice}
+              onChange={(e) => setPricing({ ...pricing, patientSubscriptionPrice: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.therapistSubscriptionPrice", "Therapist subscription (₪/mo)")}</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={pricing.therapistSubscriptionPrice}
+              onChange={(e) => setPricing({ ...pricing, therapistSubscriptionPrice: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSavePricing}
+          disabled={isSavingPricing}
+          className={`w-full rounded-xl h-11 font-bold shadow-md ${pricingSaved ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+        >
+          {isSavingPricing ? (
+            <Loader2 className="animate-spin w-5 h-5 mx-auto" />
+          ) : pricingSaved ? (
+            t("adminSettings.savedSuccessfully")
+          ) : (
+            t("adminSettings.savePricing", "Save pricing")
+          )}
+        </Button>
+        {pricingError && <p className="text-center text-xs text-destructive font-medium bg-destructive/10 py-2 rounded-lg">{pricingError}</p>}
       </motion.div>
     </div>
   );

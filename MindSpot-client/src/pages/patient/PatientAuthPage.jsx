@@ -14,7 +14,30 @@ const PatientAuthPage = () => {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
   const navigate = useNavigate();
+
+  const handleForgotPassword = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setForgotMessage(t("auth.forgotEnterEmailFirst", "Enter your email above first."));
+      return;
+    }
+    setForgotLoading(true);
+    setForgotMessage("");
+    try {
+      await fetch("https://localhost:7160/api/Auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Email: email, Role: "Patient" }),
+      });
+      setForgotMessage(t("auth.forgotSent", "If that email is registered, a reset link has been sent."));
+    } catch {
+      setForgotMessage(t("auth.forgotError", "Something went wrong. Please try again."));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const validate = () => {
     if (!isLogin && !displayName.trim()) {
@@ -209,6 +232,22 @@ const PatientAuthPage = () => {
                 required
               />
             </div>
+
+            {isLogin && (
+              <div className="text-right -mt-2">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={forgotLoading}
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  {forgotLoading ? t("auth.forgotSending", "Sending…") : t("auth.forgotPassword", "Forgot password?")}
+                </button>
+                {forgotMessage && (
+                  <p className="text-xs text-muted-foreground mt-1">{forgotMessage}</p>
+                )}
+              </div>
+            )}
 
             <AnimatePresence>
               {error && (

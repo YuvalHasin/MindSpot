@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindSpot_server.Models;
+using MindSpot_server.Models.Billing;
 using MindSpot_server.Services;
 using OpenAI.Chat;
 using Raven.Client.Documents;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 [ApiController]
@@ -52,14 +54,28 @@ public class ChatController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    // Was [AllowAnonymous] — let anyone on the internet read any therapy chat
+    // transcript by guessing/enumerating appointmentId (RavenDB ids are sequential,
+    // not random). Fixed: requires auth, and the caller must be the patient or
+    // therapist on that specific appointment.
+    [Authorize]
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory([FromQuery] string appointmentId)
     {
         if (string.IsNullOrWhiteSpace(appointmentId))
             return BadRequest(new { error = "appointmentId is required." });
 
+        var fullAppointmentId = appointmentId.Contains("/") ? appointmentId : $"Appointments/{appointmentId}";
+
         using var session = _store.OpenAsyncSession();
+
+        var appointment = await session.LoadAsync<Appointment>(fullAppointmentId);
+        if (appointment == null)
+            return NotFound(new { error = "Appointment not found." });
+
+        var callerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (callerId != appointment.PatientId && callerId != appointment.TherapistId)
+            return Forbid();
 
         var messages = await session.Query<MindSpot_server.Models.ChatMessage>()
             .Where(m => m.AppointmentId == appointmentId)

@@ -4,6 +4,7 @@ using Raven.Client.Documents;
 using MindSpot_server.Models;
 using MindSpot_server.Models.Verification;
 using MindSpot_server.Models.Billing;
+using MindSpot_server.Services.Billing;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,10 +17,12 @@ namespace server.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IDocumentStore _store;
+        private readonly IStripeService _stripeService;
 
-        public AdminController(IDocumentStore store)
+        public AdminController(IDocumentStore store, IStripeService stripeService)
         {
             _store = store;
+            _stripeService = stripeService;
         }
 
         [HttpGet("details")]
@@ -231,6 +234,59 @@ namespace server.Controllers
             admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             await session.SaveChangesAsync();
             return Ok(new { message = "Password changed successfully." });
+        }
+
+        [HttpGet("pricing")]
+        public async Task<IActionResult> GetPricing()
+        {
+            using var session = _store.OpenAsyncSession();
+            var settings = await session.LoadAsync<SystemSettings>(SystemSettings.SingletonId)
+                           ?? new SystemSettings();
+
+            return Ok(new
+            {
+                sessionPrice               = settings.SessionPrice,
+                patientSubscriptionPrice   = settings.PatientSubscriptionPrice,
+                therapistSubscriptionPrice = settings.TherapistSubscriptionPrice,
+                currency                   = settings.Currency
+            });
+        }
+
+        [HttpPut("pricing")]
+        public async Task<IActionResult> UpdatePricing([FromBody] UpdatePricingRequest request)
+        {
+            if (request.SessionPrice <= 0)
+                return BadRequest(new { message = "Session price must be greater than 0." });
+            if (request.TherapistSubscriptionPrice < 0 || request.PatientSubscriptionPrice < 0)
+                return BadRequest(new { message = "Prices cannot be negative." });
+
+            using var session = _store.OpenAsyncSession();
+            var settings = await session.LoadAsync<SystemSettings>(SystemSettings.SingletonId);
+            if (settings == null)
+            {
+                settings = new SystemSettings();
+                await session.StoreAsync(settings, SystemSettings.SingletonId);
+            }
+
+            settings.SessionPrice             = request.SessionPrice;
+            settings.PatientSubscriptionPrice = request.PatientSubscriptionPrice;
+
+            // Stripe Prices are immutable — only create a new one when the amount actually changed
+            if (settings.TherapistSubscriptionPrice != request.TherapistSubscriptionPrice
+                || string.IsNullOrEmpty(settings.TherapistSubscriptionPriceId))
+            {
+                var (productId, priceId) = await _stripeService.EnsureSubscriptionPriceAsync(
+                    settings.TherapistSubscriptionProductId,
+                    request.TherapistSubscriptionPrice,
+                    settings.Currency);
+
+                settings.TherapistSubscriptionProductId = productId;
+                settings.TherapistSubscriptionPriceId   = priceId;
+            }
+            settings.TherapistSubscriptionPrice = request.TherapistSubscriptionPrice;
+
+            await session.SaveChangesAsync();
+            return Ok(new { message = "Pricing updated successfully." });
         }
     }
 }

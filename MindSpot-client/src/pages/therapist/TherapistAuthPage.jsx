@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
   Lock, User, ArrowLeft, Loader2, Award, Briefcase,
-  Phone, Upload, CheckCircle2, Clock, ChevronRight,
+  Phone, Mail, Upload, CheckCircle2, Clock, ChevronRight,
 } from "lucide-react";
 
 const STEP = { DETAILS: 1, PROFESSIONAL: 2, PENDING: 3 };
@@ -19,10 +19,34 @@ const TherapistAuthPage = () => {
   // Login fields
   const [loginLicense,  setLoginLicense]  = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+
+  const handleForgotPassword = async () => {
+    if (!loginLicense.trim()) {
+      setForgotMessage(t("therapistAuth.forgotEnterLicenseFirst", "Enter your license number above first."));
+      return;
+    }
+    setForgotLoading(true);
+    setForgotMessage("");
+    try {
+      await fetch("https://localhost:7160/api/Auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ LicenseNumber: loginLicense, Role: "Therapist" }),
+      });
+      setForgotMessage(t("therapistAuth.forgotSent", "If that license number has an email on file, a reset link has been sent."));
+    } catch {
+      setForgotMessage(t("therapistAuth.forgotError", "Something went wrong. Please try again."));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   // Step 1 fields
   const [fullName,      setFullName]      = useState("");
   const [phoneNumber,   setPhoneNumber]   = useState("");
+  const [email,         setEmail]         = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [password,      setPassword]      = useState("");
 
@@ -50,6 +74,11 @@ const TherapistAuthPage = () => {
       e.phoneNumber = "Phone number is required.";
     } else if (!/^\d{3}-?\d{7}$/.test(phoneNumber.replace(/\s/g, ""))) {
       e.phoneNumber = "Enter a valid Israeli phone number.";
+    }
+    if (!email.trim()) {
+      e.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      e.email = "Please enter a valid email address.";
     }
     if (!licenseNumber.trim()) {
       e.licenseNumber = "License number is required.";
@@ -131,7 +160,7 @@ const TherapistAuthPage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName, phoneNumber, licenseNumber, password,
+          fullName, phoneNumber, email, licenseNumber, password,
           specialties: "", bio: "", role: "Therapist",
           preCheckFailureReason,
         }),
@@ -262,6 +291,17 @@ const TherapistAuthPage = () => {
               >
                 <FieldRow icon={Award} placeholder={t("therapistAuth.licensePlaceholder")} value={loginLicense}  onChange={setLoginLicense}  ic={ic} />
                 <FieldRow icon={Lock}  placeholder={t("therapistAuth.passwordPlaceholder")} value={loginPassword} onChange={setLoginPassword} ic={ic} type="password" />
+                <div className="text-right -mt-2">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={forgotLoading}
+                    className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    {forgotLoading ? t("therapistAuth.forgotSending", "Sending…") : t("therapistAuth.forgotPassword", "Forgot password?")}
+                  </button>
+                  {forgotMessage && <p className="text-xs text-muted-foreground mt-1">{forgotMessage}</p>}
+                </div>
                 {error && <ErrBox msg={error} />}
                 <Button type="submit" className="w-full rounded-xl h-12 text-base font-medium" disabled={loading}>
                   {loading ? <Loader2 size={18} className="animate-spin" /> : t("therapistAuth.signIn")}
@@ -277,6 +317,7 @@ const TherapistAuthPage = () => {
                 <form onSubmit={handleStep1Submit} className="space-y-3">
                   <FieldRow icon={User}  placeholder={t("therapistAuth.fullNamePlaceholder")}    value={fullName}      onChange={setFullName}      ic={ic} err={errors.fullName} />
                   <FieldRow icon={Phone} placeholder={t("therapistAuth.phonePlaceholder")}       value={phoneNumber}   onChange={setPhoneNumber}   ic={ic} err={errors.phoneNumber} />
+                  <FieldRow icon={Mail}  type="email" placeholder={t("therapistAuth.emailPlaceholder", "Email address")} value={email} onChange={setEmail} ic={ic} err={errors.email} />
                   <FieldRow icon={Award} placeholder={t("therapistAuth.licenseNumPlaceholder")}  value={licenseNumber} onChange={setLicenseNumber} ic={ic} err={errors.licenseNumber} />
                   <FieldRow icon={Lock}  placeholder={t("therapistAuth.passwordPlaceholder")}    value={password}      onChange={setPassword}      ic={ic} type="password" err={errors.password} />
                   {error && <ErrBox msg={error} />}

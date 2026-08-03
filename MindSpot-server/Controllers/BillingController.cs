@@ -6,6 +6,7 @@ using MindSpot_server.Services;
 using MindSpot_server.Services.Billing;
 using Raven.Client.Documents;
 using Stripe;
+using System.Security.Claims;
 
 namespace MindSpot_server.Controllers
 {
@@ -13,6 +14,17 @@ namespace MindSpot_server.Controllers
     [Route("api/billing")]
     public class BillingController : ControllerBase
     {
+        // Normalised id of the authenticated caller (e.g. "Patients/1-A" / "Therapists/1-A").
+        private string? CallerId()
+        {
+            var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(raw)) return null;
+            if (raw.Contains("/")) return raw;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            return role == "Therapist" ? $"Therapists/{raw}" : $"Patients/{raw}";
+        }
+
+
         private readonly IDocumentStore _store;
         private readonly IStripeService _stripeService;
         private readonly IEmailService _emailService;
@@ -36,17 +48,26 @@ namespace MindSpot_server.Controllers
         }
 
         // Creates the Appointment document; payment hasn't happened yet at this point.
+        // Amount/currency come from server-side SystemSettings, never from the client —
+        // a client-supplied Amount would let a patient dictate their own session price.
         [Authorize]
         [HttpPost("book")]
         public async Task<IActionResult> BookAppointment(
             [FromBody] BookAppointmentRequest request,
             CancellationToken ct)
         {
-            if (request.Amount <= 0)
-                return BadRequest(new { error = "Amount must be greater than 0." });
-
             if (request.AppointmentAt <= DateTime.UtcNow)
                 return BadRequest(new { error = "Appointment must be in the future." });
+
+            var callerId = CallerId();
+            var normalisedPatientId = request.PatientId.Contains("/") ? request.PatientId : $"Patients/{request.PatientId}";
+            if (callerId != normalisedPatientId)
+                return Forbid();
+
+            using var session = _store.OpenAsyncSession();
+
+            var settings = await session.LoadAsync<SystemSettings>(SystemSettings.SingletonId, ct)
+                           ?? new SystemSettings();
 
             var appointment = new Appointment
             {
@@ -55,13 +76,12 @@ namespace MindSpot_server.Controllers
                 TherapistId   = request.TherapistId,
                 AppointmentAt = request.AppointmentAt,
                 DurationMinutes = request.DurationMinutes,
-                Amount        = request.Amount,
-                Currency      = request.Currency,
+                Amount        = settings.SessionPrice,
+                Currency      = settings.Currency,
                 Notes         = request.Notes,
                 Status        = AppointmentStatus.Pending
             };
 
-            using var session = _store.OpenAsyncSession();
             await session.StoreAsync(appointment, ct);
 
             // May differ from the algorithm's top pick (ChatSession.RecommendedTherapistId)
@@ -97,6 +117,9 @@ namespace MindSpot_server.Controllers
             if (appointment is null)
                 return NotFound(new { error = "Appointment not found." });
 
+            if (CallerId() != appointment.PatientId)
+                return Forbid();
+
             if (appointment.Status != AppointmentStatus.Pending)
                 return Conflict(new { error = $"Appointment is in '{appointment.Status}' status. Cannot create payment intent." });
 
@@ -127,6 +150,9 @@ namespace MindSpot_server.Controllers
 
             if (appointment is null)
                 return NotFound(new { error = "Appointment not found." });
+
+            if (CallerId() != appointment.PatientId)
+                return Forbid();
 
             // Idempotent: if we already processed this (e.g. webhook got there first), just return OK
             if (appointment.Payment.Status != PaymentStatus.Succeeded)
@@ -169,6 +195,9 @@ namespace MindSpot_server.Controllers
 
             if (appointment is null)
                 return NotFound(new { error = "Appointment not found." });
+
+            if (CallerId() != appointment.TherapistId)
+                return Forbid();
 
             if (appointment.Payment.Status != PaymentStatus.Succeeded)
                 return Conflict(new { error = "Cannot approve an appointment that hasn't been paid yet." });
@@ -217,6 +246,18 @@ namespace MindSpot_server.Controllers
                 case EventTypes.PaymentIntentPaymentFailed:
                     await HandlePaymentFailedAsync(stripeEvent);
                     break;
+
+                case EventTypes.InvoicePaymentSucceeded:
+                    await HandleSubscriptionInvoiceSucceededAsync(stripeEvent);
+                    break;
+
+                case EventTypes.InvoicePaymentFailed:
+                    await HandleSubscriptionInvoiceFailedAsync(stripeEvent);
+                    break;
+
+                case EventTypes.CustomerSubscriptionDeleted:
+                    await HandleSubscriptionCanceledAsync(stripeEvent);
+                    break;
             }
 
             return Ok(); // always 200 so Stripe doesn't retry
@@ -233,6 +274,10 @@ namespace MindSpot_server.Controllers
 
             if (appointment is null)
                 return NotFound(new { error = "Appointment not found." });
+
+            var cancelCallerId = CallerId();
+            if (cancelCallerId != appointment.PatientId && cancelCallerId != appointment.TherapistId)
+                return Forbid();
 
             if (appointment.Status is AppointmentStatus.Completed or
                 AppointmentStatus.CancelledByPatient or
@@ -295,6 +340,10 @@ namespace MindSpot_server.Controllers
             if (string.IsNullOrWhiteSpace(patientId))
                 return BadRequest(new { error = "patientId is required." });
 
+            var normalisedPatientId = patientId.Contains("/") ? patientId : $"Patients/{patientId}";
+            if (CallerId() != normalisedPatientId)
+                return Forbid();
+
             using var session = _store.OpenAsyncSession();
 
             var appointments = await session.Query<Appointment>()
@@ -349,6 +398,9 @@ namespace MindSpot_server.Controllers
 
             string fullId = therapistId.Contains("/") ? therapistId : $"Therapists/{therapistId}";
 
+            if (CallerId() != fullId)
+                return Forbid();
+
             using var session = _store.OpenAsyncSession();
 
             var appointments = await session.Query<Appointment>()
@@ -395,6 +447,10 @@ namespace MindSpot_server.Controllers
             using var session = _store.OpenAsyncSession();
             var a             = await session.LoadAsync<Appointment>(fullId, ct);
             if (a is null) return NotFound();
+
+            var apptCallerId = CallerId();
+            if (apptCallerId != a.PatientId && apptCallerId != a.TherapistId)
+                return Forbid();
 
             var alreadyRated = await session.Query<MindSpot_server.Models.Review>()
                 .AnyAsync(r => r.AppointmentId == a.Id && r.PatientId == a.PatientId, ct);
@@ -475,6 +531,61 @@ namespace MindSpot_server.Controllers
             await session.SaveChangesAsync();
             _logger.LogWarning("Payment failed for appointment {AppointmentId}: {Reason}",
                 appointment.Id, appointment.Payment.FailureReason);
+        }
+
+        // ── Therapist subscription lifecycle ─────────────────────────────────
+
+        private async Task HandleSubscriptionInvoiceSucceededAsync(Stripe.Event e)
+        {
+            if (e.Data.Object is not Invoice invoice) return;
+            var subscriptionId = invoice.Parent?.SubscriptionDetails?.SubscriptionId;
+            if (string.IsNullOrEmpty(subscriptionId)) return;
+
+            using var session = _store.OpenAsyncSession();
+            var subscription = await session.Query<TherapistSubscription>()
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == subscriptionId);
+            if (subscription is null) return;
+
+            subscription.Status        = "active";
+            subscription.PastDueSince  = null;
+            subscription.CurrentPeriodEnd = invoice.PeriodEnd;
+            await session.SaveChangesAsync();
+
+            _logger.LogInformation("Subscription {Id} renewed successfully.", subscriptionId);
+        }
+
+        private async Task HandleSubscriptionInvoiceFailedAsync(Stripe.Event e)
+        {
+            if (e.Data.Object is not Invoice invoice) return;
+            var subscriptionId = invoice.Parent?.SubscriptionDetails?.SubscriptionId;
+            if (string.IsNullOrEmpty(subscriptionId)) return;
+
+            using var session = _store.OpenAsyncSession();
+            var subscription = await session.Query<TherapistSubscription>()
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == subscriptionId);
+            if (subscription is null) return;
+
+            subscription.Status = "past_due";
+            subscription.PastDueSince ??= DateTime.UtcNow;
+            await session.SaveChangesAsync();
+
+            _logger.LogWarning("Subscription {Id} payment failed — grace period started at {Since}.",
+                subscriptionId, subscription.PastDueSince);
+        }
+
+        private async Task HandleSubscriptionCanceledAsync(Stripe.Event e)
+        {
+            if (e.Data.Object is not Stripe.Subscription stripeSubscription) return;
+
+            using var session = _store.OpenAsyncSession();
+            var subscription = await session.Query<TherapistSubscription>()
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == stripeSubscription.Id);
+            if (subscription is null) return;
+
+            subscription.Status = "canceled";
+            await session.SaveChangesAsync();
+
+            _logger.LogInformation("Subscription {Id} canceled.", stripeSubscription.Id);
         }
     }
 }

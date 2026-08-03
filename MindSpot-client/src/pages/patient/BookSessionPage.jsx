@@ -200,6 +200,20 @@ export default function BookSessionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error,     setError]     = useState("");
 
+  // Price is admin-configurable server-side — fetch the live value instead of
+  // trusting the SESSION_PRICE fallback constant above.
+  useEffect(() => {
+    fetch("https://localhost:7160/api/public-stats/pricing")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.sessionPrice) {
+          setStripeAmount(data.sessionPrice);
+          setStripeCurrency(data.currency ?? SESSION_CURRENCY);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleBooking = useCallback(async (e) => {
     e.preventDefault();
     if (!selectedSlot) {
@@ -220,8 +234,8 @@ export default function BookSessionPage() {
           therapistId,
           appointmentAt: selectedSlot,
           durationMinutes: 50,
-          amount:   SESSION_PRICE,
-          currency: SESSION_CURRENCY,
+          amount:   stripeAmount,
+          currency: stripeCurrency,
           notes,
           chatSessionId,
         }),
@@ -397,7 +411,7 @@ export default function BookSessionPage() {
 
               <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-sm">
                 <span className="text-muted-foreground">{t("booking.sessionDuration")}</span>
-                <span className="font-bold text-foreground">₪{SESSION_PRICE}</span>
+                <span className="font-bold text-foreground">₪{stripeAmount}</span>
               </div>
 
               <Button

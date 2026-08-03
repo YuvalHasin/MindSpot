@@ -52,7 +52,11 @@ namespace MindSpot_server.Controllers
             }
         }
 
-        [Authorize]
+        // This module is disconnected from the live JWT auth (patient identities here
+        // aren't linked to a real Patient's login), so there's no ownership check to
+        // apply — locking these down to Admin-only is the safe default until this
+        // module is either wired into the real patient flow or removed.
+        [Authorize(Roles = "Admin")]
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile(
             [FromQuery] string identityId,
@@ -73,7 +77,7 @@ namespace MindSpot_server.Controllers
                targetType:   "ClinicalRecord",
                targetIdParam: "anonymousId",
                description:  "Clinical record accessed")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpGet("clinical")]
         public async Task<IActionResult> GetClinicalData(
             [FromQuery] string anonymousId,
@@ -89,7 +93,7 @@ namespace MindSpot_server.Controllers
                 : Ok(data);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost("chat-message")]
         public async Task<IActionResult> SaveChatMessage(
             [FromBody] SaveChatMessageRequest request,
@@ -112,7 +116,7 @@ namespace MindSpot_server.Controllers
             });
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost("triage")]
         public async Task<IActionResult> UpdateTriage(
             [FromBody] UpdateTriageRequest request,
@@ -127,7 +131,7 @@ namespace MindSpot_server.Controllers
             return Ok(new { message = "Triage summary updated and encrypted." });
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpGet("chat-messages")]
         public async Task<IActionResult> GetChatMessages(
             [FromQuery] string sessionId,
