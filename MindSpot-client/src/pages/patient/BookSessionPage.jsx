@@ -1,17 +1,3 @@
-/**
- * BookSessionPage.jsx
- * ───────────────────
- * Full therapy session booking flow with Stripe payment.
- *
- * Flow:
- *  1. Patient picks a therapist, date, and time.
- *  2. "Book & Pay" → POST /api/billing/book   → creates Appointment in RavenDB.
- *  3. POST /api/billing/payment-intent         → server returns Stripe clientSecret.
- *  4. Stripe Elements (PaymentForm) collects card details client-side.
- *  5. stripe.confirmPayment() sends tokenised card to Stripe directly.
- *  6. Stripe calls our webhook → appointment status → Confirmed.
- */
-
 import { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
@@ -22,17 +8,13 @@ import { Button } from "@/components/ui/button";
 import { PaymentForm } from "../../components/patient/PaymentForm";
 import { useTranslation } from "react-i18next";
 
-// ── Stripe singleton (load once, outside component) ───────────────────────────
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const SESSION_PRICE    = 200;
 const SESSION_CURRENCY = "ils";
 
-// ── Booking steps ─────────────────────────────────────────────────────────────
 const STEP = { SELECT: "select", PAYMENT: "payment", SUCCESS: "success" };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function getAuthHeader() {
   const token = sessionStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -41,8 +23,8 @@ function getAuthHeader() {
 /** Return the Monday of the week containing `date` as a YYYY-MM-DD string. */
 function getMondayOf(date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun … 6=Sat
-  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
 }
@@ -62,10 +44,8 @@ function formatTime(isoStr) {
   return d.toISOString().slice(11, 16);
 }
 
-// ── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } };
 
-// ── SlotPicker sub-component ──────────────────────────────────────────────────
 function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
   const { t } = useTranslation();
   const [weekStart, setWeekStart]   = useState(() => getMondayOf(new Date()));
@@ -94,10 +74,9 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
     const d = new Date(weekStart + "T00:00:00");
     d.setDate(d.getDate() + delta * 7);
     setWeekStart(d.toISOString().slice(0, 10));
-    onSelectSlot(null); // clear selection on week change
+    onSelectSlot(null);
   }
 
-  // Group slots by date
   const byDate = {};
   for (const slot of slots) {
     const date = slot.dateTime.slice(0, 10);
@@ -106,21 +85,18 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
   }
   const dates = Object.keys(byDate).sort();
 
-  // Display the week range label
   const weekEndDate = new Date(weekStart + "T00:00:00");
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   const weekLabel = `${weekStart.slice(8, 10)}/${weekStart.slice(5, 7)} – ${String(weekEndDate.getDate()).padStart(2, "0")}/${String(weekEndDate.getMonth() + 1).padStart(2, "0")}`;
 
   return (
     <div>
-      {/* Label */}
       <label className="block text-sm font-medium text-foreground mb-2">
         <span className="flex items-center gap-1.5">
           <CalendarDays size={13} className="text-primary" /> {t("booking.pickSlot")}
         </span>
       </label>
 
-      {/* Week navigation */}
       <div className="flex items-center justify-between mb-3 rounded-xl border border-border/60 bg-card px-3 py-2">
         <button
           type="button"
@@ -141,7 +117,6 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
         </button>
       </div>
 
-      {/* Content area */}
       {loading && (
         <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
           <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -169,11 +144,9 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
           <div className="flex gap-3 min-w-max">
             {dates.map((date) => (
               <div key={date} className="flex flex-col gap-2 min-w-[80px]">
-                {/* Date header */}
                 <div className="text-center text-xs font-semibold text-muted-foreground font-display pb-1 border-b border-border/40">
                   {formatDateHeader(date)}
                 </div>
-                {/* Time chips */}
                 {byDate[date].map((slot) => {
                   const isSelected  = selectedSlot === slot.dateTime;
                   const isAvailable = slot.available;
@@ -205,7 +178,6 @@ function SlotPicker({ therapistId, selectedSlot, onSelectSlot }) {
   );
 }
 
-// ── Main page component ───────────────────────────────────────────────────────
 export default function BookSessionPage() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -228,7 +200,6 @@ export default function BookSessionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error,     setError]     = useState("");
 
-  // ── Step 1: Create appointment + get clientSecret ──────────────────────────
   const handleBooking = useCallback(async (e) => {
     e.preventDefault();
     if (!selectedSlot) {
@@ -286,10 +257,7 @@ export default function BookSessionPage() {
     }
   }, [therapistId, selectedSlot, notes]);
 
-  // ── Step 2 → 3: Payment confirmed ──────────────────────────────────────────
-  // Stripe webhooks can't reach localhost during development, so we tell the
-  // server directly that payment succeeded. The appointment stays Pending —
-  // the therapist still has to approve the request before it's Confirmed.
+  // Stripe webhooks can't reach localhost, so we confirm with the server directly.
   const handlePaymentSuccess = useCallback(async ({ paymentIntentId }) => {
     console.log("Payment succeeded:", paymentIntentId);
     try {
@@ -308,13 +276,12 @@ export default function BookSessionPage() {
     setError(message);
   }, []);
 
-  // ── Stripe Elements appearance — matches MindSpot warm palette ─────────────
   const stripeAppearance = {
     theme: "stripe",
     variables: {
-      colorPrimary:    "#c9956b",   // warm peach primary
-      colorBackground: "#fdf8f2",   // warm beige card
-      colorText:       "#3d3028",   // foreground
+      colorPrimary:    "#c9956b",
+      colorBackground: "#fdf8f2",
+      colorText:       "#3d3028",
       colorDanger:     "#dc2626",
       fontFamily:      "Inter, system-ui, sans-serif",
       borderRadius:    "10px",
@@ -332,12 +299,10 @@ export default function BookSessionPage() {
     },
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="mx-auto max-w-lg">
 
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -351,10 +316,8 @@ export default function BookSessionPage() {
           </p>
         </motion.div>
 
-        {/* Progress steps */}
         <StepIndicator current={step} />
 
-        {/* ── Step 1: Session details form ── */}
         {step === STEP.SELECT && (
           <motion.div
             variants={fadeUp}
@@ -374,7 +337,6 @@ export default function BookSessionPage() {
 
             <form onSubmit={handleBooking} className="space-y-4">
 
-              {/* Therapist card or fallback input */}
               {therapist ? (
                 <div className="flex items-center gap-4 rounded-xl border border-border bg-primary/5 px-4 py-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-sm font-display">
@@ -404,21 +366,18 @@ export default function BookSessionPage() {
                 </div>
               )}
 
-              {/* Slot picker */}
               <SlotPicker
                 therapistId={therapistId}
                 selectedSlot={selectedSlot}
                 onSelectSlot={setSelectedSlot}
               />
 
-              {/* Selected slot summary */}
               {selectedSlot && (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-primary font-medium">
                   {t("booking.selected")} {new Date(selectedSlot).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
                 </div>
               )}
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   <span className="flex items-center gap-1.5">
@@ -436,7 +395,6 @@ export default function BookSessionPage() {
                 />
               </div>
 
-              {/* Price summary */}
               <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-sm">
                 <span className="text-muted-foreground">{t("booking.sessionDuration")}</span>
                 <span className="font-bold text-foreground">₪{SESSION_PRICE}</span>
@@ -453,7 +411,6 @@ export default function BookSessionPage() {
           </motion.div>
         )}
 
-        {/* ── Step 2: Stripe payment ── */}
         {step === STEP.PAYMENT && clientSecret && (
           <motion.div
             variants={fadeUp}
@@ -494,7 +451,6 @@ export default function BookSessionPage() {
           </motion.div>
         )}
 
-        {/* ── Step 3: Success ── */}
         {step === STEP.SUCCESS && (
           <motion.div
             variants={fadeUp}
@@ -525,7 +481,6 @@ export default function BookSessionPage() {
   );
 }
 
-// ── Step indicator ─────────────────────────────────────────────────────────────
 function StepIndicator({ current }) {
   const { t } = useTranslation();
   const steps = [

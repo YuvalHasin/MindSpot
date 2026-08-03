@@ -57,8 +57,7 @@ const StatsOverview = () => {
         }
 
         if (reviewRes.ok) {
-          // GET /api/reviews/therapist returns { averageRating, totalReviews, reviews }
-          // — not a bare array — so this was always silently showing "—".
+          // response is { averageRating, totalReviews, reviews }, not a bare array
           const reviewData = await reviewRes.json();
           if (reviewData.totalReviews > 0) {
             rating = reviewData.averageRating.toFixed(1);

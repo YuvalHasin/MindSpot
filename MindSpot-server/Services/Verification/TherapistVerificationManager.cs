@@ -4,16 +4,7 @@ using Raven.Client.Documents;
 
 namespace MindSpot_server.Services.Verification
 {
-    /// <summary>
-    /// Orchestrates the full two-step therapist verification flow:
-    ///   1. Store verification images as RavenDB Attachments.
-    ///   2. AI face comparison + OCR (Claude 3.5 Sonnet).
-    ///   3. Government registry scraping (Python + Selenium).
-    ///   4. Update the therapist document status:
-    ///        - All checks passed  -> Approved (immediate, automatic).
-    ///        - Any check failed   -> Pending (deferred to an admin's manual decision;
-    ///          see AdminController.ApproveTherapist / RejectTherapist).
-    /// </summary>
+    /// <summary>Orchestrates image storage, AI face/OCR check, and license registry check for therapist verification.</summary>
     public class TherapistVerificationManager : ITherapistVerificationManager
     {
         private readonly IDocumentStore _store;
@@ -21,10 +12,6 @@ namespace MindSpot_server.Services.Verification
         private readonly ILicenseVerificationService _licenseService;
         private readonly ILogger<TherapistVerificationManager> _logger;
 
-        /// <summary>
-        /// Minimum AI confidence score required to consider faces a match.
-        /// Tune this value based on acceptable false-positive / false-negative trade-off.
-        /// </summary>
         private const float MinConfidenceThreshold = 0.75f;
 
         public TherapistVerificationManager(
@@ -48,10 +35,8 @@ namespace MindSpot_server.Services.Verification
 
             var result = new TherapistVerificationResult { Status = VerificationStatus.InProgress };
 
-            // ── Step 1: Persist images regardless of outcome ──────────────────
             await StoreImagesAsAttachmentsAsync(fullId, request, cancellationToken);
 
-            // ── Step 2: AI face comparison + OCR ──────────────────────────────
             result.AiResult = await _aiService.VerifyTherapistImagesAsync(
                 request.SelfieImageBytes,
                 request.LicenseImageBytes,
@@ -82,9 +67,6 @@ namespace MindSpot_server.Services.Verification
                 "AI check passed for therapist {Id}. Extracted name: {Name}, licence: {Licence}",
                 fullId, result.AiResult.ExtractedFullName, result.AiResult.ExtractedLicenseNumber);
 
-            // ── Step 2b: Cross-check extracted name against registered form name ─
-            // Loads the therapist document to get the name they typed in step 1,
-            // and verifies it reasonably matches the name on the license document.
             using (var session = _store.OpenAsyncSession())
             {
                 var therapistDoc = await session.LoadAsync<Therapist>(fullId, cancellationToken);
@@ -95,7 +77,6 @@ namespace MindSpot_server.Services.Verification
 
                     if (!string.IsNullOrEmpty(formName) && !string.IsNullOrEmpty(extractedName))
                     {
-                        // Accept if any word from the form name appears in the extracted name (and vice-versa)
                         var formWords      = formName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                         var extractedWords = extractedName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                         bool anyWordMatch  = formWords.Any(w => extractedName.Contains(w))
@@ -117,7 +98,6 @@ namespace MindSpot_server.Services.Verification
                 }
             }
 
-            // ── Step 3: Government registry check ─────────────────────────────
             result.LicenseResult = await _licenseService.VerifyLicenseAsync(
                 result.AiResult.ExtractedLicenseNumber,
                 result.AiResult.ExtractedFullName,
@@ -131,7 +111,6 @@ namespace MindSpot_server.Services.Verification
                     cancellationToken);
             }
 
-            // ── All steps passed → Approve ────────────────────────────────────
             result.Status     = VerificationStatus.Approved;
             result.IsVerified = true;
             await UpdateTherapistStatusAsync(fullId, VerificationStatus.Approved, null, cancellationToken);
@@ -140,11 +119,6 @@ namespace MindSpot_server.Services.Verification
             return result;
         }
 
-        // -----------------------------------------------------------------------
-        // Private helpers
-        // -----------------------------------------------------------------------
-
-        /// <summary>Stores the selfie and license images as RavenDB document attachments.</summary>
         private async Task StoreImagesAsAttachmentsAsync(
             string therapistId,
             TherapistVerificationRequest request,
@@ -171,12 +145,11 @@ namespace MindSpot_server.Services.Verification
             }
             catch (Exception ex)
             {
-                // Non-fatal: log and continue. Images can be re-uploaded later.
+                // non-fatal: images can be re-uploaded later
                 _logger.LogWarning(ex, "Could not store verification images for therapist {Id}", therapistId);
             }
         }
 
-        /// <summary>Updates the therapist document's verification fields in RavenDB.</summary>
         private async Task UpdateTherapistStatusAsync(
             string therapistId,
             VerificationStatus status,
@@ -207,13 +180,7 @@ namespace MindSpot_server.Services.Verification
             }
         }
 
-        /// <summary>
-        /// Marks one of the automated checks as failed. This does NOT auto-reject the
-        /// therapist — it hands the decision to an admin by leaving the status at Pending
-        /// (with the failure reason attached), so the therapist shows up in the admin's
-        /// pending-approval queue instead of being silently blocked. Verification_Failed
-        /// is reserved for an admin's explicit manual rejection (see AdminController.RejectTherapist).
-        /// </summary>
+        // Failed checks go to Pending for admin review, not an automatic rejection.
         private async Task<TherapistVerificationResult> FailAsync(
             string therapistId,
             TherapistVerificationResult result,

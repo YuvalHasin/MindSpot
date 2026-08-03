@@ -36,7 +36,9 @@ RUN if [ -n "$API_URL" ]; then \
           -exec sed -i "s|https://localhost:7160|${API_URL}|g" {} + ; \
         echo "Patched API URL → ${API_URL}"; \
     else \
-        echo "API_URL not set — keeping relative URLs (same-origin serving)."; \
+        find dist/assets -name "*.js" \
+          -exec sed -i "s|https://localhost:7160||g" {} + ; \
+        echo "API_URL not set — rewrote to relative URLs (same-origin serving)."; \
     fi
 
 # ── Stage 2: Build .NET 8 server ─────────────────────────────────────────────

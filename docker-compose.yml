@@ -60,7 +60,7 @@ services:
     volumes:
       - ravendb_data:/var/lib/ravendb/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/alive || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/setup/alive || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15

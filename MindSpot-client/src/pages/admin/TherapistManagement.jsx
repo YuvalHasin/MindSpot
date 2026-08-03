@@ -17,7 +17,6 @@ const TherapistManagement = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        // סינון: מציגים רק מטפלים מאושרים (verificationStatus === "Approved")
         const activeOnly = data.filter(t => t.verificationStatus === "Approved");
         setTherapists(activeOnly);
       }
@@ -98,7 +97,6 @@ const TherapistManagement = () => {
                       animate={{ opacity: 1 }}
                       className="hover:bg-muted/30 transition-colors"
                     >
-                      {/* שם והתמחות */}
                       <td className="px-6 py-4">
                         <div className="font-bold text-foreground">{therapist.fullName}</div>
                         <div className="text-[11px] text-primary font-semibold flex items-center gap-1">
@@ -106,12 +104,10 @@ const TherapistManagement = () => {
                         </div>
                       </td>
 
-                      {/* רשיון */}
                       <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
                         {therapist.licenseNumber}
                       </td>
 
-                      {/* פרטי קשר (כולל נייד) */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 text-[11px]">
                           <span className="flex items-center gap-1.5 text-foreground font-medium">
@@ -120,14 +116,12 @@ const TherapistManagement = () => {
                         </div>
                       </td>
 
-                      {/* ביו */}
                       <td className="px-6 py-4">
                         <div className="text-xs text-muted-foreground italic truncate max-w-[200px]">
                           {therapist.bio}
                         </div>
                       </td>
 
-                      {/* סטטוס סופי */}
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 uppercase tracking-tighter">
                           <ShieldCheck size={12} /> {t("therapistManagement.verified")}

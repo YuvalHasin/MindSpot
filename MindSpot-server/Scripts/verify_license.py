@@ -215,6 +215,33 @@ def _navigate_and_scan(driver, license_number: str, full_name: str) -> Verificat
 
     logger.info("Page title: %s | URL: %s", driver.title, driver.current_url)
 
+    # ── בדיקה: האם קיבלנו דף שגיאת שרת (502/503/504 וכו') במקום את האפליקציה ──
+    # מבחינה בין "הרישיון לא נמצא" (תשובה תקפה מהאתר) לבין "האתר עצמו לא זמין"
+    # (תקלת שרת בצד משרד הבריאות) — שני מצבים שונים לגמרי שלא כדאי להציג
+    # באותה הודעה מטעה למטפל.
+    page_source = driver.page_source
+    gateway_error_markers = [
+        "502 Bad Gateway", "Bad Gateway",
+        "503 Service", "Service Unavailable",
+        "504 Gateway", "Gateway Timeout",
+        "500 Internal", "Internal Server Error",
+    ]
+    looks_like_error_page = (
+        any(marker in page_source for marker in gateway_error_markers)
+        or (not driver.title and len(page_source) < 2000)
+    )
+    if looks_like_error_page:
+        logger.warning("Registry site returned an error page instead of the app — treating as unavailable.")
+        return VerificationResult(
+            isValid=False, isActive=False,
+            registeredName="", licenseNumber=license_number,
+            failureReason=(
+                "Ministry of Health registry site is currently unavailable "
+                "(server error) — this is not a problem with your license. "
+                "Please try again later."
+            )
+        )
+
     # ── גלילה למטה לחשיפת אזור התוצאות לפני שמחפשים שורות ──────────────
     logger.info("Scrolling down to reveal results area...")
     driver.execute_script("window.scrollBy(0, 400);")

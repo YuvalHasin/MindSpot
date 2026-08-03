@@ -35,11 +35,7 @@ public class TherapistsController : ControllerBase
         _licenseService = licenseService;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // GET /api/therapists/check-license?licenseNumber=27-XXXX&fullName=...
-    // Quick pre-registration check: validates the license against the
-    // Ministry of Health registry WITHOUT creating any account.
-    // ─────────────────────────────────────────────────────────────────────────
+    // validates the license against the Ministry of Health registry without creating an account
     [AllowAnonymous]
     [HttpGet("check-license")]
     public async Task<IActionResult> CheckLicense(
@@ -71,7 +67,6 @@ public class TherapistsController : ControllerBase
         {
             if (string.IsNullOrEmpty(request.Password)) return BadRequest("Password is required");
 
-            // Combine fields for vector embedding
             string textForEmbedding = $"{request.FullName}. Specialties: {request.Specialties}. Bio: {request.Bio}";
             float[] vector = await _openAiService.GenerateEmbeddingAsync(textForEmbedding);
 
@@ -86,13 +81,8 @@ public class TherapistsController : ControllerBase
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 EmbeddingVector = vector,
 
-                // VerificationStatus defaults to Pending (see Therapist model).
-                // It only becomes Approved once the therapist completes step 2
-                // (license/selfie verification) and passes every automated check.
-                //
-                // If the quick pre-registration registry check already came back
-                // invalid, record the reason now so this application is visible
-                // to an admin (with an explanation) even if step 2 never happens.
+                // records the pre-check failure now, so the application is visible to an
+                // admin even if the therapist never completes step 2 verification
                 VerificationFailureReason = request.PreCheckFailureReason
             };
 
@@ -168,11 +158,6 @@ public class TherapistsController : ControllerBase
         return Ok();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Module 4: Fuzzy full-text search (Lucene)
-    // GET /api/therapists/search?query=חרדה+ערב&language=עברית&fuzzyDistance=1
-    // ─────────────────────────────────────────────────────────────────────────
-
     [AllowAnonymous]
     [HttpGet("search")]
     public async Task<IActionResult> Search(
@@ -199,13 +184,6 @@ public class TherapistsController : ControllerBase
         return Ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Module 1: Two-step therapist license verification
-    // POST /api/therapists/verify
-    // Accepts a multipart form with: therapistId, claimedLicenseNumber,
-    // selfieImage (file), licenseImage (file)
-    // ─────────────────────────────────────────────────────────────────────────
-
     [AllowAnonymous]
     [HttpPost("verify")]
     [RequestSizeLimit(20 * 1024 * 1024)] // 20 MB max for two images
@@ -216,7 +194,6 @@ public class TherapistsController : ControllerBase
         IFormFile licenseImage,
         CancellationToken cancellationToken)
     {
-        // ── Input validation ──────────────────────────────────────────────────
         if (string.IsNullOrWhiteSpace(therapistId))
             return BadRequest(new { error = "therapistId is required." });
 
@@ -229,7 +206,6 @@ public class TherapistsController : ControllerBase
         if (licenseImage is null || licenseImage.Length == 0)
             return BadRequest(new { error = "licenseImage is required." });
 
-        // Restrict to image content types
         var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/webp" };
         if (!allowedTypes.Contains(selfieImage.ContentType, StringComparer.OrdinalIgnoreCase))
             return BadRequest(new { error = "selfieImage must be a JPEG, PNG, or WebP image." });
@@ -237,7 +213,6 @@ public class TherapistsController : ControllerBase
         if (!allowedTypes.Contains(licenseImage.ContentType, StringComparer.OrdinalIgnoreCase))
             return BadRequest(new { error = "licenseImage must be a JPEG, PNG, or WebP image." });
 
-        // ── Read image bytes ──────────────────────────────────────────────────
         byte[] selfieBytes;
         byte[] licenseBytes;
 
@@ -253,7 +228,6 @@ public class TherapistsController : ControllerBase
             licenseBytes = ms.ToArray();
         }
 
-        // ── Run verification pipeline ─────────────────────────────────────────
         var request = new TherapistVerificationRequest
         {
             TherapistId           = therapistId,
@@ -266,11 +240,7 @@ public class TherapistsController : ControllerBase
 
         var result = await _verificationManager.VerifyAndUpdateTherapistAsync(request, cancellationToken);
 
-        // ── Both outcomes are valid, successful responses (HTTP 200) ───────────
-        // Passed every automated check -> Approved immediately.
-        // Failed one of the automated checks -> handed off to an admin to decide
-        // (VerificationStatus.Pending), not auto-rejected. Either way the upload
-        // itself succeeded, so this is never an error response.
+        // both paths return 200: a failed check goes to admin review, not an error
         if (result.IsVerified)
         {
             return Ok(new
@@ -293,11 +263,6 @@ public class TherapistsController : ControllerBase
         });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Availability: PUT /api/Therapists/availability
-    // Upsert the weekly schedule for a therapist.
-    // ─────────────────────────────────────────────────────────────────────────
-
     [Authorize]
     [HttpPut("availability")]
     public async Task<IActionResult> UpsertAvailability([FromBody] UpsertAvailabilityRequest request)
@@ -311,7 +276,6 @@ public class TherapistsController : ControllerBase
 
         using var session = _store.OpenAsyncSession();
 
-        // Try to find existing availability document for this therapist
         var existing = await session.Query<TherapistAvailability>()
             .Where(a => a.TherapistId == fullId)
             .FirstOrDefaultAsync();
@@ -341,12 +305,6 @@ public class TherapistsController : ControllerBase
         return Ok(new { message = "Availability updated." });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Availability: GET /api/Therapists/availability?therapistId=...&weekStart=YYYY-MM-DD
-    // Returns all available time slots for the 7-day window starting weekStart,
-    // with booked slots marked as unavailable.
-    // ─────────────────────────────────────────────────────────────────────────
-
     [AllowAnonymous]
     [HttpGet("availability")]
     public async Task<IActionResult> GetAvailability(
@@ -367,7 +325,6 @@ public class TherapistsController : ControllerBase
 
         using var session = _store.OpenAsyncSession();
 
-        // Load availability settings
         var avail = await session.Query<TherapistAvailability>()
             .Where(a => a.TherapistId == fullId)
             .FirstOrDefaultAsync();
@@ -377,7 +334,6 @@ public class TherapistsController : ControllerBase
 
         int slotIncrement = avail.SessionDurationMinutes + avail.BreakBetweenMinutes;
 
-        // Load all appointments for the therapist in the 7-day window
         DateTime weekEnd = weekStartDate.AddDays(7);
         var bookedAppointments = await session.Query<Appointment>()
             .Where(a =>
@@ -388,7 +344,6 @@ public class TherapistsController : ControllerBase
                 a.Status != AppointmentStatus.CancelledByTherapist)
             .ToListAsync();
 
-        // Build a HashSet of booked start times for O(1) lookup
         var bookedTimes = new HashSet<DateTime>(bookedAppointments.Select(a => a.AppointmentAt));
 
         var slots = new List<object>();
@@ -402,14 +357,12 @@ public class TherapistsController : ControllerBase
 
             foreach (var slot in matchingSlots)
             {
-                // Parse HH:mm start/end times
                 if (!TimeSpan.TryParse(slot.StartTime, out TimeSpan startTs)) continue;
                 if (!TimeSpan.TryParse(slot.EndTime,   out TimeSpan endTs))   continue;
 
                 DateTime current = day + startTs;
                 DateTime end     = day + endTs;
 
-                // Generate slots within the window
                 while (current.AddMinutes(avail.SessionDurationMinutes) <= end)
                 {
                     bool isAvailable = !bookedTimes.Contains(current);
@@ -423,18 +376,12 @@ public class TherapistsController : ControllerBase
             }
         }
 
-        // Sort chronologically
         var sorted = slots
             .OrderBy(s => ((dynamic)s).dateTime)
             .ToList();
 
         return Ok(new { slots = sorted });
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PUT /api/Therapists/update-profile
-    // Therapist updates their own bio, specialties, and city.
-    // ─────────────────────────────────────────────────────────────────────────
 
     [Authorize]
     [HttpPut("update-profile")]
@@ -462,11 +409,6 @@ public class TherapistsController : ControllerBase
         await session.SaveChangesAsync();
         return Ok(new { message = "Profile updated." });
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Public profile: GET /api/Therapists/{id}/public-profile
-    // Returns aggregated public info: bio, specialties, rating stats.
-    // ─────────────────────────────────────────────────────────────────────────
 
     [AllowAnonymous]
     [HttpGet("{id}/public-profile")]

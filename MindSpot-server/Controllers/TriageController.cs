@@ -35,7 +35,21 @@ namespace server.Controllers
             try
             {
                 var summary = await _openAiService.SummarizePatientStateAsync(request.AnswersText);
-                var embedding = await _openAiService.GenerateEmbeddingAsync(request.AnswersText);
+
+                // גיל המטופל (אם נמסר בהרשמה) מוזרם לתוך טקסט הבסיס שממנו נוצר הווקטור,
+                // כך שההתאמה הסמנטית מתחשבת גם בגיל ולא רק בתוכן החופשי
+                int? patientAge = null;
+                if (patient.DateOfBirth.HasValue)
+                {
+                    var today = DateTime.UtcNow;
+                    var dob = patient.DateOfBirth.Value;
+                    patientAge = today.Year - dob.Year - (today.DayOfYear < dob.DayOfYear ? 1 : 0);
+                }
+                var embeddingInput = patientAge.HasValue
+                    ? $"Patient age: {patientAge}. {request.AnswersText}"
+                    : request.AnswersText;
+
+                var embedding = await _openAiService.GenerateEmbeddingAsync(embeddingInput);
 
                 if (embedding == null || embedding.Length == 0)
                     return BadRequest("Vector generation failed.");
@@ -50,12 +64,51 @@ namespace server.Controllers
                 var query = session.Advanced.AsyncRawQuery<Therapist>(queryText);
                 query.AddParameter("vector", embedding.Select(f => (double)f).ToList());
 
-                var matchedTherapists = await query.Take(3).ToListAsync();
+                // שולפים מאגר מועמדים רחב יותר מהדרוש כדי שיהיה על מה לדרג מחדש
+                // לפי התמחות וזמינות בפועל, לפני שמצמצמים לשלושת ההתאמות הסופיות
+                var candidates = await query.Take(10).ToListAsync();
 
-                if (matchedTherapists == null || matchedTherapists.Count == 0)
+                if (candidates == null || candidates.Count == 0)
                 {
-                    matchedTherapists = await session.Query<Therapist>().Take(3).ToListAsync();
+                    candidates = await session.Query<Therapist>().Take(10).ToListAsync();
                 }
+
+                // זמינות מוצהרת — מטפל בלי אף slot לא ניתן לתיאום פגישה איתו בפועל
+                var candidateIds = candidates.Select(c => c.Id).ToList();
+                var availabilities = await session.Query<TherapistAvailability>()
+                    .Where(a => candidateIds.Contains(a.TherapistId))
+                    .ToListAsync();
+                var availabilityByTherapist = availabilities.ToDictionary(a => a.TherapistId, a => a);
+
+                // מילות מפתח מתוך תשובות המטופל, לבדיקת חפיפה עם ההתמחויות המוצהרות של המטפל
+                var answerWords = request.AnswersText
+                    .Split(new[] { ' ', ',', '.', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(w => w.Trim())
+                    .Where(w => w.Length >= 3)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var matchedTherapists = candidates
+                    .Select((therapist, index) =>
+                    {
+                        var hasAvailability = availabilityByTherapist.TryGetValue(therapist.Id, out var avail)
+                            && avail.WeeklySlots.Count > 0;
+
+                        var specialtyWords = (therapist.Specialties ?? string.Empty)
+                            .Split(new[] { ',', '/', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        var specialtyOverlap = specialtyWords.Any(w => answerWords.Contains(w.Trim()));
+
+                        // ההתאמה הווקטורית (סדר candidates) נשארת האות הדומיננטי;
+                        // חפיפת התמחות וזמינות בפועל הם בונוסים משניים מעליה
+                        var score = (candidates.Count - index)
+                            + (hasAvailability ? 3 : 0)
+                            + (specialtyOverlap ? 2 : 0);
+
+                        return (therapist, score);
+                    })
+                    .OrderByDescending(x => x.score)
+                    .Take(3)
+                    .Select(x => x.therapist)
+                    .ToList();
 
                 var historyRecord = new ChatSession
                 {

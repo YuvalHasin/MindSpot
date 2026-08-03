@@ -1,7 +1,5 @@
 namespace MindSpot_server.Models.Billing
 {
-    // ── Enums ─────────────────────────────────────────────────────────────────
-
     public enum AppointmentStatus
     {
         Pending,        // Waiting for payment confirmation
@@ -23,82 +21,60 @@ namespace MindSpot_server.Models.Billing
         NotRefunded       // Late cancellation — no refund, fee kept by therapist
     }
 
-    // ── Core RavenDB document ─────────────────────────────────────────────────
-
-    /// <summary>
-    /// Represents a scheduled therapy session, including its payment state.
-    /// Collection: Appointments
-    /// </summary>
     public class Appointment
     {
-        public string Id              { get; set; } = string.Empty;  // Appointments/1-A
-        public string PatientId       { get; set; } = string.Empty;  // UserIdentities/1-A
-        public string TherapistId     { get; set; } = string.Empty;  // Therapists/1-A
-        public DateTime AppointmentAt { get; set; }                  // UTC scheduled time
+        public string Id              { get; set; } = string.Empty;
+        public string PatientId       { get; set; } = string.Empty;
+        public string TherapistId     { get; set; } = string.Empty;
+        public DateTime AppointmentAt { get; set; }
         public int DurationMinutes    { get; set; } = 50;
         public AppointmentStatus Status { get; set; } = AppointmentStatus.Pending;
 
-        // Billing
-        public decimal Amount   { get; set; }        // e.g. 350.00
+        public decimal Amount   { get; set; }
         public string Currency  { get; set; } = "ils";
 
-        /// <summary>All payment / refund state lives here.</summary>
         public PaymentInfo Payment { get; set; } = new();
 
-        // Cancellation
         public DateTime? CancelledAt        { get; set; }
         public string?   CancellationReason { get; set; }
 
-        // Metadata
         public string?   Notes     { get; set; }
         public DateTime  CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        /// <summary>Set once the 24h-before reminder email has gone out, to avoid duplicate sends.</summary>
+        // avoids sending the 24h-before reminder twice
         public bool ReminderSent { get; set; } = false;
     }
 
-    /// <summary>Embedded inside Appointment — tracks the full Stripe lifecycle.</summary>
     public class PaymentInfo
     {
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
-        // Stripe identifiers
         public string? StripePaymentIntentId { get; set; }
         public string? StripeCustomerId      { get; set; }
         public string? StripeChargeId        { get; set; }
 
-        // Refund tracking
         public string?   StripeRefundId   { get; set; }
-        public decimal?  RefundAmount     { get; set; }  // actual amount refunded
+        public decimal?  RefundAmount     { get; set; }
         public DateTime? RefundedAt       { get; set; }
 
-        // Transfer to therapist (Stripe Connect) — either the therapist's share of a
-        // completed session (SessionPayoutJob) or a late-cancellation fee (AppointmentCancellationJob).
-        // An appointment only ever goes through one of these two paths, so the fields are shared.
+        // shared by both payout paths (SessionPayoutJob and AppointmentCancellationJob),
+        // since an appointment only ever goes through one of them
         public string?   StripeTransferId { get; set; }
         public decimal?  TransferAmount   { get; set; }
         public DateTime? TransferredAt    { get; set; }
 
-        // Audit trail
         public DateTime? PaidAt           { get; set; }
         public string?   FailureReason    { get; set; }
     }
 
-    // ── Request / Response DTOs ───────────────────────────────────────────────
-
     public class CreatePaymentIntentRequest
     {
-        /// <summary>RavenDB appointment ID (must already exist with Status=Pending).</summary>
         public string AppointmentId { get; set; } = string.Empty;
     }
 
     public class CreatePaymentIntentResponse
     {
-        /// <summary>
-        /// The client secret returned to the React frontend.
-        /// Stripe.js uses this to confirm the payment — card details NEVER touch our server.
-        /// </summary>
         public string ClientSecret    { get; set; } = string.Empty;
         public string PaymentIntentId { get; set; } = string.Empty;
         public decimal Amount         { get; set; }
@@ -115,13 +91,7 @@ namespace MindSpot_server.Models.Billing
         public string Currency        { get; set; } = "ils";
         public string? Notes          { get; set; }
 
-        /// <summary>
-        /// Optional: the triage ChatSession this booking originated from, if the
-        /// patient came via the AI matching flow. When present, BillingController
-        /// records this therapist as the ChatSession's ChosenTherapistId, so the
-        /// activity history reflects who the patient actually picked — not just
-        /// the algorithm's top recommendation.
-        /// </summary>
+        // set if the patient came via the AI triage/matching flow
         public string? ChatSessionId  { get; set; }
     }
 
@@ -133,7 +103,6 @@ namespace MindSpot_server.Models.Billing
 
     public class ConfirmPaymentRequest
     {
-        /// <summary>RavenDB appointment ID whose payment just succeeded on the client.</summary>
         public string AppointmentId    { get; set; } = string.Empty;
         public string PaymentIntentId  { get; set; } = string.Empty;
     }

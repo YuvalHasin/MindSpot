@@ -8,7 +8,6 @@ import {
   Phone, Upload, CheckCircle2, Clock, ChevronRight,
 } from "lucide-react";
 
-// ── Registration steps ────────────────────────────────────────────────────────
 const STEP = { DETAILS: 1, PROFESSIONAL: 2, PENDING: 3 };
 
 const TherapistAuthPage = () => {
@@ -37,14 +36,13 @@ const TherapistAuthPage = () => {
 
   // Shared UI state
   const [loading,         setLoading]         = useState(false);
-  const [verifying,       setVerifying]       = useState(false); // שלב 2 — אימות תמונות
-  const [checkingLicense, setCheckingLicense] = useState(false); // שלב 1 — בדיקת רשם
+  const [verifying,       setVerifying]       = useState(false);
+  const [checkingLicense, setCheckingLicense] = useState(false);
   const [error,           setError]           = useState("");
   const [errors,          setErrors]          = useState({});
   const [registeredId,    setRegisteredId]    = useState(null);
-  const [preCheckMessage, setPreCheckMessage] = useState(""); // מוצג במסך ההמתנה כשהבדיקה המקדימה נכשלה
+  const [preCheckMessage, setPreCheckMessage] = useState("");
 
-  // ── Validation ────────────────────────────────────────────────────────────
   const validateStep1 = () => {
     const e = {};
     if (!fullName.trim()) e.fullName = "Full name is required.";
@@ -55,8 +53,8 @@ const TherapistAuthPage = () => {
     }
     if (!licenseNumber.trim()) {
       e.licenseNumber = "License number is required.";
-    } else if (!/^27-\d{4,6}$/.test(licenseNumber)) {
-      e.licenseNumber = "Format: 27-XXXXX";
+    } else if (!/^27-\d{1,6}$/.test(licenseNumber)) {
+      e.licenseNumber = "Format: 27- followed by 1 to 6 digits";
     }
     if (!password.trim()) e.password = "Password is required.";
     setErrors(e);
@@ -73,7 +71,6 @@ const TherapistAuthPage = () => {
     return Object.keys(e).length === 0;
   };
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -107,10 +104,8 @@ const TherapistAuthPage = () => {
     setPreCheckMessage("");
     if (!validateStep1()) return;
 
-    // ── Phase A: check against the Ministry of Health registry ────────────
-    // Real Selenium lookup. If it fails (license not found / not active /
-    // registry unreachable), the applicant does NOT continue to step 2 —
-    // they're told the application will be reviewed by an admin instead.
+    // Selenium lookup against the Ministry of Health registry; a failure here
+    // doesn't block registration, it just routes the applicant to admin review.
     setCheckingLicense(true);
     let preCheckFailureReason = null;
     try {
@@ -130,10 +125,6 @@ const TherapistAuthPage = () => {
       setCheckingLicense(false);
     }
 
-    // ── Phase B: create the account either way ─────────────────────────────
-    // A failed pre-check is attached to the application (PreCheckFailureReason)
-    // so it shows up in the admin's pending queue with a reason, but the
-    // applicant is routed straight to the waiting screen instead of step 2.
     setLoading(true);
     try {
       const res  = await fetch("https://localhost:7160/api/Therapists/register", {
@@ -149,8 +140,6 @@ const TherapistAuthPage = () => {
       if (res.ok) {
         setRegisteredId(data.id);
         if (preCheckFailureReason) {
-          // Registry check failed — skip step 2 entirely, go straight to
-          // the waiting screen with an explanation for the applicant.
           setPreCheckMessage(t("therapistAuth.licenseNotFoundMessage"));
           setRegStep(STEP.PENDING);
         } else {
@@ -195,13 +184,9 @@ const TherapistAuthPage = () => {
       const data = await resp.json().catch(() => ({}));
 
       if (resp.ok) {
-        // Both outcomes land on the waiting screen:
-        //   isVerified === true  -> every automated check passed, therapist is already Approved.
-        //   isVerified === false -> one check failed, the application now waits for an
-        //                           admin's manual decision instead of being auto-rejected.
+        // Both auto-approved and failed-check applications land here; failed ones wait for admin review.
         setRegStep(STEP.PENDING);
       } else {
-        // Genuine failure (bad upload, server error) — stay on step 2 so the therapist can retry.
         const reason = data.failureReason || "Upload failed. Please check your files and try again.";
         setError(reason);
       }
@@ -213,7 +198,6 @@ const TherapistAuthPage = () => {
     }
   };
 
-  // ── Shared input class ────────────────────────────────────────────────────
   const ic = (hasError) =>
     `w-full pl-10 pr-4 py-3 rounded-xl border bg-background text-foreground text-sm
      placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors
@@ -236,7 +220,6 @@ const TherapistAuthPage = () => {
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
 
-          {/* Brand */}
           <div className="flex justify-center mb-2">
             <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center">
               <Briefcase size={16} className="text-primary" />
@@ -250,7 +233,6 @@ const TherapistAuthPage = () => {
             <p className="text-muted-foreground text-sm mt-1">{t("therapistAuth.proSubtitle")}</p>
           </div>
 
-          {/* Tabs */}
           <div className="flex bg-muted rounded-xl p-1 mb-6">
             {[t("therapistAuth.loginTab"), t("therapistAuth.applyTab")].map((label, i) => (
               <button
@@ -329,7 +311,6 @@ const TherapistAuthPage = () => {
                 <p className="text-sm font-semibold text-foreground mb-4">{t("therapistAuth.step2Label")}</p>
                 <form onSubmit={handleStep2Submit} className="space-y-4">
 
-                  {/* Specialties */}
                   <div className="space-y-1">
                     <div className="relative">
                       <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -344,7 +325,6 @@ const TherapistAuthPage = () => {
                     {errors.specialties && <p className="text-xs text-destructive ml-1">{errors.specialties}</p>}
                   </div>
 
-                  {/* Bio */}
                   <div className="space-y-1">
                     <div className="relative">
                       <User size={15} className="absolute left-3 top-3.5 text-muted-foreground" />
@@ -359,7 +339,6 @@ const TherapistAuthPage = () => {
                     {errors.bio && <p className="text-xs text-destructive ml-1">{errors.bio}</p>}
                   </div>
 
-                  {/* Photo uploads */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("therapistAuth.verificationPhotos")}</p>
 
@@ -384,7 +363,6 @@ const TherapistAuthPage = () => {
 
                   {error && <ErrBox msg={error} />}
 
-                  {/* הודעת מצב אימות */}
                   {verifying && (
                     <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-primary">
                       <Loader2 size={16} className="animate-spin shrink-0" />
@@ -476,7 +454,6 @@ const TherapistAuthPage = () => {
   );
 };
 
-// ── Micro-components ──────────────────────────────────────────────────────────
 function FieldRow({ icon: Icon, placeholder, value, onChange, ic, type = "text", err }) {
   return (
     <div className="space-y-1">

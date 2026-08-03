@@ -72,7 +72,6 @@ const AdminSidebar = ({ pendingCount = 0 }) => {
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        {/* Logo Section */}
         <div className="flex items-center gap-2 px-4 py-5 border-b border-border/50">
           {!collapsed && (
             <span className="font-display text-lg font-semibold text-foreground">
@@ -93,7 +92,6 @@ const AdminSidebar = ({ pendingCount = 0 }) => {
           </button>
         </div>
 
-        {/* Navigation Items */}
         <nav className="flex-1 py-4 space-y-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -126,7 +124,6 @@ const AdminSidebar = ({ pendingCount = 0 }) => {
           })}
         </nav>
 
-        {/* Logout Button */}
         <div className="border-t border-border/50 p-3">
           <button
             onClick={handleLogout}

@@ -1,23 +1,3 @@
-/**
- * PaymentForm.jsx
- * ───────────────
- * Stripe Elements payment form for MindSpot therapy session booking.
- *
- * Security model:
- *  1. The server creates a PaymentIntent and returns a clientSecret.
- *  2. This component renders Stripe-hosted card fields via <PaymentElement>.
- *  3. Raw card numbers are sent DIRECTLY to Stripe's servers — never to ours.
- *  4. We only receive a PaymentIntent ID (opaque token) once payment succeeds.
- *
- * Props:
- *   clientSecret   {string}   — from POST /api/billing/payment-intent
- *   appointmentId  {string}   — RavenDB appointment ID
- *   amount         {number}   — display amount (e.g. 350)
- *   currency       {string}   — e.g. "ils"
- *   onSuccess      {function} — called with { paymentIntentId } after success
- *   onError        {function} — called with { message } on failure
- */
-
 import { useState } from "react";
 import {
   PaymentElement,
@@ -27,7 +7,6 @@ import {
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// ── Currency formatter ────────────────────────────────────────────────────────
 const CURRENCY_SYMBOLS = { ils: "₪", usd: "$", eur: "€" };
 
 function formatAmount(amount, currency) {
@@ -35,7 +14,6 @@ function formatAmount(amount, currency) {
   return `${symbol}${amount.toFixed(2)}`;
 }
 
-// ── Inner form (must be used inside <Elements> provider) ─────────────────────
 export function PaymentForm({ clientSecret, appointmentId, amount, currency, onSuccess, onError }) {
   const stripe   = useStripe();
   const elements = useElements();
@@ -82,7 +60,6 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
 
-      {/* Stripe-hosted card input */}
       <div className="rounded-xl border border-border bg-background p-4">
         <PaymentElement
           options={{
@@ -92,7 +69,6 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
         />
       </div>
 
-      {/* Status message */}
       {statusMessage && (
         <p
           className={`text-sm text-center font-medium rounded-xl px-4 py-2.5 ${
@@ -105,13 +81,11 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
         </p>
       )}
 
-      {/* Charge summary */}
       <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-sm">
         <span className="text-muted-foreground">Session fee</span>
         <span className="font-bold text-foreground">{formatAmount(amount, currency)}</span>
       </div>
 
-      {/* Submit button */}
       <Button
         type="submit"
         disabled={!stripe || isProcessing}
@@ -120,7 +94,6 @@ export function PaymentForm({ clientSecret, appointmentId, amount, currency, onS
         {isProcessing ? "Processing…" : `Pay ${formatAmount(amount, currency)}`}
       </Button>
 
-      {/* Trust badge */}
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <Lock size={11} />
         Secured by{" "}

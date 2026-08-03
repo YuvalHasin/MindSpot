@@ -22,8 +22,6 @@ namespace server.Controllers
             _store = store;
         }
 
-        // ── GET /api/admin/details?id=admins/1-A
-        // שליפת פרטי האדמין המחובר (לדף ההגדרות)
         [HttpGet("details")]
         public async Task<IActionResult> GetAdminDetails([FromQuery] string id)
         {
@@ -38,8 +36,6 @@ namespace server.Controllers
             return Ok(new { fullName = admin.FullName, email = admin.Email });
         }
 
-        // ── GET /api/admin/therapists
-        // כל המטפלים לטבלת הניהול
         [HttpGet("therapists")]
         public async Task<IActionResult> GetAllTherapists()
         {
@@ -50,8 +46,6 @@ namespace server.Controllers
             return Ok(therapists);
         }
 
-        // ── GET /api/admin/therapists/pending
-        // מטפלים הממתינים לאישור (VerificationStatus == Pending)
         [HttpGet("therapists/pending")]
         public async Task<IActionResult> GetPendingTherapists()
         {
@@ -63,8 +57,6 @@ namespace server.Controllers
             return Ok(pending);
         }
 
-        // ── PUT /api/admin/therapists/{id}/approve
-        // אישור מטפל — שינוי סטטוס ל-Approved
         [HttpPut("therapists/{id}/approve")]
         public async Task<IActionResult> ApproveTherapist(string id)
         {
@@ -80,8 +72,7 @@ namespace server.Controllers
             return Ok(new { message = "Therapist approved." });
         }
 
-        // ── DELETE /api/admin/therapists/{id}/reject
-        // דחיית מטפל — שינוי סטטוס ל-Verification_Failed (לא מוחק)
+        // rejecting sets Verification_Failed, doesn't delete the therapist
         [HttpDelete("therapists/{id}/reject")]
         public async Task<IActionResult> RejectTherapist(string id)
         {
@@ -98,8 +89,6 @@ namespace server.Controllers
             return Ok(new { message = "Therapist rejected." });
         }
 
-        // ── GET /api/admin/patients
-        // כל המטופלים לטבלת הניהול
         [HttpGet("patients")]
         public async Task<IActionResult> GetAllPatients()
         {
@@ -108,8 +97,6 @@ namespace server.Controllers
             return Ok(patients);
         }
 
-        // ── DELETE /api/admin/delete-patient/{id}
-        // מחיקת מטופל מהפלטפורמה
         [HttpDelete("delete-patient/{id}")]
         public async Task<IActionResult> DeletePatient(string id)
         {
@@ -122,8 +109,6 @@ namespace server.Controllers
             return Ok(new { message = "Patient deleted successfully." });
         }
 
-        // ── GET /api/admin/summary
-        // סטטיסטיקות כלליות ל-Dashboard
         [HttpGet("summary")]
         public async Task<IActionResult> GetPlatformSummary()
         {
@@ -143,9 +128,6 @@ namespace server.Controllers
             });
         }
 
-        // ── GET /api/admin/statistics
-        // סטטיסטיקות מורחבות למסך הסטטיסטיקות של האדמין:
-        // גידול השבוע (מטפלים/מטופלים חדשים) + פירוט סשנים (הושלמו/קרובים/בוטלו).
         [HttpGet("statistics")]
         public async Task<IActionResult> GetStatistics()
         {
@@ -193,8 +175,6 @@ namespace server.Controllers
             });
         }
 
-        // ── PUT /api/admin/therapists/{id}
-        // עדכון פרטי מטפל
         [HttpPut("therapists/{id}")]
         public async Task<IActionResult> UpdateTherapist(string id, [FromBody] Therapist updatedData)
         {
@@ -212,8 +192,6 @@ namespace server.Controllers
             return Ok(new { message = "Therapist updated successfully." });
         }
 
-        // ── DELETE /api/admin/therapists/{id}
-        // מחיקת מטפל מהפלטפורמה
         [HttpDelete("therapists/{id}")]
         public async Task<IActionResult> DeleteTherapist(string id)
         {
@@ -226,7 +204,6 @@ namespace server.Controllers
             return Ok(new { message = "Therapist deleted successfully." });
         }
 
-        // ── PUT /api/admin/update-profile
         [HttpPut("update-profile")]
         public async Task<IActionResult> UpdateAdminProfile([FromBody] Admin updatedData)
         {
@@ -240,7 +217,6 @@ namespace server.Controllers
             return Ok(new { message = "Profile updated successfully." });
         }
 
-        // ── PUT /api/admin/change-password
         [HttpPut("change-password")]
         public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest request)
         {

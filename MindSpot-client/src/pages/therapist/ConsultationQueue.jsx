@@ -14,7 +14,6 @@ const urgencyStyles = {
   low:      { bg: "bg-muted",          text: "text-muted-foreground" },
 };
 
-// ממיר notification מהשרת לפורמט תצוגה
 function notifToItem(n) {
   const type = n.type || "BookingRequest";
   return {
@@ -58,7 +57,6 @@ const ConsultationQueue = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          // מראים רק הודעות שלא נקראו (בקשות חדשות)
           setQueue(data.filter(n => !n.isRead).map(notifToItem));
         }
       } catch (e) {
@@ -74,7 +72,6 @@ const ConsultationQueue = () => {
   const handleAccept = async (item) => {
     const token = sessionStorage.getItem("token");
 
-    // Mark notification as read
     try {
       await fetch(`${API}/api/Therapists/notifications/read?notificationId=${encodeURIComponent(item.id)}`, {
         method: "POST",
@@ -84,16 +81,13 @@ const ConsultationQueue = () => {
 
     setQueue((prev) => prev.filter((q) => q.id !== item.id));
 
-    // Informational alerts (e.g. a late cancellation) have nothing to approve —
-    // marking them read above is the whole action.
+    // late-cancellation alerts are just informational — marking read is the whole action
     if (item.type === "LateCancellation") {
       toast({ title: t("consultationQueue.dismissed", "Dismissed") });
       return;
     }
 
-    // Paid booking request — approve it (Pending → Confirmed). The patient will
-    // now see the session as confirmed; the chat itself only opens once the
-    // scheduled time arrives (see chatWindow in RecentSessions.jsx / ChatHub.JoinRoom).
+    // approves the booking (Pending -> Confirmed); chat still only opens near session time
     if (item.appointmentId) {
       const rawId = item.appointmentId.includes("/")
         ? item.appointmentId.split("/")[1]

@@ -10,9 +10,8 @@ const PatientManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const [actionLoading, setActionLoading] = useState(null); // זה ימנע את שגיאת ה-ReferenceError
+  const [actionLoading, setActionLoading] = useState(null);
 
-  // 1. שליפת נתונים מהשרת
   const fetchPatients = async () => {
     try {
       setLoading(true);
@@ -38,7 +37,6 @@ const PatientManagement = () => {
     fetchPatients();
   }, []);
 
-  // 2. פונקציית מחיקה
   const handleDelete = async (id) => {
     if (!window.confirm(t("patientManagement.confirmDelete"))) return;
 
@@ -97,7 +95,6 @@ const PatientManagement = () => {
         <p className="text-muted-foreground text-sm mt-1">{t("patientManagement.subtitle", { count: patients.length })}</p>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -111,7 +108,6 @@ const PatientManagement = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-soft">
         <div className="overflow-x-auto">
          <table className="w-full text-sm text-left">
@@ -130,7 +126,6 @@ const PatientManagement = () => {
           key={p.id} 
           className="hover:bg-muted/20 transition-colors"
         >
-          {/* עמודת פרופיל */}
           <td className="px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
@@ -142,12 +137,10 @@ const PatientManagement = () => {
             </div>
           </td>
 
-          {/* עמודת קשר */}
           <td className="px-6 py-4">
             <div className="text-foreground">{p.email}</div>
           </td>
 
-          {/* עמודת פעולות */}
           <td className="px-6 py-4 text-right">
             <Button
               variant="ghost"

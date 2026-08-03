@@ -137,7 +137,6 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative">
-      {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 z-20 shadow-sm">
         <Link to="/patient-dashboard">
           <Button variant="ghost" size="icon" className="rounded-full">
@@ -150,7 +149,6 @@ const ChatPage = () => {
         </div>
       </header>
 
-      {/* Recommended Area */}
       {matches?.length > 0 && (
         <div className="bg-muted/10 border-b p-4 overflow-x-auto no-scrollbar shadow-inner">
           <div className="flex gap-4">
@@ -202,7 +200,6 @@ const ChatPage = () => {
         </div>
       )}
 
-      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent to-primary/5">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -220,7 +217,6 @@ const ChatPage = () => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input Field */}
       <div className="p-4 bg-background border-t">
         <div className="max-w-3xl mx-auto flex items-end gap-2 bg-muted/50 rounded-3xl p-2 border border-border focus-within:ring-2 ring-primary/20 transition-all">
           <textarea

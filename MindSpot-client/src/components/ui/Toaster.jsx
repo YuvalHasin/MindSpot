@@ -3,14 +3,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Renders the app-wide toast queue (see hooks/use-toast.jsx).
-// Mounted once, at the root of App.jsx, so any toast({...}) call anywhere
-// in the app becomes visible on screen.
 const Toaster = () => {
   const { toasts, dismiss } = useToast();
 
-  // The toast store never auto-dismisses on its own (TOAST_REMOVE_DELAY is
-  // effectively infinite) — auto-close each toast a few seconds after it opens.
+  // TOAST_REMOVE_DELAY in the store is effectively infinite, so auto-close here instead.
   useEffect(() => {
     const timers = toasts
       .filter((t) => t.open)

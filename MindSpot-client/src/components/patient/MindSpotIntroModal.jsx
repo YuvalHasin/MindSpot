@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 
-// ─── Step data ────────────────────────────────────────────────────────────────
-// Each step has an icon, a colour accent, and i18n keys.
 const STEPS = [
   {
     key: "problem",
@@ -47,7 +45,6 @@ const STEPS = [
   },
 ];
 
-// ─── Sub-features per step ────────────────────────────────────────────────────
 const STEP_FEATURES = {
   problem:   ["intro.problem.f1", "intro.problem.f2", "intro.problem.f3"],
   solution:  ["intro.solution.f1", "intro.solution.f2", "intro.solution.f3"],
@@ -56,14 +53,12 @@ const STEP_FEATURES = {
   tech:      ["intro.tech.f1", "intro.tech.f2", "intro.tech.f3"],
 };
 
-// ─── Slide animation variants ─────────────────────────────────────────────────
 const variants = {
   enter: (dir) => ({ opacity: 0, x: dir > 0 ? 60 : -60 }),
   center: { opacity: 1, x: 0 },
   exit:  (dir) => ({ opacity: 0, x: dir > 0 ? -60 : 60 }),
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function MindSpotIntroModal({ open, onClose }) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "he";
@@ -92,7 +87,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
     <AnimatePresence>
       {open && (
         <>
-          {/* ── Backdrop ── */}
           <motion.div
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -101,7 +95,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
             onClick={handleClose}
           />
 
-          {/* ── Modal ── */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
@@ -117,7 +110,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
               dir={isRtl ? "rtl" : "ltr"}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* ── Progress bar ── */}
               <div className="h-1 bg-muted w-full">
                 <motion.div
                   className="h-full bg-primary rounded-full"
@@ -126,7 +118,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
                 />
               </div>
 
-              {/* ── Close button ── */}
               <button
                 onClick={handleClose}
                 className="absolute top-4 end-4 z-10 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground"
@@ -134,7 +125,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
                 <X size={18} />
               </button>
 
-              {/* ── Step counter ── */}
               <div className="px-6 pt-5 pb-2 flex items-center gap-2">
                 {STEPS.map((s, i) => (
                   <button
@@ -147,7 +137,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
                 ))}
               </div>
 
-              {/* ── Slide content ── */}
               <div className="relative overflow-hidden min-h-[360px]">
                 <AnimatePresence custom={direction} mode="wait">
                   <motion.div
@@ -160,27 +149,22 @@ export default function MindSpotIntroModal({ open, onClose }) {
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="px-6 pb-6 pt-3"
                   >
-                    {/* Icon block */}
                     <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${step.bg} border ${step.border} mb-4`}>
                       <Icon size={28} className={step.color} />
                     </div>
 
-                    {/* Step label */}
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
                       {t("intro.step", { current: stepIdx + 1, total: STEPS.length })}
                     </p>
 
-                    {/* Title */}
                     <h2 className="text-2xl font-display font-bold text-foreground mb-2">
                       {t(`intro.${step.key}.title`)}
                     </h2>
 
-                    {/* Description */}
                     <p className="text-muted-foreground text-sm leading-relaxed mb-5">
                       {t(`intro.${step.key}.desc`)}
                     </p>
 
-                    {/* Feature bullets */}
                     <ul className="space-y-2">
                       {STEP_FEATURES[step.key].map((fKey) => (
                         <li key={fKey} className="flex items-start gap-2.5 text-sm">
@@ -195,7 +179,6 @@ export default function MindSpotIntroModal({ open, onClose }) {
                 </AnimatePresence>
               </div>
 
-              {/* ── Navigation ── */}
               <div className="px-6 pb-6 flex items-center justify-between gap-3 border-t border-border pt-4">
                 <Button
                   variant="ghost"

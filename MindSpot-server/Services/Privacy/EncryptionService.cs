@@ -3,26 +3,8 @@ using System.Text;
 
 namespace MindSpot_server.Services.Privacy
 {
-    /// <summary>
-    /// AES-256-GCM authenticated encryption for sensitive database fields.
-    ///
-    /// Algorithm choice — AES-256-GCM:
-    ///   • 256-bit key  → NIST SP 800-57 compliant
-    ///   • GCM mode     → provides both confidentiality AND integrity (AEAD)
-    ///   • 12-byte nonce → recommended by NIST SP 800-38D, freshly random per call
-    ///   • 16-byte tag  → full 128-bit authentication tag
-    ///
-    /// Stored format (Base64-encoded bytes, prefixed with "ENC:"):
-    ///   ENC:<base64( nonce[12] | ciphertext[n] | tag[16] )>
-    ///
-    /// Key management:
-    ///   Set the ENCRYPTION_KEY environment variable to a 32-byte base64 string.
-    ///   Generate one with: openssl rand -base64 32
-    ///   Or in C#: Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
-    ///
-    ///   NEVER hard-code the key. Rotate via key-versioning (extend the prefix
-    ///   scheme to "ENC:v1:" etc.) when needed.
-    /// </summary>
+    // AES-256-GCM. Stored as "ENC:" + base64(nonce[12] | ciphertext | tag[16]).
+    // Key comes from ENCRYPTION_KEY (32-byte base64, e.g. `openssl rand -base64 32`).
     public class EncryptionService : IEncryptionService
     {
         private const string EncryptedPrefix = "ENC:";
@@ -52,15 +34,10 @@ namespace MindSpot_server.Services.Privacy
             logger.LogInformation("EncryptionService initialised (AES-256-GCM).");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Public API
-        // ─────────────────────────────────────────────────────────────────────
-
         public string Encrypt(string plainText)
         {
             if (plainText is null) throw new ArgumentNullException(nameof(plainText));
 
-            // 1. Allocate a fresh, cryptographically random nonce
             Span<byte> nonce = stackalloc byte[NonceSize];
             RandomNumberGenerator.Fill(nonce);
 
@@ -68,11 +45,10 @@ namespace MindSpot_server.Services.Privacy
             byte[] cipherBytes = new byte[plainBytes.Length];
             byte[] tag = new byte[TagSize];
 
-            // 2. Encrypt + produce authentication tag
             using var aesGcm = new AesGcm(_key, TagSize);
             aesGcm.Encrypt(nonce, plainBytes, cipherBytes, tag);
 
-            // 3. Pack: nonce || ciphertext || tag  →  single byte array
+            // nonce || ciphertext || tag packed into one array
             byte[] payload = new byte[NonceSize + cipherBytes.Length + TagSize];
             nonce.CopyTo(payload.AsSpan(0, NonceSize));
             cipherBytes.CopyTo(payload, NonceSize);
@@ -86,7 +62,7 @@ namespace MindSpot_server.Services.Privacy
             if (cipherText is null) throw new ArgumentNullException(nameof(cipherText));
 
             if (!IsEncrypted(cipherText))
-                return cipherText;   // Pass-through: value was stored before encryption was enabled
+                return cipherText;   // stored before encryption was enabled
 
             string base64Payload = cipherText[EncryptedPrefix.Length..];
             byte[] payload;
@@ -103,14 +79,13 @@ namespace MindSpot_server.Services.Privacy
             if (payload.Length < NonceSize + TagSize)
                 throw new CryptographicException("Encrypted payload is too short — data may be corrupt.");
 
-            // Unpack: nonce || ciphertext || tag
             var nonce      = payload.AsSpan(0, NonceSize);
             var tag        = payload.AsSpan(payload.Length - TagSize, TagSize);
             var cipherSpan = payload.AsSpan(NonceSize, payload.Length - NonceSize - TagSize);
 
             byte[] plainBytes = new byte[cipherSpan.Length];
 
-            // Decrypt + verify authentication tag (throws CryptographicException on tampering)
+            // throws CryptographicException if the tag doesn't verify (tampered data)
             using var aesGcm = new AesGcm(_key, TagSize);
             aesGcm.Decrypt(nonce, cipherSpan, tag, plainBytes);
 

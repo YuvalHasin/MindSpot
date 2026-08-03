@@ -2,8 +2,6 @@ using MindSpot_server.Models.Audit;
 
 namespace MindSpot_server.Services.Audit
 {
-    // ── Request DTO ───────────────────────────────────────────────────────────
-
     public class AuditLogRequest
     {
         public AuditAction Action           { get; set; }
@@ -20,14 +18,9 @@ namespace MindSpot_server.Services.Audit
         public bool   Succeeded             { get; set; } = true;
         public string? FailureReason        { get; set; }
 
-        /// <summary>
-        /// Override default retention. Leave null for the global default (7 years).
-        /// Set to a shorter period for non-sensitive audit entries.
-        /// </summary>
+        // null = global default (7 years)
         public TimeSpan? RetentionPeriod    { get; set; }
     }
-
-    // ── Query DTO ─────────────────────────────────────────────────────────────
 
     public class AuditLogQuery
     {
@@ -41,18 +34,11 @@ namespace MindSpot_server.Services.Audit
         public int Skip                { get; set; } = 0;
     }
 
-    // ── Service interface ─────────────────────────────────────────────────────
-
     public interface IAuditService
     {
-        /// <summary>
-        /// Creates an immutable AuditLog document in RavenDB.
-        /// Never throws — failures are swallowed and logged at WARNING level
-        /// to prevent audit failures from breaking the business operation.
-        /// </summary>
+        // never throws - failures are swallowed and logged so audit issues don't break the operation
         Task LogAsync(AuditLogRequest request, CancellationToken ct = default);
 
-        /// <summary>Convenience overload for simple action logging.</summary>
         Task LogAsync(
             AuditAction action,
             string actorId,
@@ -64,7 +50,6 @@ namespace MindSpot_server.Services.Audit
             Dictionary<string, string>? metadata = null,
             CancellationToken ct = default);
 
-        /// <summary>Admin: query the AuditLogs collection with filters.</summary>
         Task<(List<AuditLog> Logs, int Total)> QueryAsync(
             AuditLogQuery query,
             CancellationToken ct = default);

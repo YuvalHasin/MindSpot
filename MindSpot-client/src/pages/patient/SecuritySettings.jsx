@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 const SecuritySettings = () => {
   const { t } = useTranslation();
   const [passwords, setPasswords] = useState({ current: "", newPw: "", confirm: "" });
-  const [isSuccess, setIsSuccess] = useState(false); // רק בשביל הצבע הירוק
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errorField, setErrorField] = useState({ field: "", message: "" });
 
   const handlePasswordChange = async (e) => {
@@ -17,7 +17,6 @@ const SecuritySettings = () => {
     setErrorField({ field: "", message: "" });
     setIsSuccess(false);
 
-    // ולדיציה בסיסית
     if (passwords.newPw !== passwords.confirm) {
       setErrorField({ field: "confirm", message: "Passwords do not match." });
       return;
@@ -40,8 +39,6 @@ const SecuritySettings = () => {
       if (response.ok) {
         setIsSuccess(true);
         setPasswords({ current: "", newPw: "", confirm: "" });
-        
-        // מחזיר לצבע המקורי אחרי 3 שניות
         setTimeout(() => setIsSuccess(false), 3000);
       } else {
         const data = await response.json();
@@ -63,14 +60,12 @@ const SecuritySettings = () => {
         {t("security.backToDashboard")}
       </Link>
 
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="font-display text-2xl font-bold text-foreground">{t("security.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("security.subtitle")}</p>
       </motion.div>
 
-      {/* Change Password Card */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }} 
         animate={{ opacity: 1, y: 0 }}
         className="bg-card border border-border rounded-2xl p-6 shadow-sm"

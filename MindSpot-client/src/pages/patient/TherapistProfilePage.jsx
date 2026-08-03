@@ -85,7 +85,6 @@ const TherapistProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Back button */}
       <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
         <button
           onClick={() => navigate(-1)}
@@ -97,7 +96,6 @@ const TherapistProfilePage = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pb-16">
-        {/* Avatar + Name */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -121,7 +119,6 @@ const TherapistProfilePage = () => {
           )}
         </motion.div>
 
-        {/* Rating summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -141,7 +138,6 @@ const TherapistProfilePage = () => {
           </div>
         </motion.div>
 
-        {/* Bio */}
         {profile.bio && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -154,7 +150,6 @@ const TherapistProfilePage = () => {
           </motion.div>
         )}
 
-        {/* Recent Reviews */}
         {recentReviews.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

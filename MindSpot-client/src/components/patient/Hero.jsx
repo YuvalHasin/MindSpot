@@ -88,7 +88,6 @@ const Hero = () => {
                 {t("hero.cta")}
               </Button>
 
-              {/* ── Intro button ── */}
               <Button
                 variant="outline"
                 size="lg"
@@ -100,7 +99,6 @@ const Hero = () => {
               </Button>
             </motion.div>
 
-            {/* ── "Learn more" scroll link kept as subtle text ── */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

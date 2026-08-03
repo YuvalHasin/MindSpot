@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Cake, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const PatientAuthPage = () => {
@@ -11,6 +11,7 @@ const PatientAuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -18,6 +19,14 @@ const PatientAuthPage = () => {
   const validate = () => {
     if (!isLogin && !displayName.trim()) {
       setError("Full name is required.");
+      return false;
+    }
+    if (!isLogin && !dateOfBirth) {
+      setError("Date of birth is required.");
+      return false;
+    }
+    if (!isLogin && new Date(dateOfBirth) > new Date()) {
+      setError("Date of birth cannot be in the future.");
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -39,13 +48,13 @@ const PatientAuthPage = () => {
     setLoading(true);
 
     try {
-      const endpoint = isLogin 
-        ? "https://localhost:7160/api/Auth/login" 
+      const endpoint = isLogin
+        ? "https://localhost:7160/api/Auth/login"
         : "https://localhost:7160/api/Patients/register";
 
-      const requestBody = isLogin 
+      const requestBody = isLogin
         ? { Email: email, Password: password, Role: "Patient" }
-        : { FullName: displayName, Email: email, Password: password, Role: "Patient" };
+        : { FullName: displayName, Email: email, Password: password, DateOfBirth: dateOfBirth, Role: "Patient" };
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -91,7 +100,7 @@ const PatientAuthPage = () => {
       setLoading(false);
     }
   };
-    
+
   const inputClass =
     "w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors";
 
@@ -121,7 +130,6 @@ const PatientAuthPage = () => {
             </p>
           </div>
 
-          {/* Toggle */}
           <div className="flex bg-muted rounded-xl p-1 mb-6">
             {[t("auth.signInTab"), t("auth.createAccountTab")].map((label, i) => {
               const active = i === 0 ? isLogin : !isLogin;
@@ -161,6 +169,17 @@ const PatientAuthPage = () => {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       className={inputClass}
+                    />
+                  </div>
+                  <div className="relative mt-4">
+                    <Cake size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      max={new Date().toISOString().split("T")[0]}
+                      className={inputClass}
+                      required={!isLogin}
                     />
                   </div>
                 </motion.div>

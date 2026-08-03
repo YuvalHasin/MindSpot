@@ -6,10 +6,7 @@ using Raven.Client.Documents;
 
 namespace MindSpot_server.Controllers
 {
-    /// <summary>
-    /// Small, unauthenticated endpoint used by the public marketing homepage
-    /// (Hero.jsx) so it can show real platform numbers instead of hardcoded copy.
-    /// </summary>
+    // Unauthenticated endpoint for the marketing homepage (Hero.jsx) stats.
     [ApiController]
     [Route("api/public-stats")]
     [AllowAnonymous]

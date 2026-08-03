@@ -47,11 +47,7 @@ const AdminLoginPage = () => {
           sessionStorage.setItem("token", data.token);
           sessionStorage.setItem("role", "admin");
 
-          // --- עדכון טוקן ההתראות ---
-          // FCM's getToken() can hang indefinitely (no built-in timeout) if the
-          // service worker, network, or VAPID config isn't set up — race it
-          // against a short timeout so a broken push-notification setup can
-          // never block login itself.
+          // FCM getToken() has no built-in timeout, so race it to avoid blocking login
           try {
             const currentToken = await Promise.race([
               getToken(messaging, {
@@ -72,7 +68,6 @@ const AdminLoginPage = () => {
             }
           } catch (tokenErr) {
             console.error("Failed to update push token:", tokenErr);
-            // לא עוצרים את הכניסה אם רק ההתראות נכשלו
           }
 
           navigate("/admin/admin-dashboard");

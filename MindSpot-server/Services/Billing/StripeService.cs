@@ -3,16 +3,6 @@ using Stripe;
 
 namespace MindSpot_server.Services.Billing
 {
-    /// <summary>
-    /// Wraps the Stripe.NET SDK for PaymentIntent creation, refunds, and Connect transfers.
-    ///
-    /// NuGet package required:  Stripe.net  (dotnet add package Stripe.net)
-    ///
-    /// Configuration (.env / appsettings.json):
-    ///   STRIPE_SECRET_KEY      = sk_test_...   (secret key — server only, never expose)
-    ///   STRIPE_WEBHOOK_SECRET  = whsec_...     (for webhook signature verification)
-    ///   STRIPE_PUBLISHABLE_KEY = pk_test_...   (safe to expose to React client)
-    /// </summary>
     public class StripeService : IStripeService
     {
         private readonly ILogger<StripeService> _logger;
@@ -29,13 +19,8 @@ namespace MindSpot_server.Services.Billing
                             ?? throw new InvalidOperationException(
                                 "Stripe secret key not configured. Set STRIPE_SECRET_KEY.");
 
-            // Set the global Stripe API key (thread-safe singleton)
             StripeConfiguration.ApiKey = secretKey;
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // PaymentIntent
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<CreatePaymentIntentResponse> CreatePaymentIntentAsync(
             Appointment appointment,
@@ -47,7 +32,6 @@ namespace MindSpot_server.Services.Billing
                 Currency    = appointment.Currency.ToLower(),
                 Description = $"MindSpot therapy session — Appointment {appointment.Id}",
 
-                // Metadata stored on the Stripe object for webhook reconciliation
                 Metadata = new Dictionary<string, string>
                 {
                     ["appointment_id"]  = appointment.Id,
@@ -56,7 +40,6 @@ namespace MindSpot_server.Services.Billing
                     ["appointment_at"]  = appointment.AppointmentAt.ToString("O")
                 },
 
-                // Automatically confirm when the client calls confirmCardPayment()
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true
@@ -78,10 +61,6 @@ namespace MindSpot_server.Services.Billing
                 Currency        = appointment.Currency
             };
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // Refunds
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<string> RefundFullAsync(
             string paymentIntentId,
@@ -127,10 +106,6 @@ namespace MindSpot_server.Services.Billing
             return refund.Id;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Stripe Connect Transfer
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task<string> TransferToTherapistAsync(
             string therapistStripeAccountId,
             long amountToTransfer,
@@ -160,10 +135,6 @@ namespace MindSpot_server.Services.Billing
 
             return transfer.Id;
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // Helpers
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<string?> GetChargeIdAsync(
             string paymentIntentId,

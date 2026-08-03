@@ -15,7 +15,6 @@ const AdminOverview = () => {
   const [isRegisteringNotification, setIsRegisteringNotification] = useState(false);
   const { toast } = useToast();
 
-  // --- 1. לוגיקת התראות (רישום טוקן) ---
   const setupNotifications = async () => {
     setIsRegisteringNotification(true);
     try {
@@ -63,7 +62,6 @@ const AdminOverview = () => {
     });
   };
 
-  // --- 2. שליפת נתונים ומאזין להתראות לייב ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -99,7 +97,6 @@ const AdminOverview = () => {
     fetchDashboardData();
     autoGetToken();
 
-    // מאזין להתראות כשהדף פתוח (Foreground)
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Foreground message received:", payload);
       toast({
@@ -130,7 +127,6 @@ const AdminOverview = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">{t("adminOverview.title")}</h1>
@@ -154,7 +150,6 @@ const AdminOverview = () => {
         )}
       </div>
 
-      {/* Banner for Pending Requests */}
       <AnimatePresence>
         {data?.pendingTherapists > 0 && (
           <motion.div 
@@ -184,7 +179,6 @@ const AdminOverview = () => {
         )}
       </AnimatePresence>
 
-      {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
           <motion.div

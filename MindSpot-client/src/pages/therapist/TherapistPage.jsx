@@ -4,11 +4,7 @@ import TherapistSidebar from "../../components/therapist/TherapistSidebar";
 import { Bell } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-/**
- * TherapistPage — layout wrapper for all /therapist/* routes.
- * Fetches the therapist's profile + unread notifications once,
- * then passes them down via Outlet context so child pages can use them.
- */
+// Layout wrapper for /therapist/* routes; passes profile + notifications down via Outlet context.
 const TherapistPage = () => {
   const { t } = useTranslation();
   const [therapistData, setTherapistData]   = useState(null);
@@ -71,7 +67,6 @@ const TherapistPage = () => {
       <TherapistSidebar fullName={therapistData.fullName} unreadCount={unread} />
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-        {/* ── Shared header ─────────────────────────────────────────────── */}
         <div className="max-w-6xl mx-auto px-6 pt-8 pb-2 flex justify-between items-start">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">
@@ -95,7 +90,6 @@ const TherapistPage = () => {
           </div>
         </div>
 
-        {/* ── Route-specific content (injected by React Router) ─────────── */}
         <Outlet context={{ therapistData, notifications }} />
       </main>
     </div>

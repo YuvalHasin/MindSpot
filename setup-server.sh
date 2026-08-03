@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # ── CONFIG — edit before running ─────────────────────────────────────────────
-DUCKDNS_TOKEN=""          # Your DuckDNS token (from duckdns.org → Account)
+DUCKDNS_TOKEN="${DUCKDNS_TOKEN:-}"   # Set via: DUCKDNS_TOKEN=xxx sudo -E ./setup-server.sh
 DUCKDNS_SUBDOMAIN="mindspot"   # The subdomain you registered on DuckDNS
 REPO_DIR="/opt/mindspot"       # Where the repo lives on the server
 # ─────────────────────────────────────────────────────────────────────────────

@@ -4,16 +4,8 @@ using Raven.Client.Documents.Session;
 
 namespace MindSpot_server.Services.Privacy
 {
-    /// <summary>
-    /// Implements the privacy-by-design split between PII and clinical data.
-    ///
-    /// Design rules enforced here:
-    ///   1. UserIdentity  ← PII only (name, email, phone, passwordHash)
-    ///   2. ClinicalRecord ← medical data only, no PII, no real name
-    ///   3. The two are linked exclusively via AnonymousId (a random GUID)
-    ///   4. All sensitive clinical fields are AES-256-GCM encrypted BEFORE
-    ///      being written to RavenDB, and decrypted AFTER loading.
-    /// </summary>
+    // Keeps PII (UserIdentity) and clinical data (ClinicalRecord, no real name) split,
+    // linked only via AnonymousId. Sensitive clinical fields are AES-256-GCM encrypted at rest.
     public class PatientPrivacyService : IPatientPrivacyService
     {
         private readonly IDocumentStore _store;
@@ -30,15 +22,10 @@ namespace MindSpot_server.Services.Privacy
             _logger = logger;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // REGISTRATION
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task<(string IdentityId, string AnonymousId)> RegisterPatientAsync(
             RegisterPatientRequest request,
             CancellationToken ct = default)
         {
-            // Guard: duplicate email check
             using var checkSession = _store.OpenAsyncSession();
             bool emailExists = await checkSession.Query<UserIdentity>()
                 .AnyAsync(u => u.Email == request.Email, ct);
@@ -46,26 +33,22 @@ namespace MindSpot_server.Services.Privacy
             if (emailExists)
                 throw new InvalidOperationException($"Email '{request.Email}' is already registered.");
 
-            // 1. Create the UserIdentity (PII document)
             var identity = new UserIdentity
             {
                 FullName     = request.FullName,
                 Email        = request.Email,
                 Phone        = request.Phone,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                AnonymousId  = Guid.NewGuid().ToString("N")   // no dashes → shorter storage
+                AnonymousId  = Guid.NewGuid().ToString("N")
             };
 
-            // 2. Create the linked ClinicalRecord (zero PII)
             var clinical = new ClinicalRecord
             {
                 AnonymousId = identity.AnonymousId
             };
 
-            // 3. Persist both in a single RavenDB session (one round-trip)
             using var session = _store.OpenAsyncSession();
 
-            // Use collection-prefixed IDs: RavenDB fills the numeric suffix
             identity.Id  = "UserIdentities/";
             clinical.Id  = "ClinicalRecords/";
 
@@ -79,10 +62,6 @@ namespace MindSpot_server.Services.Privacy
 
             return (identity.Id, identity.AnonymousId);
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // READ: PII only
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<PatientProfileDto?> GetProfileAsync(
             string identityId, CancellationToken ct = default)
@@ -101,10 +80,6 @@ namespace MindSpot_server.Services.Privacy
             };
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // READ: Clinical data only (with decryption)
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task<ClinicalDataDto?> GetClinicalDataAsync(
             string anonymousId, CancellationToken ct = default)
         {
@@ -122,23 +97,17 @@ namespace MindSpot_server.Services.Privacy
                 LastTriageDate      = record.LastTriageDate,
                 TotalSessions       = record.ChatSessions.Count,
 
-                // Decrypt sensitive fields on the way out
                 LastTriageSummary   = _enc.DecryptNullable(record.LastTriageSummary),
                 TreatmentGoals      = _enc.DecryptNullable(record.TreatmentGoals),
                 ClinicalNotes       = _enc.DecryptNullable(record.ClinicalNotes)
             };
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // WRITE: Chat message (encrypted)
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task SaveChatMessageAsync(
             SaveChatMessageRequest request, CancellationToken ct = default)
         {
             using var session = _store.OpenAsyncSession();
 
-            // Load or create the EncryptedChatSession
             var chatSession = await session.LoadAsync<EncryptedChatSession>(request.SessionId, ct);
 
             if (chatSession is null)
@@ -151,15 +120,13 @@ namespace MindSpot_server.Services.Privacy
                 await session.StoreAsync(chatSession, ct);
             }
 
-            // Encrypt the message content before appending
             chatSession.Messages.Add(new EncryptedChatMessage
             {
                 Role      = request.Role,
-                Content   = _enc.Encrypt(request.Content),   // 🔒 encrypted
+                Content   = _enc.Encrypt(request.Content),
                 Timestamp = DateTime.UtcNow
             });
 
-            // Update the inline stub on ClinicalRecord
             var record = await session.Query<ClinicalRecord>()
                 .FirstOrDefaultAsync(r => r.AnonymousId == request.AnonymousId, ct);
 
@@ -178,10 +145,6 @@ namespace MindSpot_server.Services.Privacy
             await session.SaveChangesAsync(ct);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // WRITE: Triage summary (encrypted)
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task UpdateTriageSummaryAsync(
             UpdateTriageRequest request, CancellationToken ct = default)
         {
@@ -196,17 +159,13 @@ namespace MindSpot_server.Services.Privacy
                 return;
             }
 
-            record.LastTriageSummary = _enc.Encrypt(request.TriageSummary);   // 🔒 encrypted
+            record.LastTriageSummary = _enc.Encrypt(request.TriageSummary);
             record.TriageEmbedding   = request.TriageEmbedding;
             record.LastTriageDate    = DateTime.UtcNow;
             record.UpdatedAt         = DateTime.UtcNow;
 
             await session.SaveChangesAsync(ct);
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // AUTH helpers
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<bool> ValidatePasswordAsync(
             string identityId, string password, CancellationToken ct = default)
@@ -225,10 +184,6 @@ namespace MindSpot_server.Services.Privacy
             return await session.Query<UserIdentity>()
                 .FirstOrDefaultAsync(u => u.Email == email, ct);
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // HELPER: Decrypt all messages in a chat session (for display)
-        // ─────────────────────────────────────────────────────────────────────
 
         public async Task<List<(string Role, string Content, DateTime Timestamp)>> GetDecryptedMessagesAsync(
             string sessionId, CancellationToken ct = default)

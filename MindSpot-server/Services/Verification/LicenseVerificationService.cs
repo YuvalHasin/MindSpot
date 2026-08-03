@@ -4,20 +4,14 @@ using MindSpot_server.Models.Verification;
 
 namespace MindSpot_server.Services.Verification
 {
-    /// <summary>
-    /// Invokes the Python Selenium script (verify_license.py) as a child process,
-    /// captures its JSON stdout, and returns a typed <see cref="LicenseVerificationResult"/>.
-    /// </summary>
+    /// <summary>Invokes verify_license.py as a child process and parses its JSON stdout.</summary>
     public class LicenseVerificationService : ILicenseVerificationService
     {
         private readonly ILogger<LicenseVerificationService> _logger;
         private readonly string _scriptPath;
         private readonly string _pythonExecutable;
 
-        // The Python script now enforces its own internal caps (25s Chrome/driver
-        // startup + 25s page navigation+scan, see verify_license.py), so the total
-        // realistic worst case is well under a minute. This outer timeout is just a
-        // safety net in case the internal caps themselves ever fail to fire.
+        // verify_license.py caps itself at ~50s internally; this is just a safety net.
         private static readonly TimeSpan ScriptTimeout = TimeSpan.FromSeconds(65);
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -31,7 +25,6 @@ namespace MindSpot_server.Services.Verification
         {
             _logger = logger;
 
-            // Prefer relative path from appsettings, otherwise resolve from base dir
             var configuredPath = configuration["Verification:PythonScriptPath"];
             _scriptPath = string.IsNullOrWhiteSpace(configuredPath)
                 ? Path.Combine(AppContext.BaseDirectory, "Scripts", "verify_license.py")
@@ -62,8 +55,6 @@ namespace MindSpot_server.Services.Verification
             var safeLicense = SanitiseArg(licenseNumber);
             var safeName    = SanitiseArg(fullName);
 
-            // On Windows the configured executable may not be on the PATH of the server
-            // process. We try a ranked list so that at least one succeeds.
             var candidates = BuildExecutableCandidates(_pythonExecutable);
 
             foreach (var exe in candidates)
@@ -78,7 +69,6 @@ namespace MindSpot_server.Services.Verification
                 "Please install Python and ensure 'py', 'python', or 'python3' is on the system PATH.");
         }
 
-        // ── Try a single Python executable; return null if the executable was not found ──
         private async Task<LicenseVerificationResult?> TryRunScriptAsync(
             string exe, string safeLicense, string safeName,
             CancellationToken cancellationToken)
@@ -136,10 +126,7 @@ namespace MindSpot_server.Services.Verification
                 }
                 catch (OperationCanceledException)
                 {
-                    // The Python script (and any Chrome/chromedriver it spawned) is still
-                    // running in the background at this point — kill the whole tree so it
-                    // doesn't sit there consuming resources or popping up a browser window
-                    // after we've already given up and answered the HTTP request.
+                    // kill the whole tree, or the spawned Chrome/chromedriver keeps running
                     _logger.LogWarning(
                         "License verification script timed out for license {License} — killing process tree.",
                         safeLicense);
@@ -165,17 +152,11 @@ namespace MindSpot_server.Services.Verification
             }
         }
 
-        // ── Build an ordered list of Python executables to try ─────────────────
         private static IReadOnlyList<string> BuildExecutableCandidates(string configured)
         {
-            // Always try the configured one first, then common fallbacks
             var all = new[] { configured, "py", "python", "python3" };
             return all.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
-
-        // -----------------------------------------------------------------------
-        // Private helpers
-        // -----------------------------------------------------------------------
 
         private LicenseVerificationResult ParseOutput(string stdout, string licenseNumber)
         {
@@ -198,13 +179,6 @@ namespace MindSpot_server.Services.Verification
         private static string SanitiseArg(string value) =>
             value.Replace("\"", "").Replace("'", "").Replace(";", "").Trim();
 
-        /// <summary>
-        /// Kills a timed-out verification process along with any children it spawned
-        /// (e.g. Chrome/chromedriver launched by the Python script). Without this, a
-        /// timed-out request leaves the browser automation running in the background
-        /// indefinitely, which can make Chrome appear to pop up "late" or pile up
-        /// orphaned processes across repeated attempts.
-        /// </summary>
         private void TryKillProcessTree(Process process)
         {
             try

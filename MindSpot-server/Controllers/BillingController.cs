@@ -9,16 +9,6 @@ using Stripe;
 
 namespace MindSpot_server.Controllers
 {
-    /// <summary>
-    /// Handles all payment and booking lifecycle operations.
-    ///
-    /// Routes:
-    ///   POST   /api/billing/book            — create appointment record
-    ///   POST   /api/billing/payment-intent  — get Stripe clientSecret for React
-    ///   POST   /api/billing/webhook         — Stripe signed webhook receiver
-    ///   POST   /api/billing/cancel          — cancel + mark refund pending
-    ///   GET    /api/billing/appointment     — get appointment details
-    /// </summary>
     [ApiController]
     [Route("api/billing")]
     public class BillingController : ControllerBase
@@ -45,12 +35,7 @@ namespace MindSpot_server.Controllers
                              ?? throw new InvalidOperationException("STRIPE_WEBHOOK_SECRET is not configured.");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/billing/book
-        // Step 1: Patient books a session — creates the Appointment document.
-        // Payment has NOT yet happened at this point.
-        // ─────────────────────────────────────────────────────────────────────
-
+        // Creates the Appointment document; payment hasn't happened yet at this point.
         [Authorize]
         [HttpPost("book")]
         public async Task<IActionResult> BookAppointment(
@@ -79,9 +64,7 @@ namespace MindSpot_server.Controllers
             using var session = _store.OpenAsyncSession();
             await session.StoreAsync(appointment, ct);
 
-            // If this booking came from the AI triage/matching flow, record which
-            // therapist the patient actually chose out of the candidates shown —
-            // this may differ from the algorithm's top pick (ChatSession.RecommendedTherapistId).
+            // May differ from the algorithm's top pick (ChatSession.RecommendedTherapistId)
             if (!string.IsNullOrWhiteSpace(request.ChatSessionId))
             {
                 var chatSessionFullId = request.ChatSessionId.Contains("/")
@@ -98,12 +81,7 @@ namespace MindSpot_server.Controllers
             return Ok(new { appointmentId = appointment.Id });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/billing/payment-intent
-        // Step 2: React asks for a clientSecret to initialise Stripe Elements.
-        // Raw card details are collected by Stripe.js — NEVER by our server.
-        // ─────────────────────────────────────────────────────────────────────
-
+        // Raw card details are collected by Stripe.js, never by our server.
         [Authorize]
         [HttpPost("payment-intent")]
         public async Task<IActionResult> CreatePaymentIntent(
@@ -124,7 +102,6 @@ namespace MindSpot_server.Controllers
 
             var intentResponse = await _stripeService.CreatePaymentIntentAsync(appointment, ct);
 
-            // Persist the PaymentIntent ID so the webhook can reconcile later
             appointment.Payment.StripePaymentIntentId = intentResponse.PaymentIntentId;
             appointment.Payment.Status                = PaymentStatus.Pending;
             appointment.UpdatedAt                     = DateTime.UtcNow;
@@ -133,18 +110,9 @@ namespace MindSpot_server.Controllers
             return Ok(intentResponse);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/billing/confirm-payment
-        // Called directly by the React client right after Stripe.js confirms the
-        // payment. In local/dev environments Stripe webhooks can't reach
-        // localhost, so we can't rely solely on HandlePaymentSucceededAsync.
-        //
-        // NOTE: this intentionally leaves Appointment.Status = Pending — payment
-        // succeeding does not auto-confirm the session. It notifies the
-        // therapist, who must approve the request (see /appointments/{id}/approve)
-        // before the appointment becomes Confirmed and the chat room opens up.
-        // ─────────────────────────────────────────────────────────────────────
-
+        // Called by the client right after Stripe.js confirms payment, since local
+        // dev webhooks can't reach localhost. Leaves Status = Pending until the
+        // therapist approves (see /appointments/{id}/approve).
         [Authorize]
         [HttpPost("confirm-payment")]
         public async Task<IActionResult> ConfirmPayment(
@@ -188,11 +156,6 @@ namespace MindSpot_server.Controllers
             return Ok(new { message = "Payment confirmed. Waiting for therapist approval." });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // PUT /api/billing/appointments/{id}/approve
-        // Therapist approves a paid booking request — flips Pending → Confirmed.
-        // ─────────────────────────────────────────────────────────────────────
-
         [Authorize]
         [HttpPut("appointments/{id}/approve")]
         public async Task<IActionResult> ApproveAppointment(
@@ -220,22 +183,15 @@ namespace MindSpot_server.Controllers
             return Ok(new { message = "Appointment approved and confirmed." });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/billing/webhook
-        // Stripe calls this endpoint after payment events (e.g. payment_intent.succeeded).
-        // Signature verification MUST happen before reading the body.
-        // ─────────────────────────────────────────────────────────────────────
-
         [AllowAnonymous]
         [HttpPost("webhook")]
         public async Task<IActionResult> StripeWebhook()
         {
-            // Read the raw body — do NOT use model binding (it corrupts the signature)
+            // model binding would corrupt the signature, so read the raw body instead
             string json;
             using (var reader = new StreamReader(HttpContext.Request.Body))
                 json = await reader.ReadToEndAsync();
 
-            // Verify the Stripe-Signature header to prevent spoofed events
             Stripe.Event stripeEvent;
             try
             {
@@ -261,18 +217,10 @@ namespace MindSpot_server.Controllers
                 case EventTypes.PaymentIntentPaymentFailed:
                     await HandlePaymentFailedAsync(stripeEvent);
                     break;
-
-                // Add more event handlers as needed
             }
 
-            return Ok(); // Always return 200 to Stripe to acknowledge receipt
+            return Ok(); // always 200 so Stripe doesn't retry
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/billing/cancel
-        // Patient or therapist cancels a confirmed appointment.
-        // The background job (AppointmentCancellationJob) will process the refund.
-        // ─────────────────────────────────────────────────────────────────────
 
         [Authorize]
         [HttpPost("cancel")]
@@ -293,7 +241,7 @@ namespace MindSpot_server.Controllers
                 return Conflict(new { error = $"Cannot cancel an appointment with status '{appointment.Status}'." });
             }
 
-            // Calculate the refund policy BEFORE mutating the appointment
+            // must compute before mutating the appointment below
             var timeUntilAppt = appointment.AppointmentAt - DateTime.UtcNow;
             bool isEarly      = timeUntilAppt.TotalHours > 24;
 
@@ -305,12 +253,9 @@ namespace MindSpot_server.Controllers
             appointment.CancellationReason = request.CancellationReason;
             appointment.UpdatedAt          = DateTime.UtcNow;
 
-            // Mark refund as pending — the background job will process it
             if (appointment.Payment.Status == PaymentStatus.Succeeded)
                 appointment.Payment.Status = PaymentStatus.RefundPending;
 
-            // Late cancellation (<24h) by the patient — alert the therapist so
-            // they see the freed-up slot / lost session right away.
             if (!isEarly && callerRole != "Therapist")
             {
                 var patient = await session.LoadAsync<Patient>(appointment.PatientId, ct);
@@ -341,11 +286,6 @@ namespace MindSpot_server.Controllers
             });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/billing/appointments/patient?patientId=UserIdentities/1-A
-        // Returns all appointments for a patient, with therapist name joined.
-        // ─────────────────────────────────────────────────────────────────────
-
         [Authorize]
         [HttpGet("appointments/patient")]
         public async Task<IActionResult> GetPatientAppointments(
@@ -363,15 +303,10 @@ namespace MindSpot_server.Controllers
                 .Take(50)
                 .ToListAsync(ct);
 
-            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
-            // the therapist their share — doing it here too would let the status flip
-            // without ever triggering the payout.
-
-            // Load therapist names in one batch
+            // Confirmed -> Completed only happens in SessionPayoutJob (it also triggers payout)
             var therapistIds = appointments.Select(a => a.TherapistId).Distinct().ToList();
             var therapists   = await session.LoadAsync<MindSpot_server.Models.Therapist>(therapistIds, ct);
 
-            // Which of this patient's appointments already have a review?
             var ratedAppointmentIds = new HashSet<string>(
                 await session.Query<MindSpot_server.Models.Review>()
                     .Where(r => r.PatientId == patientId)
@@ -403,11 +338,6 @@ namespace MindSpot_server.Controllers
             return Ok(result);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/billing/appointments/therapist?therapistId=Therapists/1-A
-        // Returns all appointments for a therapist, with patient name joined.
-        // ─────────────────────────────────────────────────────────────────────
-
         [Authorize]
         [HttpGet("appointments/therapist")]
         public async Task<IActionResult> GetTherapistAppointments(
@@ -427,11 +357,6 @@ namespace MindSpot_server.Controllers
                 .Take(50)
                 .ToListAsync(ct);
 
-            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
-            // the therapist their share — doing it here too would let the status flip
-            // without ever triggering the payout.
-
-            // Load patient names in one batch
             var patientIds = appointments.Select(a => a.PatientId).Distinct().ToList();
             var patients   = await session.LoadAsync<Patient>(patientIds, ct);
 
@@ -459,12 +384,7 @@ namespace MindSpot_server.Controllers
             return Ok(result);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/billing/appointment?appointmentId=Appointments/1-A
-        // Ratings live in the separate Reviews collection (see ReviewsController /
-        // api/reviews) — this endpoint just tells the client whether one exists yet.
-        // ─────────────────────────────────────────────────────────────────────
-
+        // ratings live in the Reviews collection; this just reports whether one exists
         [Authorize]
         [HttpGet("appointment")]
         public async Task<IActionResult> GetAppointment(
@@ -475,10 +395,6 @@ namespace MindSpot_server.Controllers
             using var session = _store.OpenAsyncSession();
             var a             = await session.LoadAsync<Appointment>(fullId, ct);
             if (a is null) return NotFound();
-
-            // Confirmed → Completed only happens in SessionPayoutJob, which also pays
-            // the therapist their share — doing it here too would let the status flip
-            // without ever triggering the payout.
 
             var alreadyRated = await session.Query<MindSpot_server.Models.Review>()
                 .AnyAsync(r => r.AppointmentId == a.Id && r.PatientId == a.PatientId, ct);
@@ -499,17 +415,12 @@ namespace MindSpot_server.Controllers
             });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Private webhook handlers
-        // ─────────────────────────────────────────────────────────────────────
-
         private async Task HandlePaymentSucceededAsync(Stripe.Event e)
         {
             if (e.Data.Object is not PaymentIntent intent) return;
 
             using var session = _store.OpenAsyncSession();
 
-            // Find the appointment by the PaymentIntent ID stored in metadata / our DB
             var appointment = await session.Query<Appointment>()
                 .FirstOrDefaultAsync(a => a.Payment.StripePaymentIntentId == intent.Id);
 

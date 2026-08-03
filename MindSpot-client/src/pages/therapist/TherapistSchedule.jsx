@@ -42,8 +42,7 @@ const parseGrid = (raw) => {
 
 const hasSlots = (grid) => DAYS.some((d) => grid[d.key]?.size > 0);
 
-// Group each day's selected hourly slots into contiguous [StartTime, EndTime) ranges
-// so the server can compute real bookable appointment slots from them.
+// Collapses each day's selected hours into contiguous [StartTime, EndTime) ranges.
 const buildWeeklySlots = (grid) => {
   const result = [];
   DAYS.forEach((d) => {
@@ -80,7 +79,6 @@ const buildWeeklySlots = (grid) => {
   return result;
 };
 
-// Derive booked (day, hour) pairs from future appointments
 const buildBookedSet = (appointments) => {
   const now = new Date();
   const set = new Set();
@@ -97,7 +95,6 @@ const buildBookedSet = (appointments) => {
   return set;
 };
 
-// ── View mode: read-only pretty grid ────────────────────────────────────────
 const ScheduleView = ({ grid, onEdit }) => {
   const { t } = useTranslation();
   const activeDays = DAYS.filter((d) => grid[d.key]?.size > 0);
@@ -160,7 +157,6 @@ const ScheduleView = ({ grid, onEdit }) => {
   );
 };
 
-// ── Edit mode: interactive grid ──────────────────────────────────────────────
 const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
   const { t } = useTranslation();
   const [grid, setGrid]         = useState(() => {
@@ -170,7 +166,7 @@ const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError]       = useState("");
-  const [warn, setWarn]         = useState("");   // inline conflict warning
+  const [warn, setWarn]         = useState("");
   const [dragging, setDragging] = useState(null); // "add" | "remove" | null
 
   const tryToggle = (dayKey, slot) => {
@@ -226,7 +222,7 @@ const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
       const weeklySlots = buildWeeklySlots(grid);
 
       const [profileRes, availRes] = await Promise.all([
-        // Human-readable availability string (used by search/profile display)
+        // human-readable string for profile display
         fetch("https://localhost:7160/api/Therapists/update-profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -235,7 +231,7 @@ const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
             AvailabilityHours: JSON.stringify(serialized),
           }),
         }),
-        // Actual bookable weekly slots — this is what patients' booking screen reads
+        // actual bookable slots, read by the patient booking screen
         fetch("https://localhost:7160/api/Therapists/availability", {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -368,7 +364,6 @@ const ScheduleEdit = ({ initialGrid, bookedSet, onSave, onCancel }) => {
   );
 };
 
-// ── Main component ───────────────────────────────────────────────────────────
 const TherapistSchedule = () => {
   const [loading, setLoading]     = useState(true);
   const [isEditing, setIsEditing] = useState(false);

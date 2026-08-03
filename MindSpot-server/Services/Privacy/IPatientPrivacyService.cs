@@ -2,8 +2,6 @@ using MindSpot_server.Models.Privacy;
 
 namespace MindSpot_server.Services.Privacy
 {
-    // ── DTOs used by the privacy service layer ────────────────────────────────
-
     public class RegisterPatientRequest
     {
         public string FullName     { get; set; } = string.Empty;
@@ -47,55 +45,26 @@ namespace MindSpot_server.Services.Privacy
         public float[]? TriageEmbedding { get; set; }
     }
 
-    // ── Service interface ─────────────────────────────────────────────────────
-
     public interface IPatientPrivacyService
     {
-        /// <summary>
-        /// Creates a UserIdentity (PII) + ClinicalRecord (clinical data) pair.
-        /// Returns the new UserIdentity document ID and the anonymous GUID.
-        /// </summary>
         Task<(string IdentityId, string AnonymousId)> RegisterPatientAsync(
             RegisterPatientRequest request,
             CancellationToken ct = default);
 
-        /// <summary>
-        /// Loads PII from UserIdentity by its RavenDB document ID.
-        /// Never returns clinical data.
-        /// </summary>
+        // never returns clinical data
         Task<PatientProfileDto?> GetProfileAsync(string identityId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Loads and decrypts clinical data via the anonymous GUID.
-        /// Never returns PII.
-        /// </summary>
+        // never returns PII
         Task<ClinicalDataDto?> GetClinicalDataAsync(string anonymousId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Encrypts and persists a new chat message inside an EncryptedChatSession document.
-        /// Also updates the ChatSessionStub inside ClinicalRecord.
-        /// </summary>
         Task SaveChatMessageAsync(SaveChatMessageRequest request, CancellationToken ct = default);
 
-        /// <summary>
-        /// Encrypts and stores a triage summary on the ClinicalRecord.
-        /// </summary>
         Task UpdateTriageSummaryAsync(UpdateTriageRequest request, CancellationToken ct = default);
 
-        /// <summary>
-        /// Verifies a password against the stored hash for the given identity document ID.
-        /// </summary>
         Task<bool> ValidatePasswordAsync(string identityId, string password, CancellationToken ct = default);
 
-        /// <summary>
-        /// Looks up a UserIdentity by email (for login).
-        /// Returns null when not found.
-        /// </summary>
         Task<UserIdentity?> FindByEmailAsync(string email, CancellationToken ct = default);
 
-        /// <summary>
-        /// Returns all decrypted chat messages for a given session document ID.
-        /// </summary>
         Task<List<MindSpot_server.Models.Privacy.EncryptedChatMessage>> GetDecryptedMessagesAsync(
             string sessionId, CancellationToken ct = default);
     }

@@ -1,25 +1,23 @@
-﻿namespace MindSpot_server.Models
+namespace MindSpot_server.Models
 {
     public class Patient
     {
-        public string? Id { get; set; } // RavenDB ימלא את זה אוטומטית (למשל patients/1-A)
+        public string? Id { get; set; }
         public string? FullName { get; set; }
         public string? Email { get; set; }
-        // זה מה שנשמר ב-RavenDB
         public string? PasswordHash { get; set; }
 
-        // זה משמש רק לקבלת הנתונים מה-React ולא נשמר (זמני בזיכרון)
+        // transient - not persisted
         public string? Password { get; set; }
 
-        // שדה קריטי לשידוך המשכי
+        public DateTime? DateOfBirth { get; set; }
+
         public string? CurrentTherapistId { get; set; }
 
-        // השדות שחסרים לך בשגיאות:
-        public string? LastTriageSummary { get; set; }   // סיכום ה-AI
-        public float[]? TriageEmbedding { get; set; } // הוקטור לשידוך
-        public DateTime? LastTriageDate { get; set; }    // תאריך האבחון
+        public string? LastTriageSummary { get; set; }
+        public float[]? TriageEmbedding { get; set; }
+        public DateTime? LastTriageDate { get; set; }
 
-        // תאריך הרשמה — משמש למסך הסטטיסטיקות של האדמין (מטופלים חדשים השבוע)
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Patient() { }

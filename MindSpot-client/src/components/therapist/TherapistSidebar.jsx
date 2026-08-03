@@ -77,7 +77,6 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        {/* Logo */}
         <div className="flex items-center gap-2 px-4 py-5 border-b border-border/50">
           {!collapsed && (
             <span className="font-display text-lg font-semibold text-foreground">
@@ -93,7 +92,6 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 py-4 space-y-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -119,7 +117,6 @@ const TherapistSidebar = ({ fullName, unreadCount = 0 }) => {
           })}
         </nav>
 
-        {/* User Info + Logout Section */}
         <div className="mt-auto border-t border-border/50 p-3 space-y-2">
           {!collapsed && (
             <button

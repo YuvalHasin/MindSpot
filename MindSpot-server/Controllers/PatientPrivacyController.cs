@@ -6,18 +6,6 @@ using MindSpot_server.Services.Privacy;
 
 namespace MindSpot_server.Controllers
 {
-    /// <summary>
-    /// Handles all patient operations that use the privacy-by-design split model.
-    /// PII (name, email) is always kept separate from clinical data.
-    ///
-    /// Routes:
-    ///   POST   /api/patient-privacy/register
-    ///   GET    /api/patient-privacy/profile?identityId=...
-    ///   GET    /api/patient-privacy/clinical?anonymousId=...
-    ///   POST   /api/patient-privacy/chat-message
-    ///   POST   /api/patient-privacy/triage
-    ///   GET    /api/patient-privacy/chat-messages?sessionId=...
-    /// </summary>
     [ApiController]
     [Route("api/patient-privacy")]
     public class PatientPrivacyController : ControllerBase
@@ -32,11 +20,6 @@ namespace MindSpot_server.Controllers
             _privacyService = privacyService;
             _logger         = logger;
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/patient-privacy/register
-        // Creates UserIdentity (PII) + ClinicalRecord (clinical) as a pair.
-        // ─────────────────────────────────────────────────────────────────────
 
         [AllowAnonymous]
         [HttpPost("register")]
@@ -55,9 +38,7 @@ namespace MindSpot_server.Controllers
             {
                 var (identityId, anonymousId) = await _privacyService.RegisterPatientAsync(request, ct);
 
-                // Return identityId (for login / JWT) and anonymousId (for clinical API calls).
-                // NEVER return the patient's real name or email from a registration endpoint
-                // — the client already has those from the request.
+                // never echo back name/email here - client already has them from the request
                 return Ok(new
                 {
                     message    = "Patient registered successfully.",
@@ -70,11 +51,6 @@ namespace MindSpot_server.Controllers
                 return Conflict(new { error = ex.Message });
             }
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/patient-privacy/profile?identityId=UserIdentities/1-A
-        // Returns PII only — no clinical data.
-        // ─────────────────────────────────────────────────────────────────────
 
         [Authorize]
         [HttpGet("profile")]
@@ -93,13 +69,6 @@ namespace MindSpot_server.Controllers
                 : Ok(profile);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/patient-privacy/clinical?anonymousId=<guid>
-        // Returns decrypted clinical data — no PII.
-        // Accessible only by the patient themselves or their assigned therapist.
-        // ─────────────────────────────────────────────────────────────────────
-
-        // Module 4: Every access to clinical data creates an immutable audit log entry
         [Audit(AuditAction.ViewMedicalRecord,
                targetType:   "ClinicalRecord",
                targetIdParam: "anonymousId",
@@ -120,11 +89,6 @@ namespace MindSpot_server.Controllers
                 : Ok(data);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/patient-privacy/chat-message
-        // Encrypts and persists a single chat message.
-        // ─────────────────────────────────────────────────────────────────────
-
         [Authorize]
         [HttpPost("chat-message")]
         public async Task<IActionResult> SaveChatMessage(
@@ -136,7 +100,6 @@ namespace MindSpot_server.Controllers
             if (string.IsNullOrWhiteSpace(request.Content))
                 return BadRequest(new { error = "Content is required." });
 
-            // Assign a session ID if not provided by the client
             if (string.IsNullOrWhiteSpace(request.SessionId))
                 request.SessionId = $"ChatSessions/{Guid.NewGuid():N}";
 
@@ -148,11 +111,6 @@ namespace MindSpot_server.Controllers
                 sessionId = request.SessionId
             });
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // POST /api/patient-privacy/triage
-        // Stores an encrypted AI triage summary.
-        // ─────────────────────────────────────────────────────────────────────
 
         [Authorize]
         [HttpPost("triage")]
@@ -169,11 +127,6 @@ namespace MindSpot_server.Controllers
             return Ok(new { message = "Triage summary updated and encrypted." });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/patient-privacy/chat-messages?sessionId=...
-        // Returns decrypted chat history for a session.
-        // ─────────────────────────────────────────────────────────────────────
-
         [Authorize]
         [HttpGet("chat-messages")]
         public async Task<IActionResult> GetChatMessages(
@@ -187,16 +140,11 @@ namespace MindSpot_server.Controllers
             return Ok(messages.Select(m => new
             {
                 role      = m.Role,
-                content   = m.Content,    // plaintext — decrypted
+                content   = m.Content,
                 timestamp = m.Timestamp
             }));
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Private helper
-        // ─────────────────────────────────────────────────────────────────────
-
-        /// <summary>Ensures the ID has the correct RavenDB collection prefix.</summary>
         private static string NormaliseId(string id, string collection) =>
             id.Contains('/') ? id : $"{collection}/{id}";
     }

@@ -40,8 +40,7 @@ function formatTime(iso) {
   return new Date(iso).toLocaleTimeString("en-IL", { hour: "2-digit", minute: "2-digit" });
 }
 
-// Chat only opens in a window around the scheduled session — mirrors the
-// server-side check in ChatHub.JoinRoom (15 min before → duration + 15 min after).
+// Chat opens 15 min before the session and closes 15 min after it ends (mirrors ChatHub.JoinRoom).
 function chatWindow(apt) {
   const start = new Date(apt.appointmentAt);
   const windowStart = new Date(start.getTime() - 15 * 60000);
@@ -177,7 +176,6 @@ const SessionHistory = () => {
         <p className="text-sm text-muted-foreground mt-1">{t("history.subtitle")}</p>
       </motion.div>
 
-      {/* Tabs */}
       <div className="flex bg-muted rounded-xl p-1 w-fit">
         {[
           { id: "ai",    label: t("history.aiSessions"),  count: aiSessions.length },
@@ -217,7 +215,6 @@ const SessionHistory = () => {
               />
             ) : (
               <>
-                {/* Desktop table */}
                 <div className="hidden md:block overflow-hidden bg-card border border-border/60 rounded-2xl shadow-sm">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-muted/30 text-muted-foreground border-b border-border/60">
@@ -256,7 +253,6 @@ const SessionHistory = () => {
                   </table>
                 </div>
 
-                {/* Mobile cards */}
                 <div className="md:hidden space-y-4">
                   {aiSessions.map((s, i) => (
                     <motion.div
@@ -302,7 +298,6 @@ const SessionHistory = () => {
                     variants={item}
                     className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4"
                   >
-                    {/* Date badge */}
                     <div className="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/15">
                       <span className="text-lg font-bold text-primary leading-none">
                         {new Date(a.appointmentAt).getDate()}
@@ -312,7 +307,6 @@ const SessionHistory = () => {
                       </span>
                     </div>
 
-                    {/* Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-foreground">{a.therapistName}</p>
@@ -328,7 +322,6 @@ const SessionHistory = () => {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="shrink-0 flex flex-col items-end gap-2">
                       <span className="text-[11px] font-semibold">
                         {a.paymentStatus === "Succeeded"
@@ -395,7 +388,7 @@ const SessionHistory = () => {
 
       </AnimatePresence>
 
-      {/* ── Cancel dialog ── */}
+      {/* Cancel dialog */}
       <AnimatePresence>
         {cancelTarget && (
           <motion.div
@@ -439,7 +432,7 @@ const SessionHistory = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Rate session dialog ── */}
+      {/* Rate session dialog */}
       <AnimatePresence>
         {rateTarget && (
           <motion.div

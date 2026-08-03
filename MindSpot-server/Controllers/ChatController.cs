@@ -52,10 +52,6 @@ public class ChatController : ControllerBase
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SignalR chat history: GET /api/Chat/history?appointmentId=...
-    // ─────────────────────────────────────────────────────────────────────────
-
     [AllowAnonymous]
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory([FromQuery] string appointmentId)

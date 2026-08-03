@@ -4,10 +4,6 @@ namespace MindSpot_server.Services.Verification
 {
     public interface ITherapistAiVerificationService
     {
-        /// <summary>
-        /// Sends both images to Claude 3.5 Sonnet for face comparison and OCR.
-        /// Returns structured verification data extracted from the images.
-        /// </summary>
         Task<AiVerificationResult> VerifyTherapistImagesAsync(
             byte[] selfieBytes,
             byte[] licenseBytes,

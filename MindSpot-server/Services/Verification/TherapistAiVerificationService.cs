@@ -34,11 +34,9 @@ namespace MindSpot_server.Services.Verification
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            // שליפה בטוחה מה-env או מהקונפיגורציה
             _apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY") ?? configuration["Anthropic:ApiKey"];
 
-            // במקום לזרוק Exception שיפיל את כל השרת ברקע, נרשום אזהרה בלוג.
-            // השרת יעלה חלק, ונוכל לעבוד על המודולים של Stripe וסלניום באין מפריע.
+            // logged as a warning instead of thrown, so a missing key doesn't take down the whole server
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
                 _logger.LogWarning("Anthropic API key is not configured. " +
@@ -94,17 +92,12 @@ namespace MindSpot_server.Services.Verification
             }
         }
 
-        // -----------------------------------------------------------------------
-        // Private helpers
-        // -----------------------------------------------------------------------
-
         private static object BuildClaudeRequest(
       byte[] selfieBytes, byte[] licenseBytes,
       string selfieContentType, string licenseContentType,
       string claimedLicenseNumber)
         {
-            // השימוש ב-$$""" מחייב סוגריים כפולים עבור אינטרפולציה של קוד,
-            // ומשאיר סוגריים בודדים כטקסט רגיל עבור ה-JSON Schema.
+            // $$""" requires double braces for interpolation, leaving single braces literal for the JSON schema below
             string prompt = $$"""
         You are an identity verification system for a licensed healthcare platform.
         You will receive TWO images:
@@ -141,7 +134,6 @@ namespace MindSpot_server.Services.Verification
                 role = "user",
                 content = new object[]
                 {
-                    // Image 1: selfie
                     new
                     {
                         type = "image",
@@ -152,7 +144,6 @@ namespace MindSpot_server.Services.Verification
                             data = Convert.ToBase64String(selfieBytes)
                         }
                     },
-                    // Image 2: license document
                     new
                     {
                         type = "image",
@@ -163,7 +154,6 @@ namespace MindSpot_server.Services.Verification
                             data = Convert.ToBase64String(licenseBytes)
                         }
                     },
-                    // Instruction text
                     new
                     {
                         type = "text",

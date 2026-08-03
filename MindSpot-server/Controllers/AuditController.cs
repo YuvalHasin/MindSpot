@@ -6,19 +6,6 @@ using MindSpot_server.Services.Audit;
 
 namespace MindSpot_server.Controllers
 {
-    /// <summary>
-    /// Admin-only endpoint for querying the immutable AuditLogs collection.
-    ///
-    /// All reads from this controller are themselves audited (meta-audit),
-    /// so we know who looked at the audit trail and when.
-    ///
-    /// Routes:
-    ///   GET /api/audit                — query logs with filters
-    ///   GET /api/audit/{id}           — get a single log entry
-    ///   GET /api/audit/summary        — aggregate counts by action type
-    ///
-    /// Demo of [Audit] declarative attribute — this action is auto-audited.
-    /// </summary>
     [ApiController]
     [Route("api/audit")]
     [Authorize(Roles = "Admin")]
@@ -31,12 +18,7 @@ namespace MindSpot_server.Controllers
             _auditService = auditService;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/audit
-        // Query audit logs with optional filters.
-        // This read is itself audited (meta-audit trail).
-        // ─────────────────────────────────────────────────────────────────────
-
+        // this read is itself audited (meta-audit trail)
         [Audit(AuditAction.DataExported, targetType: "AuditLogs",
                description: "Admin queried audit log")]
         [HttpGet]
@@ -91,18 +73,12 @@ namespace MindSpot_server.Controllers
             });
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // GET /api/audit/summary
-        // Returns aggregate counts grouped by action type for the dashboard.
-        // ─────────────────────────────────────────────────────────────────────
-
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary(
             [FromQuery] DateTime? fromUtc = null,
             [FromQuery] DateTime? toUtc   = null,
             CancellationToken ct          = default)
         {
-            // Query recent failures
             var (failures, failTotal) = await _auditService.QueryAsync(new AuditLogQuery
             {
                 FromUtc       = fromUtc ?? DateTime.UtcNow.AddDays(-30),
@@ -111,7 +87,6 @@ namespace MindSpot_server.Controllers
                 Take          = 0   // count only
             }, ct);
 
-            // Query medical record access events
             var (medicalAccess, medTotal) = await _auditService.QueryAsync(new AuditLogQuery
             {
                 Action  = AuditAction.ViewMedicalRecord,
@@ -120,7 +95,6 @@ namespace MindSpot_server.Controllers
                 Take    = 0
             }, ct);
 
-            // Query financial events
             var (payments, payTotal) = await _auditService.QueryAsync(new AuditLogQuery
             {
                 Action  = AuditAction.RefundIssued,

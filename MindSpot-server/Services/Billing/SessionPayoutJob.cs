@@ -4,31 +4,9 @@ using Raven.Client.Documents;
 
 namespace MindSpot_server.Services.Billing
 {
-    /// <summary>
-    /// Background job that runs every 5 minutes, finds Confirmed appointments whose
-    /// scheduled time window has passed, flips them to Completed, and pays the
-    /// therapist their share of the session fee via Stripe Connect.
-    ///
-    /// Revenue split (on a ₪200 session):
-    ///   • 80% (₪160) → therapist, transferred automatically once the session is over.
-    ///   • 20% (₪40)  → platform, kept in the main Stripe account (never transferred out).
-    ///
-    /// This job is the ONLY place that flips Confirmed → Completed. Previously that
-    /// transition happened lazily inside three separate GET endpoints in
-    /// BillingController, which meant a patient or therapist loading their appointment
-    /// list could flip the status to Completed without ever triggering a payout —
-    /// silently skipping the therapist's earnings. Centralising the transition here
-    /// guarantees the payout always fires exactly once before the status changes.
-    ///
-    /// Note on Stripe Connect:
-    ///   Therapists need a Stripe Connect account ID stored on their Therapist document.
-    ///   If no Connect account is configured, the appointment still completes, but the
-    ///   payout is held by the platform (logged as a warning) until the therapist links
-    ///   an account — no automatic retry today.
-    ///
-    /// Registered in Program.cs as:
-    ///   builder.Services.AddHostedService&lt;SessionPayoutJob&gt;();
-    /// </summary>
+    // Finds Confirmed appointments whose time window has passed, flips them to
+    // Completed, and pays the therapist their share via Stripe Connect. This is the
+    // only place that transition happens, so a payout is never skipped.
     public class SessionPayoutJob : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -66,7 +44,6 @@ namespace MindSpot_server.Services.Billing
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't crash the service — retry on next tick
                     _logger.LogError(ex, "Error during session payout processing cycle.");
                 }
             }
@@ -74,22 +51,17 @@ namespace MindSpot_server.Services.Billing
             _logger.LogInformation("SessionPayoutJob stopped.");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Core processing
-        // ─────────────────────────────────────────────────────────────────────
-
         private async Task ProcessFinishedSessionsAsync(CancellationToken ct)
         {
-            // Use a fresh DI scope per polling cycle (Scoped services inside Singleton host)
+            // fresh DI scope per cycle since these are Scoped services inside a Singleton host
             await using var scope = _scopeFactory.CreateAsyncScope();
             var store         = scope.ServiceProvider.GetRequiredService<IDocumentStore>();
             var stripeService = scope.ServiceProvider.GetRequiredService<IStripeService>();
 
             using var session = store.OpenAsyncSession();
 
-            // Confirmed + paid appointments not yet processed by this job.
-            // (Time-window filtering happens client-side below — RavenDB can't easily
-            // express "AppointmentAt + DurationMinutes < now" in a Where clause.)
+            // time-window filter happens client-side below since RavenDB can't express
+            // "AppointmentAt + DurationMinutes < now" in a Where clause
             var candidates = await session.Query<Appointment>()
                 .Where(a =>
                     a.Status == AppointmentStatus.Confirmed &&
@@ -122,7 +94,6 @@ namespace MindSpot_server.Services.Billing
                     _logger.LogError(ex,
                         "Failed to process payout for appointment {Id}. Will retry on next cycle.",
                         appointment.Id);
-                    // Don't flip the status — leave it as Confirmed so the next cycle retries.
                 }
             }
 

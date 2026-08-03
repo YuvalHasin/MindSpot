@@ -30,8 +30,7 @@ function StatusDot({ status }) {
   return <span className="text-[10px] text-muted-foreground">{status}</span>;
 }
 
-// Chat only opens in a window around the scheduled session — mirrors the
-// server-side check in ChatHub.JoinRoom (15 min before → duration + 15 min after).
+// Chat opens 15 min before the session and closes 15 min after it ends (mirrors ChatHub.JoinRoom).
 const chatWindow = (apt) => {
   const start = new Date(apt.appointmentAt);
   const windowStart = new Date(start.getTime() - 15 * 60000);
@@ -107,7 +106,6 @@ const RecentSessions = () => {
               key={s.id}
               className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors flex-wrap sm:flex-nowrap"
             >
-              {/* Date badge */}
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
                 <span className="text-[13px] font-bold text-primary leading-none">
                   {new Date(s.appointmentAt).getDate()}

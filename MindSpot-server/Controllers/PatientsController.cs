@@ -20,6 +20,11 @@ public class PatientsController : ControllerBase
     [HttpPost("register")]
     public IActionResult Register([FromBody] Patient patient)
     {
+        if (patient.DateOfBirth == null)
+        {
+            return BadRequest(new { message = "Date of birth is required." });
+        }
+
         using (var session = _store.OpenSession())
         {
             var existingPatient = session.Query<Patient>()
@@ -132,8 +137,7 @@ public class PatientsController : ControllerBase
 
                 foreach (var s in history)
                 {
-                    // Prefer the therapist the patient actually booked with over the
-                    // algorithm's top pick — they may not be the same one.
+                    // may differ from the algorithm's top pick
                     var wasChosen   = !string.IsNullOrEmpty(s.ChosenTherapistId);
                     var therapistId = wasChosen ? s.ChosenTherapistId : s.RecommendedTherapistId;
 

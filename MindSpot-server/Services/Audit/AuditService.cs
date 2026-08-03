@@ -5,23 +5,7 @@ using Raven.Client.Documents.Session;
 
 namespace MindSpot_server.Services.Audit
 {
-    /// <summary>
-    /// Append-only audit logging service.
-    ///
-    /// Immutability strategy:
-    ///   • Each log entry is stored with session.StoreAsync() using a
-    ///     pre-built unique ID — never loaded and never updated.
-    ///   • The ID format is: AuditLogs/{timestamp-ticks}/{action}/{short-guid}
-    ///     → lexicographically sortable by time in RavenDB Studio
-    ///   • To enforce immutability at the DB level:
-    ///     Enable RavenDB Document Revisions on the AuditLogs collection
-    ///     and restrict delete permissions via RavenDB certificates / ACL.
-    ///
-    /// GDPR retention:
-    ///   Sensitive logs (medical/financial) default to 7 years.
-    ///   The ExpiresAt field is written to @expires in document metadata,
-    ///   which triggers RavenDB's built-in document expiration feature.
-    /// </summary>
+    // Append-only: entries are stored with a pre-built ID and never loaded or updated.
     public class AuditService : IAuditService
     {
         private readonly IDocumentStore _store;
@@ -36,10 +20,6 @@ namespace MindSpot_server.Services.Audit
             _logger = logger;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Write (append-only)
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task LogAsync(AuditLogRequest request, CancellationToken ct = default)
         {
             try
@@ -49,7 +29,7 @@ namespace MindSpot_server.Services.Audit
 
                 var log = new AuditLog
                 {
-                    // Sortable ID: AuditLogs/638xxx/ActionName/abc123
+                    // ticks prefix keeps IDs sortable by time
                     Id = $"AuditLogs/{now.Ticks}/{request.Action}/{Guid.NewGuid():N}",
 
                     Action            = request.Action,
@@ -73,11 +53,10 @@ namespace MindSpot_server.Services.Audit
 
                 await session.StoreAsync(log, ct);
 
-                // ── Set RavenDB @expires metadata for automatic document expiry ──
-                // Requires the Document Expiration feature to be enabled in RavenDB.
+                // requires Document Expiration enabled in RavenDB
                 var metadata = session.Advanced.GetMetadataFor(log);
                 metadata[Raven.Client.Constants.Documents.Metadata.Expires] =
-                    log.ExpiresAt!.Value.ToString("O");   // ISO 8601
+                    log.ExpiresAt!.Value.ToString("O");
 
                 await session.SaveChangesAsync(ct);
 
@@ -87,8 +66,7 @@ namespace MindSpot_server.Services.Audit
             }
             catch (Exception ex)
             {
-                // CRITICAL: audit failures must NEVER crash the calling operation.
-                // Log at WARNING so monitoring alerts can trigger.
+                // audit failures must never crash the calling operation
                 _logger.LogWarning(ex,
                     "Failed to write audit log for action {Action} by actor {ActorId}. " +
                     "The business operation will continue.",
@@ -118,17 +96,12 @@ namespace MindSpot_server.Services.Audit
                 Metadata          = metadata
             }, ct);
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Read (admin queries)
-        // ─────────────────────────────────────────────────────────────────────
-
         public async Task<(List<AuditLog> Logs, int Total)> QueryAsync(
             AuditLogQuery query,
             CancellationToken ct = default)
         {
             using var session = _store.OpenAsyncSession();
 
-            // Build the query dynamically
             IRavenQueryable<AuditLog> q = session.Query<AuditLog>();
 
             if (query.Action.HasValue)
@@ -149,7 +122,6 @@ namespace MindSpot_server.Services.Audit
             if (query.SucceededOnly.HasValue)
                 q = q.Where(l => l.Succeeded == query.SucceededOnly.Value);
 
-            // Always sort newest-first
             q = q.OrderByDescending(l => l.Timestamp);
 
             var total = await q.CountAsync(ct);

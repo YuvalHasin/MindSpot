@@ -31,11 +31,8 @@ namespace MindSpot_server.Controllers
 
             using var session = _store.OpenAsyncSession();
 
-            // Different entry points (chat-room exit modal vs. session-history
-            // dialog) may send the appointment id with or without the RavenDB
-            // "Appointments/" collection prefix. Normalize to the full form so
-            // the dedup check and stored value always match what BillingController
-            // compares against (which uses the canonical Appointment.Id).
+            // callers may send the id with or without the "Appointments/" prefix;
+            // normalize so the dedup check matches BillingController's canonical Appointment.Id
             string? normalizedAppointmentId = string.IsNullOrWhiteSpace(request.AppointmentId)
                 ? request.AppointmentId
                 : (request.AppointmentId.Contains("/") ? request.AppointmentId : $"Appointments/{request.AppointmentId}");

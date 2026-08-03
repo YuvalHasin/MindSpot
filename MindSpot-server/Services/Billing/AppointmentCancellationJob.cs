@@ -4,21 +4,9 @@ using Raven.Client.Documents;
 
 namespace MindSpot_server.Services.Billing
 {
-    /// <summary>
-    /// Background job that runs every 5 minutes, scans for cancelled appointments
-    /// with a pending refund, and applies the cancellation policy automatically.
-    ///
-    /// Cancellation policy:
-    ///   • &gt; 24 hours before appointment  → 100% refund to patient
-    ///   • ≤ 24 hours before appointment  → No refund; cancellation fee transferred to therapist
-    ///
-    /// Note on Stripe Connect:
-    ///   Therapists need a Stripe Connect account ID stored on their Therapist document.
-    ///   If no Connect account is configured, the fee is held by the platform.
-    ///
-    /// Registered in Program.cs as:
-    ///   builder.Services.AddHostedService&lt;AppointmentCancellationJob&gt;();
-    /// </summary>
+    // Polls for cancelled appointments with a pending refund and applies the
+    // cancellation policy: >24h before appointment = full refund, otherwise a fee
+    // is transferred to the therapist (or held by the platform if no Connect account).
     public class AppointmentCancellationJob : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -58,7 +46,6 @@ namespace MindSpot_server.Services.Billing
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't crash the service — retry on next tick
                     _logger.LogError(ex, "Error during cancellation refund processing cycle.");
                 }
             }
@@ -66,13 +53,9 @@ namespace MindSpot_server.Services.Billing
             _logger.LogInformation("AppointmentCancellationJob stopped.");
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Core processing
-        // ─────────────────────────────────────────────────────────────────────
-
         private async Task ProcessPendingRefundsAsync(CancellationToken ct)
         {
-            // Use a fresh DI scope per polling cycle (Scoped services inside Singleton host)
+            // fresh DI scope per cycle since these are Scoped services inside a Singleton host
             await using var scope = _scopeFactory.CreateAsyncScope();
             var store        = scope.ServiceProvider.GetRequiredService<IDocumentStore>();
             var stripeService = scope.ServiceProvider.GetRequiredService<IStripeService>();
@@ -80,7 +63,6 @@ namespace MindSpot_server.Services.Billing
 
             using var session = store.OpenAsyncSession();
 
-            // Query all cancelled appointments where refund hasn't been settled yet
             var pending = await session.Query<Appointment>()
                 .Where(a =>
                     (a.Status == AppointmentStatus.CancelledByPatient ||
@@ -108,7 +90,6 @@ namespace MindSpot_server.Services.Billing
                     _logger.LogError(ex,
                         "Failed to process refund for appointment {Id}. Will retry on next cycle.",
                         appointment.Id);
-                    // Don't update the status — leave it as RefundPending for the next cycle
                 }
             }
 
@@ -122,7 +103,6 @@ namespace MindSpot_server.Services.Billing
             Raven.Client.Documents.Session.IAsyncDocumentSession session,
             CancellationToken ct)
         {
-            // Cancelled at is set when the patient/therapist cancels; use UtcNow as fallback
             var cancelledAt     = appointment.CancelledAt ?? DateTime.UtcNow;
             var timeUntilAppt   = appointment.AppointmentAt - cancelledAt;
             var isEarlyCancel   = timeUntilAppt > CancellationWindow;
@@ -134,7 +114,6 @@ namespace MindSpot_server.Services.Billing
 
             if (isEarlyCancel)
             {
-                // ── Full refund ────────────────────────────────────────────
                 var refundId = await stripeService.RefundFullAsync(intentId, ct: ct);
 
                 appointment.Payment.Status        = PaymentStatus.FullyRefunded;
@@ -149,18 +128,14 @@ namespace MindSpot_server.Services.Billing
             }
             else
             {
-                // ── Late cancellation: partial or no refund ────────────────
-                // Determine the cancellation fee to transfer to the therapist
                 decimal feeForTherapist = Math.Round(appointment.Amount * LateCancellationFeePercent, 2);
                 long    feeInSmallest   = (long)(feeForTherapist * 100);   // agora / cents
 
-                // Try to transfer the fee to the therapist via Stripe Connect
                 string? transferId = null;
                 if (feeInSmallest > 0)
                 {
                     var chargeId = await stripeService.GetChargeIdAsync(intentId, ct);
 
-                    // Load therapist to get their Stripe Connect account ID
                     var therapist = await session.LoadAsync<Therapist>(appointment.TherapistId, ct);
                     var connectAccountId = therapist?.StripeConnectAccountId;
 
@@ -196,7 +171,6 @@ namespace MindSpot_server.Services.Billing
                     "no patient refund. Fee ₪{Fee} transferred (TransferId={TransferId})",
                     appointment.Id, feeForTherapist, transferId ?? "N/A");
 
-                // Send late-cancellation confirmation email to the patient
                 try
                 {
                     var patient = await session.LoadAsync<Patient>(appointment.PatientId, ct);

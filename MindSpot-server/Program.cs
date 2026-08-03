@@ -1,4 +1,7 @@
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using MindSpot_server.Filters;
 using MindSpot_server.Hubs;
 using MindSpot_server.Indexes;
@@ -18,8 +21,6 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- הגדרת חיבור ל-RavenDB ---
-// ה-DocumentStore מנהל את התקשורת מול בסיס הנתונים
 var ravenSettings = builder.Configuration.GetSection("RavenDb");
 var documentStore = new DocumentStore
 {
@@ -27,23 +28,24 @@ var documentStore = new DocumentStore
     Database = ravenSettings["Database"]
 }.Initialize();
 
-// רישום אינדקסים ב-RavenDB — מבוצע פעם אחת בהפעלה
-new Therapists_ByVector().Execute(documentStore);
-new Therapists_BySearch().Execute(documentStore);   // Module 4: Lucene full-text index
+// RavenDB doesn't create the database automatically — without this, index
+// creation below throws on any fresh environment (e.g. a new Docker container)
+var existingDatabaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, 100));
+if (!existingDatabaseNames.Contains(documentStore.Database))
+{
+    documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(documentStore.Database)));
+}
 
-// הזרקת ה-DocumentStore כ-Singleton לשימוש בכל ה-Controllers 
+new Therapists_ByVector().Execute(documentStore);
+new Therapists_BySearch().Execute(documentStore);
+
 builder.Services.AddSingleton<IDocumentStore>(documentStore);
 
-// --- הוספת שירות ה-AI ---
-// רישום השירות שיבצע את הסיכום והווקטוריזציה מול OpenAI
 var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-// תיקון קריטי: הזרקת המפתח מתוך ה-env ישירות לקונפיגורציה של השרת
 builder.Configuration["OpenAI:ApiKey"] = openAiKey;
 
 builder.Services.AddSingleton<OpenAiService>();
 
-// --- Module 1: Therapist Verification Services ---
-// HttpClient מוגדר עם timeout ארוך יחסית לקריאות AI
 builder.Services.AddHttpClient("ClaudeApi", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(60);
@@ -52,45 +54,29 @@ builder.Services.AddHttpClient("ClaudeApi", client =>
 builder.Services.AddScoped<ITherapistAiVerificationService, TherapistAiVerificationService>();
 builder.Services.AddScoped<ILicenseVerificationService, LicenseVerificationService>();
 builder.Services.AddScoped<ITherapistVerificationManager, TherapistVerificationManager>();
-// -------------------------------------------------
 
-// --- Module 2: Patient Privacy & Application-Layer Encryption ---
-// Singleton: EncryptionService טוען את המפתח פעם אחת בלבד
-// Scoped:    PatientPrivacyService  — חי לאורך בקשת HTTP אחת
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<IPatientPrivacyService, PatientPrivacyService>();
-// ---------------------------------------------------------------
 
-// --- Module 3: Billing, Stripe & Cancellation Policy ---
 builder.Services.AddSingleton<IStripeService, StripeService>();
 builder.Services.AddHostedService<AppointmentCancellationJob>();
 builder.Services.AddHostedService<SessionReminderJob>();
 builder.Services.AddHostedService<SessionPayoutJob>();
-// -------------------------------------------------------
 
-// --- Email Notifications (SendGrid) ---
 builder.Services.AddHttpClient<IEmailService, SendGridEmailService>();
-// ---------------------------------------
 
-// --- Module 4: Lucene Search + Audit Log ---
 builder.Services.AddScoped<ITherapistSearchService, TherapistSearchService>();
 builder.Services.AddSingleton<IAuditService, AuditService>();
 
-// AuditActionFilter: רישום גלובלי כ-ServiceFilter (עם DI)
-// פועל אוטומטית על כל action עם [Audit] attribute
 builder.Services.AddScoped<AuditActionFilter>();
-// -------------------------------------------
 
-// Presentation Layer
-// AuditActionFilter נרשם גלובלית — כל action עם [Audit] attribute ייכנס לתוכו
 builder.Services.AddControllers(opts =>
-  opts.Filters.AddService<AuditActionFilter>()) // Module 4: global audit filter (DI-aware)
+  opts.Filters.AddService<AuditActionFilter>())
   .AddJsonOptions(opts =>
-      // Without this, enums (VerificationStatus, AppointmentStatus, PaymentStatus...)
-      // serialize as raw numbers (0,1,2...) instead of names, silently breaking
-      // every client-side string comparison like `status === "Confirmed"`.
+      // without this, enums serialize as raw numbers instead of names,
+      // breaking client-side checks like `status === "Confirmed"`
       opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddSignalR();                   // Real-time chat
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -120,7 +106,6 @@ builder.Services.AddSwaggerGen(c =>
   });
 });
 
-// --- הגדרת אימות JWT ---
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
@@ -144,11 +129,8 @@ builder.Services.AddAuthentication(options =>
 
     // SignalR over native WebSocket can't set an Authorization header (browser
     // limitation), so the client sends the JWT as an "access_token" query string
-    // param instead (see accessTokenFactory in ChatRoomPage.jsx). Without this
-    // handler the default JwtBearerHandler only reads the header, the WebSocket
-    // handshake fails auth, and SignalR silently falls back to long-polling —
-    // still working, but not the "true WebSocket" behavior the hub relies on.
-    // Scoped to /hubs only so the rest of the API still requires a normal header.
+    // param instead (see accessTokenFactory in ChatRoomPage.jsx). Scoped to /hubs
+    // only so the rest of the API still requires a normal header.
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -168,38 +150,30 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        // הוספתי את שני הפורטים הנפוצים כדי שלא תתקעי אם React יחליט להחליף
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
        .AllowAnyMethod()
        .AllowAnyHeader()
        .AllowCredentials();
     });
 });
 
-// יצירת סשן אסינכרוני שחי לאורך בקשת ה-HTTP בלבד (Scoped)
 builder.Services.AddScoped(sp => sp.GetRequiredService<IDocumentStore>().OpenAsyncSession());
 
 var app = builder.Build();
 
-// הגדרת Swagger לסביבת הפיתוח
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// --- Static file serving (React SPA) ---
-// In production the exe serves the React build from wwwroot/.
-// UseDefaultFiles must come before UseStaticFiles so that a bare "/" request
-// resolves to index.html instead of 404-ing.
-app.UseDefaultFiles();   // / -> wwwroot/index.html
-app.UseStaticFiles();    // /assets/*, /*.js, etc.
+// UseDefaultFiles must come before UseStaticFiles so "/" resolves to index.html
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.UseCors("AllowAll");
 
-// HTTPS redirect only in development; the distributable exe uses plain HTTP.
-// For public deployments, put a TLS-terminating reverse proxy (nginx/Caddy)
-// in front of the exe instead.
+// HTTPS redirect only in development; production sits behind a TLS-terminating reverse proxy
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -208,10 +182,9 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<ChatHub>("/hubs/chat");   // Real-time chat
+app.MapHub<ChatHub>("/hubs/chat");
 
-// SPA fallback: any route not matched by the API (e.g. /patient-dashboard/*)
-// must return index.html so React Router can handle client-side navigation.
+// SPA fallback so React Router can handle client-side navigation
 app.MapFallbackToFile("index.html");
 
 app.Run();

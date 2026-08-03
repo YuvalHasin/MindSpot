@@ -4,18 +4,8 @@ using Raven.Client.Documents;
 
 namespace MindSpot_server.Services.Billing
 {
-    /// <summary>
-    /// Background job that runs every 15 minutes and emails patients a reminder
-    /// about their upcoming confirmed session, roughly 24 hours in advance.
-    ///
-    /// A session is reminded once it's within the next 24 hours (AppointmentAt - now &lt;= 24h),
-    /// still Confirmed, still in the future, and hasn't already been reminded
-    /// (Appointment.ReminderSent). The flag makes this idempotent regardless of
-    /// how the polling interval lines up with the 24h boundary.
-    ///
-    /// Registered in Program.cs as:
-    ///   builder.Services.AddHostedService&lt;SessionReminderJob&gt;();
-    /// </summary>
+    // Emails patients a reminder ~24h before their confirmed session.
+    // ReminderSent makes this idempotent regardless of polling timing.
     public class SessionReminderJob : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -108,7 +98,6 @@ namespace MindSpot_server.Services.Billing
                     _logger.LogError(ex,
                         "Failed to send reminder for appointment {Id}. Will retry next cycle.",
                         appointment.Id);
-                    // Leave ReminderSent = false so it's retried on the next poll
                 }
             }
 

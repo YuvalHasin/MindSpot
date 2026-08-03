@@ -6,10 +6,6 @@ import { useTranslation } from "react-i18next";
 import RecentSessions from "./RecentSessions";
 import TherapistReviews from "./TherapistReviews";
 
-/**
- * TherapistDashboard — default content for the /therapist index route.
- * Receives therapistData + notifications via Outlet context from TherapistPage.
- */
 const TherapistDashboard = () => {
   const { t } = useTranslation();
   const { notifications } = useOutletContext();
@@ -20,7 +16,6 @@ const TherapistDashboard = () => {
     <div className="max-w-6xl mx-auto px-6 pb-8 space-y-8">
       <StatsOverview />
 
-      {/* ── New Booking Requests ──────────────────────────────────────── */}
       {unreadNotifications.length > 0 && (
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">

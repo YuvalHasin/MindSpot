@@ -112,7 +112,6 @@ const AdminRequests = () => {
                       exit={{ opacity: 0, scale: 0.98 }}
                       className="hover:bg-muted/10 transition-colors"
                     >
-                      {/* עמודה 1: שם והתמחות */}
                       <td className="px-6 py-4">
                         <div className="font-bold text-foreground">{req.fullName}</div>
                         <div className="text-xs text-primary font-medium">{req.specialties}</div>
@@ -124,7 +123,6 @@ const AdminRequests = () => {
                         )}
                       </td>
 
-                      {/* עמודה 2: רשיון (בנפרד) */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 font-mono text-xs bg-muted px-2 py-1 rounded w-fit">
                           <BadgeCheck size={12} className="text-muted-foreground" />
@@ -132,21 +130,18 @@ const AdminRequests = () => {
                         </div>
                       </td>
 
-                      {/* עמודה 3: ביו (בנפרד) */}
                       <td className="px-6 py-4">
                         <div className="text-xs text-muted-foreground italic max-w-[200px] line-clamp-2">
                           {req.bio || t("adminRequests.noBio")}
                         </div>
                       </td>
 
-                      {/* עמודה 4: קשר */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 text-[11px] text-muted-foreground">
                           <span className="flex items-center gap-1.5"><Phone size={12}/> {req.phone || req.phoneNumber}</span>
                         </div>
                       </td>
 
-                      {/* עמודה 5: כפתורי פעולה */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button 

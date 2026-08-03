@@ -10,21 +10,6 @@ const HISTORY_URL = "https://localhost:7160/api/chat/history";
 const HUB_URL = "https://localhost:7160/hubs/chat";
 const API = "https://localhost:7160";
 
-/**
- * ChatRoomPage — shared, role-agnostic real-time chat room.
- *
- * Used by BOTH the patient dashboard ("/patient-dashboard/chat-room/:id")
- * and the therapist dashboard ("/therapist/chat-room/:id"). The SignalR
- * ChatHub already enforces server-side that only the appointment's actual
- * patient or therapist may join the room (see ChatHub.JoinRoom), so a
- * single shared route/component is safe for both roles.
- *
- * Rendered as a fixed full-screen overlay (`fixed inset-0`) rather than a
- * normal flex child so it always covers the ENTIRE viewport — including
- * the dashboard sidebar and the mobile bottom tab bar — regardless of
- * which layout it's nested inside. This avoids the chat input being
- * clipped/hidden behind the fixed mobile bottom nav.
- */
 const ChatRoomPage = () => {
   const { t } = useTranslation();
   const { appointmentId } = useParams();
@@ -57,13 +42,11 @@ const ChatRoomPage = () => {
     sessionStorage.getItem("name") ||
     (role === "therapist" ? "Therapist" : "Patient");
 
-  // Scroll to bottom whenever messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Patient only: fetch appointment details so we know when the session ends
-  // and whether it's already been rated (used by the back-button rating prompt).
+  // Needed to know if the session already ended / was rated for the back-button prompt.
   useEffect(() => {
     if (role !== "patient") return;
     let active = true;
@@ -85,18 +68,11 @@ const ChatRoomPage = () => {
   }, [appointmentId, token, role]);
 
   useEffect(() => {
-    // React 18 StrictMode double-invokes effects in dev, mounting → cleaning up
-    // → mounting again almost immediately. Because connecting is async, the
-    // cleanup for the first invocation can run before 'connection' has even
-    // been assigned, letting BOTH connections join the SignalR group and
-    // causing every message to be delivered (and shown) twice. 'active'
-    // closes that race: any step that finishes after cleanup ran bails out
-    // and tears down its own connection instead of joining the room.
+    // 'active' guards against StrictMode's double-invoke joining the SignalR room twice.
     let active = true;
     let connection = null;
 
     const init = async () => {
-      // 1. Fetch chat history
       try {
         const res = await fetch(`${HISTORY_URL}?appointmentId=${appointmentId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -106,12 +82,11 @@ const ChatRoomPage = () => {
           if (active) setMessages(Array.isArray(data) ? data : []);
         }
       } catch {
-        // history fetch failure is non-fatal
+        // non-fatal
       }
 
       if (!active) return;
 
-      // 2. Build SignalR connection
       connection = new HubConnectionBuilder()
         .withUrl(HUB_URL, { accessTokenFactory: () => token })
         .withAutomaticReconnect()
@@ -134,7 +109,7 @@ const ChatRoomPage = () => {
         }
         await connection.invoke("JoinRoom", appointmentId);
       } catch {
-        // connection failed — UI will stay in "connecting" state showing error implicitly
+        // stays in "connecting" state
       } finally {
         if (active) setConnecting(false);
       }
@@ -166,7 +141,7 @@ const ChatRoomPage = () => {
         senderName
       );
     } catch {
-      // optionally show a toast
+      // ignore
     } finally {
       setSending(false);
     }
@@ -182,7 +157,6 @@ const ChatRoomPage = () => {
   const isOwn = (msg) =>
     (myId && msg.senderId === myId) || msg.senderRole === role;
 
-  // Session is over once now >= appointmentAt + durationMinutes
   const sessionHasEnded = () => {
     if (!appointmentInfo?.appointmentAt) return false;
     const end = new Date(appointmentInfo.appointmentAt).getTime() +

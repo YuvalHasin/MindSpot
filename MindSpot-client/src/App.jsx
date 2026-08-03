@@ -4,27 +4,22 @@ import Toaster from "./components/ui/Toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-// --- קומפוננטת הגנה על נתיבים ---
 const ProtectedRoute = ({ children, redirectTo, roleRequired }) => {
   const location = useLocation();
-  const token = sessionStorage.getItem("token"); // וודא שזה המפתח שבו אתה שומר את הטוקן
-  const userRole = sessionStorage.getItem("role"); // וודא שזה המפתח שבו אתה שומר את התפקיד (admin/patient)
+  const token = sessionStorage.getItem("token");
+  const userRole = sessionStorage.getItem("role");
 
-  // 1. אם אין טוקן בכלל - שלח ללוגין הרלוונטי
   if (!token) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // 2. אם יש טוקן אבל התפקיד לא מתאים (למשל מטופל שמנסה להיכנס לאדמין)
   if (roleRequired && userRole !== roleRequired) {
-    return <Navigate to="/" replace />; 
+    return <Navigate to="/" replace />;
   }
 
-  // 3. הכל תקין - הצג את הדף
   return children;
 };
 
-// --- ייבוא דפים (Pages) ---
 import Index from "./pages/Index";
 import PatientAuthPage from "./pages/patient/PatientAuthPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
@@ -48,7 +43,6 @@ import ProfileSettings from "./pages/patient/ProfileSettings";
 import SecuritySettings from "./pages/patient/SecuritySettings";
 import TriagePage from "./pages/patient/TriagePage";
 import ChatPage from "./pages/patient/ChatPage";
-// Shared, role-agnostic real-time chat room — used by both patient & therapist dashboards
 import ChatRoomPage from "./pages/ChatRoomPage";
 
 // Therapist Pages & Layout
@@ -61,7 +55,9 @@ import TherapistSettings from "./pages/therapist/TherapistSettings";
 import TherapistPatients from "./pages/therapist/TherapistPatients";
 
 // Patient extra pages
-import BookSessionPage from "./pages/patient/BookSessionPage";
+// Lazy-loaded: BookSessionPage pulls in Stripe.js at module scope, so a
+// static import would load Stripe globally on every page.
+const BookSessionPage = React.lazy(() => import("./pages/patient/BookSessionPage"));
 import TherapistProfilePage from "./pages/patient/TherapistProfilePage";
 
 // Public marketing pages
@@ -78,7 +74,6 @@ const App = () => (
       <Toaster />
       <BrowserRouter>
         <Routes>
-          {/* --- נתיבים ציבוריים (פתוחים לכולם) --- */}
           <Route path="/" element={<Index />} />
           <Route path="/patient-auth" element={<PatientAuthPage />} />
           <Route path="/therapist-auth" element={<TherapistAuthPage />} />
@@ -89,9 +84,8 @@ const App = () => (
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/policies" element={<PoliciesPage />} />
 
-          {/* --- נתיבי מטופל (מוגנים) --- */}
-          <Route 
-            path="/patient-dashboard" 
+          <Route
+            path="/patient-dashboard"
             element={
               <ProtectedRoute redirectTo="/patient-auth" roleRequired="patient">
                 <PatientDashboardLayout />
@@ -105,19 +99,24 @@ const App = () => (
             <Route path="triage" element={<TriagePage />} />
             <Route path="chat/:sessionId?" element={<ChatPage />} />
             <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
-            <Route path="book-session" element={<BookSessionPage />} />
+            <Route
+              path="book-session"
+              element={
+                <React.Suspense fallback={null}>
+                  <BookSessionPage />
+                </React.Suspense>
+              }
+            />
           </Route>
 
-         {/* --- נתיבי מטפל (מוגנים) --- */}
           <Route
             path="/therapist"
             element={
               <ProtectedRoute redirectTo="/therapist-auth" roleRequired="therapist">
-                <TherapistPage /> {/* כאן נמצא ה-Sidebar וה-Layout של המטפל שכולל <Outlet /> */}
+                <TherapistPage />
               </ProtectedRoute>
             }
           >
-            {/* אלו הילדים שירוססו בתוך ה-Sidebar לפי מה שנבחר */}
             <Route index element={<TherapistDashboard />} />
             <Route path="consultations" element={<RecentSessions />} />
             <Route path="clients" element={<TherapistPatients />} />
@@ -126,16 +125,15 @@ const App = () => (
             <Route path="chat-room/:appointmentId" element={<ChatRoomPage />} />
           </Route>
 
-          {/* --- נתיבי אדמין (מוגנים) --- */}
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
               <ProtectedRoute redirectTo="/admin-login" roleRequired="admin">
                 <AdminLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminOverview />} /> 
+            <Route index element={<AdminOverview />} />
             <Route path="admin-dashboard" element={<AdminOverview />} />
             <Route path="therapists" element={<TherapistManagement />} />
             <Route path="patients" element={<PatientManagement />} />
@@ -145,7 +143,6 @@ const App = () => (
             <Route path="history" element={<AdminAuditLog />} />
           </Route>
 
-          {/* --- דף 404 --- */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

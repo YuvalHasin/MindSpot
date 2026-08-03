@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 const AdminSettings = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false); // למניעת לחיצות כפולות
+  const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [form, setForm] = useState({ 
     fullName: "", 
@@ -52,7 +52,6 @@ const AdminSettings = () => {
     e.preventDefault();
     setErrorField({ field: "", message: "" });
 
-    // Validate password fields if the user intends to change password
     if (form.newPassword) {
       if (form.newPassword !== form.confirmPassword) {
         setErrorField({ field: "confirmPassword", message: "Passwords do not match." });
@@ -66,7 +65,6 @@ const AdminSettings = () => {
 
     setIsSaving(true);
     try {
-      // 1. Update profile (name + email)
       const profileRes = await fetch("https://localhost:7160/api/admin/update-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -74,7 +72,6 @@ const AdminSettings = () => {
       });
       if (!profileRes.ok) throw new Error("Profile update failed.");
 
-      // 2. Change password only if requested
       if (form.newPassword) {
         const pwRes = await fetch("https://localhost:7160/api/admin/change-password", {
           method: "PUT",
@@ -86,7 +83,6 @@ const AdminSettings = () => {
           setErrorField({ field: "currentPassword", message: d.message || "Password change failed." });
           return;
         }
-        // Clear password fields after success
         setForm(f => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
       }
 
@@ -122,7 +118,6 @@ const AdminSettings = () => {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border/60 rounded-2xl p-6 space-y-6 shadow-sm">
         
-        {/* Header Section */}
         <div className="flex items-center gap-4 border-b border-border/40 pb-6">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary uppercase">
             {form.fullName ? form.fullName[0] : "A"}
@@ -133,7 +128,6 @@ const AdminSettings = () => {
           </div>
         </div>
 
-        {/* Profile Fields */}
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -157,7 +151,6 @@ const AdminSettings = () => {
             <div className="relative flex justify-start text-[10px] uppercase tracking-widest font-bold"><span className="bg-card pr-3 text-muted-foreground/60">{t("adminSettings.securityVerification")}</span></div>
           </div>
 
-          {/* Password Fields */}
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground ml-1">{t("adminSettings.currentPasswordLabel")}</label>
@@ -194,7 +187,6 @@ const AdminSettings = () => {
           </div>
         </div>
 
-        {/* Action Button */}
         <div className="pt-4">
           <Button 
             onClick={handleSave} 

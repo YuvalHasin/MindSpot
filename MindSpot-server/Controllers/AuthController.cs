@@ -72,7 +72,6 @@ namespace server.Controllers
 
             if (userId != null)
             {
-                // Fetch the display name for the logged-in user
                 string fullName = "";
                 using var nameSession = _store.OpenAsyncSession();
                 if (userRole == "Patient")

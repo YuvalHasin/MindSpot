@@ -13,7 +13,6 @@ const ProfileSettings = () => {
   const [form, setForm] = useState({ fullName: "", email: "" });
   const [errorField, setErrorField] = useState({ field: "", message: "" });
 
-  // 1. טעינת נתונים מהשרת
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
@@ -42,13 +41,11 @@ const ProfileSettings = () => {
     fetchPatientData();
   }, []);
 
-  // 2. שמירת נתונים
   const handleSave = async (e) => {
     e.preventDefault();
     setErrorField({ field: "", message: "" });
     setIsSuccess(false);
 
-    // ולדיציה בסיסית
     if (!form.fullName.trim()) {
       setErrorField({ field: "fullName", message: t("profileSettings.errorFullNameRequired") });
       return;
@@ -118,7 +115,6 @@ const ProfileSettings = () => {
         animate={{ opacity: 1, y: 0 }} 
         className="bg-card border border-border/60 rounded-2xl p-6 space-y-6 shadow-sm"
       >
-        {/* Avatar Section */}
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-2xl font-display font-bold text-muted-foreground">
@@ -134,7 +130,6 @@ const ProfileSettings = () => {
           </div>
         </div>
 
-        {/* Form Fields */}
         <div className="space-y-4">
           {[
             { label: t("profileSettings.fullName"), field: "fullName", icon: <User size={16} /> },
@@ -168,7 +163,6 @@ const ProfileSettings = () => {
           ))}
         </div>
 
-        {/* Action Button */}
         <div className="space-y-3">
           <Button 
             onClick={handleSave} 
