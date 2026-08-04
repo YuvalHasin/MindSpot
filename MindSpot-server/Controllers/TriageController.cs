@@ -4,6 +4,7 @@ using MindSpot_server.Models;
 using MindSpot_server.Services;
 using OpenAI.Chat;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,7 +77,7 @@ namespace server.Controllers
                 // זמינות מוצהרת — מטפל בלי אף slot לא ניתן לתיאום פגישה איתו בפועל
                 var candidateIds = candidates.Select(c => c.Id).ToList();
                 var availabilities = await session.Query<TherapistAvailability>()
-                    .Where(a => candidateIds.Contains(a.TherapistId))
+                    .Where(a => a.TherapistId.In(candidateIds))
                     .ToListAsync();
                 var availabilityByTherapist = availabilities.ToDictionary(a => a.TherapistId, a => a);
 
